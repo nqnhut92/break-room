@@ -8,7 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS } = require('./lib/realtime');
-const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv } = require('./lib/config');
+const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv } = require('./lib/config');
 const { TYPES } = require('./lib/world');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -77,6 +77,7 @@ function createApp({ store = createStoreFromEnv(), env = process.env, ...overrid
     respawnMs: respawnMsFromEnv(env),
     trustProxy: env.TRUST_PROXY === '1',
     renewAfterMs: renewAfterMsFromEnv(env),
+    ...limitsFromEnv(env),
     ...overrides,
   });
   rt.attach(server, { path: WS_PATH });

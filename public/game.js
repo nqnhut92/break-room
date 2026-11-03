@@ -275,6 +275,18 @@ import { createScene3D } from './scene3d.js';
       }
       if (S.ws !== ws || S.fatal) return;
       if (S.pendingWs) return; // a replacement is already joining; it takes over
+      if (ev && ev.code === 4002) {
+        // kicked for inactivity: do not reconnect on our own, that would defeat the purpose
+        S.fatal = true;
+        S.joined = false;
+        S.keys.clear();
+        S.smashHeld = false;
+        $('conn').hidden = true;
+        $('overlay').classList.remove('gone');
+        $('joinBtn').disabled = false;
+        $('joinErr').textContent = 'Bạn đứng yên lâu quá nên bị ngắt kết nối để tiết kiệm tài nguyên. Bấm "Vào văn phòng" để quay lại, điểm của bạn vẫn còn.';
+        return;
+      }
       if (ev && ev.code === 4001) {
         S.fatal = true;
         S.joined = false;

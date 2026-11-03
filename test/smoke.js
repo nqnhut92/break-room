@@ -330,6 +330,63 @@ async function main() {
     world.WORLD.spawn = lobbySpawn;
   });
 
+  await step('players who do nothing are disconnected with code 4002, active ones are not', async () => {
+    const app = server.createApp({ afkMs: 900 });
+    const p = await app.start(0);
+    const idle = await h.client(p, 'Idle', 'afkroom');
+    const busy = await h.client(p, 'Busy', 'afkroom');
+    let x = busy.x;
+    for (let i = 0; i < 28; i++) {
+      x += i % 2 ? 6 : -6; // keeps moving for ~2.8 s
+      send(busy, { t: 'move', x, y: busy.y, d: 1 });
+      await sleep(100);
+    }
+    assert.strictEqual(idle.closeCode, 4002, 'idle player was told to go (4002)');
+    assert.strictEqual(busy.closeCode, null, 'moving player is still connected');
+    // re-sending the same spot is not activity
+    const faker = await h.client(p, 'Faker', 'afkroom');
+    for (let i = 0; i < 18; i++) {
+      send(faker, { t: 'move', x: faker.x, y: faker.y, d: 1 });
+      await sleep(100);
+    }
+    assert.strictEqual(faker.closeCode, 4002, 'standing still while spamming moves still counts as AFK');
+    busy.ws.close();
+    await app.stop();
+  });
+
+  await step('connection and room caps, and the kill switch', async () => {
+    const capped = server.createApp({ maxConnections: 2, maxRooms: 1 });
+    const p = await capped.start(0);
+    const a = await h.client(p, 'A', 'room-one');
+    const b = await h.client(p, 'B', 'room-one'); // same room is fine
+    const third = new WebSocket('ws://127.0.0.1:' + p + '/api/ws');
+    assert.strictEqual(await new Promise((r) => third.on('close', (c) => r(c))), 1013, 'third connection refused');
+    b.ws.close();
+    await sleep(300);
+    const other = await new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + p + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name: 'C', room: 'room-two', token: h.newToken() })));
+      ws.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        if (m.t === 'err') resolve(m);
+      });
+    });
+    assert.ok(/đầy phòng/.test(other.m), 'a second room is refused when maxRooms is 1');
+    a.ws.close();
+    await capped.stop();
+
+    const off = server.createApp({ disabled: true });
+    const po = await off.start(0);
+    const closedMsg = await new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + po + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name: 'D', room: 'x', token: h.newToken() })));
+      ws.on('message', (d) => resolve(JSON.parse(d.toString())));
+    });
+    assert.strictEqual(closedMsg.t, 'err');
+    assert.ok(/tạm đóng/.test(closedMsg.m));
+    await off.stop();
+  });
+
   console.log('\nAll ' + passed + ' checks passed');
   await bigIp.stop();
   await server.stop();

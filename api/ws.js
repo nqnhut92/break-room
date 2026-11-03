@@ -7,10 +7,12 @@
 
 const http = require('http');
 const { createRealtime } = require('../lib/realtime');
-const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv } = require('../lib/config');
+const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv } = require('../lib/config');
 
-const store = createStoreFromEnv();
-if (!store) console.error('[break-room] REDIS_URL is not set: players will be told the server is not configured');
+const limits = limitsFromEnv();
+// With the kill switch on we never open a Redis connection at all.
+const store = limits.disabled ? null : createStoreFromEnv();
+if (!store && !limits.disabled) console.error('[break-room] REDIS_URL is not set: players will be told the server is not configured');
 
 const server = http.createServer((req, res) => {
   res.writeHead(426, { 'Content-Type': 'text/plain; charset=utf-8', Upgrade: 'websocket' });
@@ -22,6 +24,7 @@ createRealtime({
   respawnMs: respawnMsFromEnv(),
   trustProxy: true, // Vercel sets the client address headers itself
   renewAfterMs: renewAfterMsFromEnv(),
+  ...limits,
 }).attach(server);
 
 module.exports = server;

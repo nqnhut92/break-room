@@ -14,7 +14,7 @@ delete process.env.VERCEL;
 
 const assert = require('assert');
 const net = require('net');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const Redis = require('ioredis');
 const server = require('../server.js');
 const { createMemoryStore } = require('../lib/store-memory');
@@ -417,6 +417,61 @@ async function main() {
   }
   try {
     await contract('redis', () => createRedisStore(redis.url, { log: () => {} }));
+    await step('npm run check:store passes against a real Redis and never prints the URL', async () => {
+      const out = spawnSync('node', ['scripts/check-store.js'], {
+        cwd: require('path').join(__dirname, '..'),
+        env: { ...process.env, REDIS_URL: redis.url },
+        encoding: 'utf8',
+        timeout: 60000,
+      });
+      assert.strictEqual(out.status, 0, out.stdout + out.stderr);
+      assert.ok(/All 7 checks passed/.test(out.stdout), out.stdout);
+      assert.ok(!out.stdout.includes(redis.url) && !out.stdout.includes('127.0.0.1:' + redis.url.split(':').pop()), 'URL leaked into the output');
+      const bad = spawnSync('node', ['scripts/check-store.js'], {
+        cwd: require('path').join(__dirname, '..'),
+        env: { ...process.env, REDIS_URL: 'redis://127.0.0.1:1' },
+        encoding: 'utf8',
+        timeout: 60000,
+      });
+      assert.strictEqual(bad.status, 1, 'an unreachable store fails the check');
+    });
+
+    await step('/api/health: shallow, deep with ping, key protected, kill switch', async () => {
+      const health = require('../api/health.js');
+      const call = async (env, url) => {
+        const saved = { ...process.env };
+        Object.assign(process.env, env);
+        try {
+          let code;
+          let body = '';
+          await health({ url }, {
+            setHeader() {},
+            end(b) {
+              body = b;
+            },
+            set statusCode(c) {
+              code = c;
+            },
+          });
+          return { code, body: JSON.parse(body) };
+        } finally {
+          for (const k of Object.keys(env)) delete process.env[k];
+          Object.assign(process.env, saved);
+        }
+      };
+      assert.deepStrictEqual((await call({ REDIS_URL: redis.url }, '/api/health')).body, { ok: true, store: 'redis' });
+      const deep = await call({ REDIS_URL: redis.url }, '/api/health?deep=1');
+      assert.strictEqual(deep.code, 200);
+      assert.ok(deep.body.pingMs >= 0);
+      assert.strictEqual((await call({ REDIS_URL: redis.url, HEALTH_KEY: 'sekret' }, '/api/health?deep=nope')).code, 401);
+      assert.strictEqual((await call({ REDIS_URL: redis.url, HEALTH_KEY: 'sekret' }, '/api/health?deep=sekret')).code, 200);
+      assert.strictEqual((await call({ REDIS_URL: 'redis://127.0.0.1:1' }, '/api/health?deep=1')).code, 503);
+      assert.strictEqual((await call({ REDIS_URL: redis.url, GAME_DISABLED: '1' }, '/api/health')).code, 503);
+      const k = new Redis(redis.url);
+      assert.ok((await k.ttl('br:keepalive')) > 0, 'the keepalive key has an expiry');
+      k.disconnect();
+    });
+
     await twoInstances(redis.url);
   } finally {
     await redis.stop();

@@ -71,6 +71,12 @@ Giới hạn kết nối theo IP (10 kết nối mỗi IP) được chuyển san
 | `REDIS_URL` hoặc `KV_URL` | Chuỗi kết nối Redis (TCP). Bắt buộc trên Vercel. Local có thể bỏ trống |
 | `WS_MAX_DURATION_S` | Thời gian tối đa của một kết nối WebSocket. Mặc định 300 trên Vercel, 0 (không giới hạn) khi chạy local. Đặt bằng `maxDuration` nếu bạn nâng lên (gói Pro) |
 | `RESPAWN_MS` | Thời gian đồ vật tự thay mới, mặc định 25000 |
+| `AFK_MS` | Người chơi đứng yên (không đi, đập, emoji) quá từng này mili giây thì bị ngắt với mã 4002, mặc định 180000 (3 phút). Client không tự kết nối lại, hiện nút vào lại, điểm vẫn còn. Chặn tab bỏ quên giữ instance Vercel sống (bộ nhớ tính theo thời gian instance còn sống) |
+| `MAX_CONNECTIONS` | Số kết nối tối đa mỗi instance. Mặc định 200 trên Vercel, không giới hạn khi chạy local |
+| `MAX_ROOMS` | Số phòng tối đa mỗi instance. Mặc định 40 trên Vercel, không giới hạn khi chạy local |
+| `GAME_DISABLED=1` | Công tắc tắt khẩn cấp: mọi người vào đều nhận "Game đang tạm đóng" và server không mở kết nối Redis nào. Đặt biến rồi redeploy |
+| `REDIS_TLS_CA` | Chứng chỉ CA (nội dung PEM) cho nhà cung cấp Redis dùng chứng chỉ tự ký, ví dụ gói trả phí của Redis Cloud. Có thể viết `\n` thay cho xuống dòng |
+| `HEALTH_KEY` | Nếu đặt, `/api/health?deep=<HEALTH_KEY>` mới được kiểm tra sâu (xem dưới) |
 | `ROOM_TTL_S` | Phòng không có ai thì state bị xóa sau từng này giây, mặc định 1800 |
 | `PORT` | Cổng khi chạy local, mặc định 3000 |
 | `TRUST_PROXY=1` | Chỉ cần khi chạy `server.js` sau reverse proxy ngoài Vercel (Render, Railway, Nginx...) để đếm kết nối theo IP thật. Trên Vercel luôn bật sẵn |
@@ -97,7 +103,22 @@ Nếu một instance chết mà không kịp dọn, các instance còn lại t�
 
 `server.js` chạy được trên mọi host Node thường trực (Render, Railway, Fly.io, VPS): `npm install && npm start`. Một tiến trình duy nhất thì không cần Redis (state nằm trong RAM, mất khi khởi động lại). Muốn chạy nhiều instance thì đặt `REDIS_URL` như trên. Repo hiện không có Dockerfile.
 
-Health check: `GET /healthz` khi chạy `server.js`, `GET /api/health` trên Vercel.
+Health check: `GET /healthz` khi chạy `server.js`, `GET /api/health` trên Vercel (chỉ kiểm tra đã có biến Redis). `GET /api/health?deep=<HEALTH_KEY>` kết nối thật tới Redis, ghi một khoá `br:keepalive` có hạn 3 ngày và trả `pingMs`. Các gói Redis miễn phí xoá database khi khoảng 2 tuần không có lệnh nào, nên trỏ một dịch vụ uptime miễn phí (ví dụ UptimeRobot) tới địa chỉ này mỗi ngày một lần vừa giữ database sống vừa báo khi game hỏng.
+
+### Chọn và kiểm tra nhà cung cấp Redis
+
+Trước khi dán `REDIS_URL` vào Vercel, chạy thử trên máy:
+
+```bash
+REDIS_URL='rediss://user:password@host:port' npm run check:store
+```
+
+Script kiểm tra: kết nối, độ trễ, `SET`/`GET`, Lua (`EVAL`), pub/sub, 20 kết nối cùng lúc, và chạy thử chính store của game (vào phòng, đập, snapshot, dọn dẹp, gọi IT). Nó chỉ tạo khoá trong một phòng tạm rồi xoá, và không in chuỗi kết nối. Ghi chú về các gói (số liệu tính đến 2026-11, hãy xem lại trang giá của họ):
+
+- **Redis Cloud Free (30 MB)**: 30 kết nối, 100 ops/giây, 5 GB băng thông/tháng, không có hạn mức số lệnh theo tháng. **Không có TLS** (docs ghi rõ) nên dùng mật khẩu riêng của database này, và database tự bị xoá nếu khoảng 14 ngày không có lệnh nào (dùng `deep` health ở trên). Chưa có tài liệu xác nhận Lua và pub/sub có chạy trên gói Free hay không, vì vậy hãy chạy script trước.
+- **Redis Cloud Essentials (trả phí, khoảng $5/tháng)**: có TLS (phải bật trong Security, có thể cần `REDIS_TLS_CA`), 256 kết nối, 1000 ops/giây, 100 GB băng thông.
+- **Upstash Free**: 500K lệnh/tháng, chỉ 1 database. Nếu gắn thẻ thanh toán, theo tài liệu của họ mọi tài nguyên free của cả tài khoản chuyển sang trả phí.
+- Game giảm số lệnh khi mọi người ở cùng một instance (vị trí gửi nội bộ, chỉ dùng Redis khi có người ở instance khác), nhưng vẫn tốn lệnh cho dọn dẹp mỗi vài giây và cho mỗi lần đập.
 
 ## Cấu trúc
 
@@ -123,7 +144,7 @@ vercel.json          thư mục tĩnh và maxDuration
 npm test
 ```
 
-`test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM. `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`.
+`test/world.js` kiểm tra bố cục và đường đi. `test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM (gồm AFK, giới hạn kết nối/phòng và công tắc tắt khẩn cấp). `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`.
 
 ## Ghi chú thiết kế
 
