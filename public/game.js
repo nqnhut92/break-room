@@ -306,6 +306,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.smashHeld = false;
         $('conn').hidden = true;
         $('overlay').classList.remove('gone');
+        chatLog.hidden = true;
         setJoinBusy(false);
         $('joinErr').textContent = 'Bạn đứng yên lâu quá nên bị ngắt kết nối để tiết kiệm tài nguyên. Bấm "Vào văn phòng" để quay lại, điểm của bạn vẫn còn.';
         return;
@@ -352,6 +353,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.joined = true;
         $('overlay').classList.add('gone');
         $('hud').hidden = false;
+        if (chatLog.hidden) {
+          chatLog.textContent = ''; // a fresh join starts with an empty frame; a reconnect keeps what was said
+          chatLog.hidden = false;
+        }
         $('conn').hidden = true;
         $('roomName').textContent = m.roomLabel || S.room;
         try {
@@ -556,9 +561,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   });
 
   // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
-  // while under the system toasts, and each message also shows as a bubble over the speaker for 3 seconds.
-  const CHAT_LINES = 5;
-  const CHAT_LINE_MS = 20000;
+  // while in a frame under the system toasts, and each message also shows as a bubble over the speaker for 3 seconds.
+  const CHAT_LINES = 60; // kept in the frame, scrolled to the newest
   const CHAT_BUBBLE_S = 3;
   const chatForm = $('chatForm');
   const chatInput = $('chatInput');
@@ -572,13 +576,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const nm = document.createElement('b');
     nm.textContent = (p ? p.name : String(m.name || '?')) + ': ';
     li.append(nm, document.createTextNode(m.text)); // text nodes only: never HTML
+    const atEnd = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40; // do not yank someone reading older lines
     chatLog.appendChild(li);
-    chatLog.hidden = false;
     while (chatLog.children.length > CHAT_LINES) chatLog.removeChild(chatLog.firstChild);
-    setTimeout(() => {
-      if (li.parentNode) li.parentNode.removeChild(li);
-      if (!chatLog.children.length) chatLog.hidden = true;
-    }, CHAT_LINE_MS);
+    if (atEnd || m.id === S.me) chatLog.scrollTop = chatLog.scrollHeight;
     if (p) {
       p.chat = m.text;
       p.chatT = CHAT_BUBBLE_S;
@@ -636,6 +637,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.smashHeld = false;
     S.target = null;
     S.attackId = null;
+    chatLog.hidden = true;
     for (const ws of [S.pendingWs, S.ws]) if (ws) ws.close(1000);
     S.pendingWs = null;
     $('conn').hidden = true;

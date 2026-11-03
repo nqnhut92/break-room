@@ -355,17 +355,32 @@ canvas {
   max-width: min(360px, calc(100vw - 20px));
 }
 #toasts { display: flex; flex-direction: column; gap: 6px; }
-#chatLog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-#chatLog[hidden] { display: none; }
-.chatline {
+/* one continuous frame, always there once you are in: the last messages scroll inside it */
+#chatLog {
+  list-style: none;
+  margin: 0;
+  padding: 6px 4px 6px 10px;
+  width: min(320px, calc(100vw - 20px));
+  height: 118px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
   background: var(--panel);
-  border-radius: 10px;
-  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#chatLog[hidden] { display: none; }
+#chatLog:empty::before { content: 'Chưa có tin nhắn nào'; color: var(--muted); font-size: 13px; margin: auto 0; }
+.chatline {
   font-size: 13px;
   line-height: 1.35;
   color: #fff;
   overflow-wrap: anywhere;
-  animation: pop 0.2s ease-out;
+  padding-right: 6px;
 }
 .chatline b { font-weight: 700; }
 .chatline.me b { color: var(--accent-2); }
@@ -548,6 +563,7 @@ canvas {
   #board { width: 100%; font-size: 12px; }
   .board-total { font-size: 15px; }
   #leftCol { bottom: 120px; }
+  #chatLog { height: 88px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
