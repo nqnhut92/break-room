@@ -290,7 +290,7 @@ import { createScene3D } from './scene3d.js';
       if (ev && ev.code === 4001) {
         S.fatal = true;
         S.joined = false;
-        $('conn').textContent = 'Phòng này đang mở ở tab khác. Đóng tab kia hoặc tải lại trang.';
+        $('conn').textContent = 'Server này đang mở ở tab khác. Đóng tab kia hoặc tải lại trang.';
         $('conn').hidden = false;
         return;
       }
@@ -341,11 +341,11 @@ import { createScene3D } from './scene3d.js';
       }
       case 'pj':
         addPlayer(m.p);
-        toast(m.p.name + ' vừa vào phòng');
+        toast(m.p.name + ' vừa vào server');
         break;
       case 'pl': {
         const p = S.players.get(m.id);
-        if (p) toast(p.name + ' đã rời phòng');
+        if (p) toast(p.name + ' đã rời server');
         S.players.delete(m.id);
         break;
       }
@@ -597,7 +597,7 @@ import { createScene3D } from './scene3d.js';
 
   $('copyLink').addEventListener('click', () => {
     const url = location.origin + location.pathname + '?room=' + encodeURIComponent(S.room);
-    const done = () => toast('Đã copy link phòng, gửi cho đồng nghiệp nhé');
+    const done = () => toast('Đã copy link server, gửi cho đồng nghiệp nhé');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(done, () => toast(url));
     } else {
@@ -627,8 +627,8 @@ import { createScene3D } from './scene3d.js';
   // The two rooms that exist (keep in sync with ROOMS in lib/world.js; the server sends
   // the live list with player counts, this is only the fallback if that request fails).
   const FALLBACK_ROOMS = [
-    { id: 'may-in', name: 'Máy In' },
-    { id: 'tu-server', name: 'Tủ Server' },
+    { id: 'br-1', name: 'BR-1' },
+    { id: 'br-2', name: 'BR-2' },
   ];
 
   (function setupJoin() {
@@ -640,7 +640,7 @@ import { createScene3D } from './scene3d.js';
     } catch (e) { /* ignore */ }
     $('nameInput').value = savedName;
 
-    let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 40 }));
+    let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 20 }));
     let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
     let chosenByUser = picked !== null;
 
@@ -656,10 +656,12 @@ import { createScene3D } from './scene3d.js';
         b.disabled = full;
         const n = document.createElement('span');
         n.className = 'rn';
-        n.textContent = 'Phòng ' + r.name;
+        n.textContent = r.name;
         const c = document.createElement('span');
-        c.className = 'rc';
-        c.textContent = full ? 'Đầy' : r.online === null ? '' : r.online + '/' + r.max + ' online';
+        // Green while there is plenty of space, orange from 50% full, red from 80% (and when full).
+        const load = r.online === null ? 0 : r.online / r.max;
+        c.className = 'rc ' + (r.online === null ? '' : load >= 0.8 ? 'hot' : load >= 0.5 ? 'warm' : 'cool');
+        c.textContent = r.online === null ? '' : (full ? 'Đầy · ' : '') + r.online + ' online';
         b.append(n, c);
         b.addEventListener('click', () => {
           picked = r.id;

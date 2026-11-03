@@ -15,7 +15,7 @@ Chạy local không cần Redis: toàn bộ state nằm trong RAM của tiến t
 
 ## Chơi chung với đồng nghiệp
 
-Game có **hai phòng cố định**, như hai "server": **Phòng Máy In** và **Phòng Tủ Server**, mỗi phòng tối đa 40 người. Màn hình vào hiển thị số người đang online ở từng phòng và tự chọn sẵn phòng đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một phòng; nút "Copy link phòng" tạo link `/?room=may-in` hoặc `/?room=tu-server` để chọn sẵn phòng đó. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
+Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối đa 20 người. Màn hình vào hiển thị "x online" của từng server, màu xanh lá (dưới 50% sức chứa), cam (từ 50%), đỏ (từ 80%), và tự chọn sẵn server đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một server; nút "Copy link server" tạo link `/?room=br-1` hoặc `/?room=br-2` để chọn sẵn. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
 
 ## Điều khiển
 

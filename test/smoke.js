@@ -292,7 +292,7 @@ async function main() {
 
   await step('a full room rejects new players', async () => {
     const socks = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 20; i++) {
       socks.push(await h.client(fullPort, 'F' + i, 'fullroom'));
     }
     const extra = await new Promise((resolve) => {
@@ -374,7 +374,7 @@ async function main() {
       }).on('error', reject);
     });
     assert.deepStrictEqual(list.rooms.map((r) => [r.id, r.name]), world.ROOMS.map((r) => [r.id, r.name]));
-    assert.ok(list.rooms.every((r) => r.max === 40 && Number.isInteger(r.online)));
+    assert.ok(list.rooms.every((r) => r.max === 20 && Number.isInteger(r.online)));
     const total = list.rooms.reduce((n, r) => n + r.online, 0);
     assert.ok(total >= 0 && total <= 2);
     stray.ws.close();
