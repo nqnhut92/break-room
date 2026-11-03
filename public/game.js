@@ -644,9 +644,22 @@ import { createScene3D } from './scene3d.js';
     let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
     let chosenByUser = picked !== null;
 
+    let loaded = false;
+
     function render() {
       const box = $('roomList');
       box.textContent = '';
+      box.setAttribute('aria-busy', String(!loaded));
+      if (!loaded) {
+        // Skeleton rows while the first /api/rooms answer is on its way.
+        for (let i = 0; i < rooms.length; i++) {
+          const s = document.createElement('div');
+          s.className = 'roomskel';
+          s.setAttribute('aria-hidden', 'true');
+          box.appendChild(s);
+        }
+        return;
+      }
       for (const r of rooms) {
         const full = r.online !== null && r.online >= r.max;
         const b = document.createElement('button');
@@ -689,6 +702,7 @@ import { createScene3D } from './scene3d.js';
         const data = await res.json();
         if (data && Array.isArray(data.rooms) && data.rooms.length) rooms = data.rooms;
       } catch (e) { /* keep what we have */ }
+      loaded = true;
       preselect();
       render();
     }

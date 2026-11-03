@@ -6,7 +6,10 @@
   <meta name="theme-color" content="#0d1017">
   <meta name="description" content="Văn phòng đập phá nhiều người chơi: vào server, đập laptop, màn hình, máy in cùng đồng nghiệp.">
   <title>Office Rage Room</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -49,7 +52,7 @@
       </label>
       <div class="roompick">
         <span class="lbl">Chọn server</span>
-        <div id="roomList" class="roomlist" role="group" aria-label="Chọn server"></div>
+        <div id="roomList" class="roomlist" role="group" aria-label="Chọn server" aria-busy="true"></div>
       </div>
       <button id="joinBtn" class="btn smash" type="submit">Vào văn phòng</button>
       <p id="joinErr" class="err" role="alert"></p>
