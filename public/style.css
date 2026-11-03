@@ -98,6 +98,7 @@ canvas {
 }
 .btn.pill { padding: 6px 12px; border-radius: 999px; }
 
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn.smash {
   background: linear-gradient(180deg, #ff6a55, #e63b2a);
   border-color: #ff8a78;
@@ -272,6 +273,7 @@ canvas {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 46px;
   padding: 12px 14px;
   background: #0f131c;
   border: 1px solid var(--line);

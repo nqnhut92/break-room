@@ -4,6 +4,16 @@ import { createScene3D } from './scene3d.js';
   'use strict';
 
   const $ = (id) => document.getElementById(id);
+
+  // The join button is only usable with a name, and not while a join is in flight.
+  let joinBusy = false;
+  function syncJoin() {
+    $('joinBtn').disabled = joinBusy || !$('nameInput').value.trim();
+  }
+  function setJoinBusy(b) {
+    joinBusy = b;
+    syncJoin();
+  }
   const canvas = $('c');
   let scene = null;
   try {
@@ -283,7 +293,7 @@ import { createScene3D } from './scene3d.js';
         S.smashHeld = false;
         $('conn').hidden = true;
         $('overlay').classList.remove('gone');
-        $('joinBtn').disabled = false;
+        setJoinBusy(false);
         $('joinErr').textContent = 'Bạn đứng yên lâu quá nên bị ngắt kết nối để tiết kiệm tài nguyên. Bấm "Vào văn phòng" để quay lại, điểm của bạn vẫn còn.';
         return;
       }
@@ -437,13 +447,13 @@ import { createScene3D } from './scene3d.js';
           S.smashHeld = false;
           $('conn').hidden = true;
           $('overlay').classList.remove('gone');
-          $('joinBtn').disabled = false;
+          setJoinBusy(false);
           $('joinErr').textContent = m.m;
           $('nameInput').focus();
         } else if (!S.joined) {
           S.fatal = true;
           $('joinErr').textContent = m.m;
-          $('joinBtn').disabled = false;
+          setJoinBusy(false);
         } else {
           toast(m.m);
         }
@@ -650,6 +660,8 @@ import { createScene3D } from './scene3d.js';
       savedName = localStorage.getItem('br-name') || '';
     } catch (e) { /* ignore */ }
     $('nameInput').value = savedName;
+    $('nameInput').addEventListener('input', syncJoin);
+    syncJoin();
 
     let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 20 }));
     let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
@@ -754,7 +766,7 @@ import { createScene3D } from './scene3d.js';
       S.fatal = false;
       S.started = true;
       $('joinErr').textContent = '';
-      $('joinBtn').disabled = true;
+      setJoinBusy(true);
       initAudio();
       connect();
     });
