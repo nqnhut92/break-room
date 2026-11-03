@@ -399,6 +399,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
   const cam = { x: 0, z: 0, dist: 820, pitch: 0.97, ready: false };
+  let shadowR = 900;
 
   scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x59606e, 1.05));
   const sun = new THREE.DirectionalLight(0xfff0d8, 1.7);
@@ -578,7 +579,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       ctx.fillText(text, 44, h / 2 + 2);
     });
     const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(1000, 125), new THREE.MeshBasicMaterial({ map: sign, transparent: true }));
-    signMesh.position.set(W / 2, 215, 3);
+    signMesh.position.set(W / 2, 215, 7); // in front of the window frames (they reach z = 4)
     staticGroup.add(signMesh);
     const clock = makeCanvasTexture(128, 128, (ctx, w, h) => {
       ctx.fillStyle = '#e9edf3';
@@ -1124,7 +1125,19 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     camera.position.set(cam.x + jx, Math.sin(cam.pitch) * d + 40 + jy, cam.z + Math.cos(cam.pitch) * d);
     camera.lookAt(cam.x, 30, cam.z);
 
-    sun.position.set(cam.x - 500, 1100, cam.z + 450);
+    // The sun's shadow box follows the view: wide enough to cover everything visible, so zooming out does not
+    // reveal the edge of the shadowed area (it used to be a fixed 1800-wide box).
+    const R = Math.min(2700, Math.max(900, d * 1.6));
+    if (Math.abs(R - shadowR) > 8) {
+      shadowR = R;
+      const sc2 = sun.shadow.camera;
+      sc2.left = -R; sc2.right = R; sc2.top = R; sc2.bottom = -R;
+      sc2.near = 10;
+      sc2.far = 1300 + R * 1.8 + 400;
+      sc2.updateProjectionMatrix();
+    }
+    const sunDist = 1280 + shadowR * 0.9; // further away for a bigger box, so no ground point ends up behind the light
+    sun.position.set(cam.x - (500 / 1280) * sunDist, (1100 / 1280) * sunDist, cam.z + (450 / 1280) * sunDist);
     sun.target.position.set(cam.x, 0, cam.z);
 
     // objects

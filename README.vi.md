@@ -26,13 +26,13 @@ Tên là bắt buộc, và tên đã có người đang online dùng ở cùng s
 | Hành động | Cách làm |
 | --- | --- |
 | Di chuyển | WASD / phím mũi tên, hoặc chạm vào nền |
-| Đập | Space (giữ để đập liên tục), hoặc bấm thẳng vào đồ vật, hoặc nút ĐẬP! |
+| Đập | Space (giữ để đập liên tục), nút ĐẬP!, hoặc chạm vào đồ vật (màn hình cảm ứng) |
 | Thả emoji | Phím 1 đến 8 hoặc bấm các nút emoji |
 | Zoom camera | Lăn chuột |
 
-**Mana.** Mỗi cú đập tốn 6 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 10/giây khi đang đập liên tục và 30/giây khi đã ngừng tay một giây, nên bạn đập dồn được khoảng 16 cú rồi phải đập chậm lại hoặc nghỉ. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
+**Mana.** Mỗi cú đập tốn 8 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 5/giây khi đang đập liên tục và 15/giây khi đã ngừng tay 1,2 giây, nên bạn đập dồn được khoảng 12 cú rồi phải nghỉ khoảng 7 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
 
-Bấm vào một món ở xa thì nhân vật tự chạy tới và đập cho tới khi vỡ (đi thẳng tới món, nếu bị bàn hay tường chặn thì dừng lại).
+Trên màn hình cảm ứng (và bút), chạm vào nền thì đi tới đó, chạm vào một món thì đi tới và đập đúng một cú cho mỗi lần chạm (nếu bị bàn hay tường chặn thì dừng lại); giữ nút ĐẬP! để đập liên tục. Với chuột thì canvas bỏ qua cú click: chơi bằng bàn phím.
 
 ## Văn phòng
 

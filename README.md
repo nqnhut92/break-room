@@ -26,13 +26,13 @@ Names are required, and a name that is already used by someone online on the sam
 | Action | How |
 | --- | --- |
 | Move | WASD / arrow keys, or tap the floor |
-| Smash | Space (hold to keep smashing), click an object directly, or the SMASH! button |
+| Smash | Space (hold to keep smashing), the SMASH! button, or tap an object (touch screens) |
 | Emoji | Keys 1 to 8 or the emoji buttons |
 | Zoom | Mouse wheel |
 
-**Mana.** Every smash costs 6 mana out of 100 (the blue bar under your name). Mana comes back at 10/s while you keep swinging and 30/s once you have stopped for a second, so you can burst about 16 hits and then have to pace yourself or rest. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
+**Mana.** Every smash costs 8 mana out of 100 (the blue bar under your name). Mana comes back at 5/s while you keep swinging and 15/s once you have stopped for 1.2 seconds, so you can burst about 12 hits, then you have to rest for roughly 7 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
 
-Clicking a far-away object makes your character run to it and keep smashing until it breaks (it walks straight there and stops if a desk or wall is in the way).
+On touch screens (and with a pen), tapping the floor walks there and tapping an object walks to it and smashes it once per tap (it stops if a desk or wall is in the way); hold the SMASH! button to keep smashing. With a mouse the canvas ignores clicks: use the keyboard.
 
 ## The office
 

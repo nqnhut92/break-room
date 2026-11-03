@@ -350,8 +350,9 @@ import { createScene3D } from './scene3d.js';
         if (!S.welcomed) {
           S.welcomed = true;
           const hint = $('hint');
-          hint.classList.remove('fade');
-          setTimeout(() => hint.classList.add('fade'), 15000);
+          const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+          if (touch) hint.textContent = 'Chạm vào nền để đi · chạm vào đồ vật để đập · giữ nút ĐẬP! để đập liên tục';
+          hint.classList.remove('fade'); // the hint stays on screen, kept subtle by its style
         }
         break;
       }
@@ -599,6 +600,8 @@ import { createScene3D } from './scene3d.js';
 
   canvas.addEventListener('pointerdown', (e) => {
     if (!S.joined || !scene) return;
+    // Tap-to-walk and tap-to-smash are for touch screens (and pens). With a mouse, play with the keyboard.
+    if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
     const hit = scene.pick(e.clientX, e.clientY);
     if (!hit) return;
     if (hit.objectId !== undefined) {
@@ -847,7 +850,7 @@ import { createScene3D } from './scene3d.js';
       } else {
         const dist = Math.hypot(o.x - me.x, o.y - me.y);
         if (dist <= S.hitRange - 15) {
-          tryHit(o);
+          if (tryHit(o)) S.attackId = null; // one tap, one smash
         } else {
           dx = (o.x - me.x) / dist;
           dy = (o.y - me.y) / dist;
