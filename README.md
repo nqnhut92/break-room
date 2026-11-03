@@ -1,6 +1,6 @@
 # Break Room
 
-Văn phòng đập phá nhiều người chơi. Vào phòng, đi quanh văn phòng cùng đồng nghiệp và đập laptop, màn hình, máy in, tủ server. Mỗi món vỡ sẽ cộng vào "tổng thiệt hại" của cả phòng, ai đập nhiều nhất lên bảng xếp hạng. IT sẽ thay đồ mới sau 25 giây, hoặc bấm nút "Gọi IT" để thay hết ngay.
+Văn phòng đập phá nhiều người chơi, vẽ 3D bằng three.js. Vào phòng, đi quanh văn phòng cùng đồng nghiệp và đập laptop, màn hình, máy in, tủ server. Mỗi món vỡ sẽ cộng vào "tổng thiệt hại" của cả phòng, ai đập nhiều nhất lên bảng xếp hạng. IT sẽ thay đồ mới sau 25 giây, hoặc bấm nút "Gọi IT" để thay hết ngay.
 
 ## Chạy thử trên máy
 
@@ -24,8 +24,17 @@ Mỗi phòng có một tên, nằm trong link: `/?room=ten-phong`. Bấm "Copy l
 | Di chuyển | WASD / phím mũi tên, hoặc chạm vào nền |
 | Đập | Space (giữ để đập liên tục), hoặc bấm thẳng vào đồ vật, hoặc nút ĐẬP! |
 | Thả emoji | Phím 1 đến 8 hoặc bấm các nút emoji |
+| Zoom camera | Lăn chuột |
 
-Bấm vào một món ở xa thì nhân vật tự chạy tới và đập cho tới khi vỡ.
+Bấm vào một món ở xa thì nhân vật tự chạy tới và đập cho tới khi vỡ (đi thẳng tới món, nếu bị bàn hay tường chặn thì dừng lại).
+
+## Văn phòng
+
+Phòng rộng 3840×2160 (gấp 3 lần mỗi chiều so với bản đầu), camera bám theo người chơi. Có khu bàn làm việc (32 bàn), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh họp có bàn họp, sofa. Khoảng 140 món đập được. Bàn, tường, máy in, tủ server, bình nước, máy pha cà phê là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`).
+
+Mọi hình 3D (người, bàn ghế, laptop, tủ server...) được dựng bằng code từ các khối hộp, trụ, cầu, gộp thành mesh theo từng loại, nên không có file model hay texture nào và không vướng bản quyền. Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `node_modules/three/build/three.module.min.js` và `node_modules/three/examples/jsm/utils/BufferGeometryUtils.js` vào `public/vendor/`.
+
+Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, game tự giảm độ phân giải và bóng đổ trên màn hình cảm ứng.
 
 ## Deploy lên Vercel
 
@@ -91,13 +100,14 @@ Health check: `GET /healthz` khi chạy `server.js`, `GET /api/health` trên Ver
 api/ws.js            hàm Vercel nhận WebSocket (export http server có gắn WebSocketServer)
 api/health.js        báo đã cấu hình Redis chưa
 lib/realtime.js      logic game và nối WebSocket, không biết đang chạy ở đâu
-lib/world.js         bố cục văn phòng và loại đồ vật (cố định)
+lib/world.js         bố cục văn phòng, loại đồ vật, vật cản và hàm va chạm (cố định)
 lib/store-redis.js   state dùng chung + pub/sub trong Redis (script Lua nguyên tử)
 lib/store-memory.js  cùng giao diện nhưng trong RAM, cho local và test
 lib/config.js        chọn store theo biến môi trường
 server.js            chạy local: file tĩnh + WebSocket ở /api/ws
-public/              index.html, style.css, game.js (canvas, hiệu ứng, âm thanh WebAudio, không cần file ảnh/âm thanh)
-test/                smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
+public/              index.html, style.css, game.js (mạng, input, HUD, âm thanh WebAudio),
+                     scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn)
+test/                world.js (bố cục, đường đi), smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
 vercel.json          thư mục tĩnh và maxDuration
 ```
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const WebSocket = require('ws');
+const { resolveCollisions } = require('../lib/world');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const send = (c, o) => c.ws.send(JSON.stringify(o));
@@ -57,17 +58,28 @@ async function none(c, pred, ms = 300) {
   if (m) throw new Error('unexpected message ' + JSON.stringify(m));
 }
 
+// Walks like the real client: straight towards the target, sliding along furniture
+// with the same collision maths the server uses. Gives up if it stops making progress.
 async function walkTo(c, target, stop) {
   let { x, y } = c;
-  while (Math.hypot(target.x - x, target.y - y) > stop) {
+  let best = Infinity;
+  let stalled = 0;
+  while (Math.hypot(target.x - x, target.y - y) > stop && stalled < 8) {
     const d = Math.hypot(target.x - x, target.y - y);
-    x += ((target.x - x) / d) * 14;
-    y += ((target.y - y) / d) * 14;
+    const r = resolveCollisions(x + ((target.x - x) / d) * 14, y + ((target.y - y) / d) * 14);
+    x = r.x;
+    y = r.y;
     send(c, { t: 'move', x: Math.round(x), y: Math.round(y), d: 1 });
     await sleep(50);
+    const nd = Math.hypot(target.x - x, target.y - y);
+    if (nd < best - 0.5) {
+      best = nd;
+      stalled = 0;
+    } else stalled++;
   }
   c.x = x;
   c.y = y;
+  await sleep(120); // let the last moves land before the caller acts
 }
 
 const dist = (c, o) => Math.hypot(o.x - c.x, o.y - c.y);

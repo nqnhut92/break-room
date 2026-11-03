@@ -11,6 +11,7 @@
 </head>
 <body>
   <canvas id="c"></canvas>
+  <div id="labels"></div>
 
   <div id="hud" hidden>
     <div id="topbar">
@@ -36,7 +37,7 @@
       <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
     </div>
 
-    <div id="hint">WASD / mũi tên để di chuyển · Space hoặc bấm vào đồ vật để đập · phím 1-8 để thả emoji</div>
+    <div id="hint">WASD / mũi tên để di chuyển · Space hoặc bấm vào đồ vật để đập · phím 1-8 để thả emoji · lăn chuột để zoom</div>
   </div>
 
   <div id="overlay">
@@ -57,6 +58,7 @@
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
   <div id="toasts" aria-live="polite"></div>
 
-  <script src="game.js"></script>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>

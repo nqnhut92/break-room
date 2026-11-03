@@ -17,6 +17,7 @@ const http = require('http');
 const path = require('path');
 const server = require('../server.js');
 const h = require('./helpers.js');
+const world = require('../lib/world.js');
 
 const { sleep, send, take, none, walkTo, dist, WebSocket } = h;
 let port;
@@ -43,6 +44,10 @@ async function step(name, fn) {
 }
 
 async function main() {
+  // Everyone spawns in the pantry, a few steps from the printers, so the old walk-and-hit
+  // checks stay short. (Real players spawn in the lobby.)
+  const lobbySpawn = world.WORLD.spawn;
+  world.WORLD.spawn = { x: 3140, y: 300, rx: 0, ry: 0 };
   port = await server.start(0);
   // a second app with a high per-IP cap, for the full-room check
   const bigIp = server.createApp({ maxConnPerIp: 100 });
@@ -104,7 +109,7 @@ async function main() {
   });
 
   const target = A.welcome.objects
-    .filter((o) => o.type !== 'plant')
+    .filter((o) => o.type === 'printer')
     .reduce((best, o) => (dist(A, o) < dist(A, best) ? o : best));
   const info = server.TYPES[target.type];
 
@@ -299,6 +304,29 @@ async function main() {
     });
     assert.ok(/đầy/.test(extra.m));
     socks.forEach((c) => c.ws.close());
+  });
+
+  await step('furniture is solid: the server stops a player walking through a desk', async () => {
+    world.WORLD.spawn = { x: 260, y: 335, rx: 0, ry: 0 }; // just below the first desk
+    const O = await client('Obs', 'solidroom');
+    const X = await client('Walker', 'solidroom');
+    let y = X.y;
+    for (let i = 0; i < 25; i++) {
+      y -= 12; // straight up, through the desk
+      send(X, { t: 'move', x: X.x, y, d: 1 });
+      await sleep(60);
+    }
+    await sleep(200);
+    const last = O.msgs.filter((m) => m.t === 'ps').flatMap((m) => m.l).filter((e) => e[0] === X.id).pop();
+    assert.ok(last, 'observer saw the walker move');
+    // desk 0 is centred at (260, 265), half height 35, and the walker has a 16 radius
+    assert.ok(last[2] >= 265 + 35 + 16 - 2, 'stopped at the desk edge, y=' + last[2]);
+    // the server's own copy agrees with the shared collision maths
+    const fixed = world.resolveCollisions(last[1], last[2]);
+    assert.ok(Math.hypot(fixed.x - last[1], fixed.y - last[2]) < 3);
+    O.ws.close();
+    X.ws.close();
+    world.WORLD.spawn = lobbySpawn;
   });
 
   console.log('\nAll ' + passed + ' checks passed');

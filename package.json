@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/smoke.js && node test/shared.js"
+    "test": "node test/world.js && node test/smoke.js && node test/shared.js"
   },
   "engines": {
     "node": ">=18"
@@ -14,5 +14,8 @@
     "ioredis": "^5.11.1",
     "ws": "^8.18.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "three": "^0.170.0"
+  }
 }

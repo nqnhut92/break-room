@@ -20,6 +20,7 @@ const server = require('../server.js');
 const { createMemoryStore } = require('../lib/store-memory');
 const { createRedisStore } = require('../lib/store-redis');
 const h = require('./helpers.js');
+const world = require('../lib/world.js');
 
 const { sleep, send, take, none, WebSocket } = h;
 let passed = 0;
@@ -188,6 +189,8 @@ async function twoInstances(url) {
     server.createApp({ store: createRedisStore(url, { log: quiet }), presenceTtlMs: 2500, log: quiet });
   const app1 = mk();
   const app2 = mk();
+  // spawn next to the pantry so the walk-and-hit steps are short
+  world.WORLD.spawn = { x: 3140, y: 330, rx: 0, ry: 0 };
   const p1 = await app1.start(0);
   const p2 = await app2.start(0);
   const room = 'shared-' + Date.now();
@@ -205,7 +208,9 @@ async function twoInstances(url) {
     assert.strictEqual(board.online, 2);
 
     // A hits on instance 1, B (instance 2) sees it, and breaking it updates everyone's board
-    const target = A.welcome.objects.filter((o) => o.type === 'chair')[0];
+    const target = A.welcome.objects
+      .filter((o) => o.type === 'chair')
+      .reduce((best, o) => (h.dist(A, o) < h.dist(A, best) ? o : best));
     await h.walkTo(A, target, 50);
     for (let i = 0; i < server.TYPES.chair.hp; i++) {
       send(A, { t: 'hit', id: target.id });
@@ -230,7 +235,9 @@ async function twoInstances(url) {
     const r = room + '-race';
     const A = await h.client(p1, 'An', r);
     const B = await h.client(p2, 'Binh', r);
-    const plant = A.welcome.objects.filter((o) => o.type === 'plant')[0];
+    const plant = A.welcome.objects
+      .filter((o) => o.type === 'plant')
+      .reduce((best, o) => (h.dist(A, o) < h.dist(A, best) ? o : best));
     await Promise.all([h.walkTo(A, plant, 50), h.walkTo(B, plant, 50)]);
     for (let i = 0; i < 3; i++) {
       send(A, { t: 'hit', id: plant.id });
