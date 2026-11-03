@@ -6,7 +6,12 @@
   --muted: #9aa4b5;
   --accent: #ff5d4a;
   --accent-2: #ffb02e;
+  /* One sans stack for everything (also mirrored by UI_FONT in scene3d.js for canvas text). Segoe UI on Windows and
+     San Francisco on macOS both carry the full Vietnamese set; never put a system serif such as Georgia first. */
+  --font-ui: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
+
+button, input, select, textarea { font-family: inherit; }
 
 * { box-sizing: border-box; }
 
@@ -15,7 +20,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-ui);
   overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
@@ -374,6 +379,9 @@ canvas {
   gap: 2px;
 }
 #chatLog[hidden] { display: none; }
+#chatLog { transition: opacity 0.35s ease; }
+#chatLog.idle { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #chatLog { transition: none; } }
 #chatLog:empty::before { content: 'Chưa có tin nhắn nào'; color: var(--muted); font-size: 13px; margin: auto 0; }
 .chatline {
   font-size: 13px;

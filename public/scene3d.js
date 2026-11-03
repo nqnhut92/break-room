@@ -449,6 +449,9 @@ function soft(ctx, w, h, stops) {
 }
 
 // ------------------------------------------------------------- the scene ----
+// Same stack as --font-ui in style.css: Segoe UI on Windows, San Francisco on macOS, both with full Vietnamese coverage.
+const UI_FONT = '"Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
+
 export function createScene3D(canvas, labelsEl, hooks = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -601,7 +604,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         ctx.lineWidth = 5;
         ctx.strokeRect(3, 3, w - 6, h - 6);
         ctx.fillStyle = '#c9ffe2';
-        ctx.font = '800 38px system-ui, sans-serif';
+        ctx.font = '800 38px ' + UI_FONT;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('EXIT · LỐI RA', w / 2, h / 2 + 2);
@@ -661,7 +664,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         ctx.lineWidth = 6;
         ctx.strokeRect(3, 3, w - 6, h - 6);
         ctx.fillStyle = 'rgba(201,255,226,.95)';
-        ctx.font = '800 40px system-ui, sans-serif';
+        ctx.font = '800 40px ' + UI_FONT;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.save();
@@ -687,12 +690,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       // Shrink the font until the whole sentence fits: system fonts differ in width (macOS is wider than Linux)
       // and the end of the sentence used to be cut off.
       let size = 52;
-      ctx.font = '800 ' + size + 'px system-ui, sans-serif';
+      ctx.font = '800 ' + size + 'px ' + UI_FONT;
       const room = w - 44 - 32;
       const needed = ctx.measureText(text).width;
       if (needed > room) {
         size = Math.max(24, Math.floor(size * (room / needed)));
-        ctx.font = '800 ' + size + 'px system-ui, sans-serif';
+        ctx.font = '800 ' + size + 'px ' + UI_FONT;
       }
       ctx.fillStyle = '#eef1f6';
       ctx.textBaseline = 'middle';

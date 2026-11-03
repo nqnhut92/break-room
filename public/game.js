@@ -357,6 +357,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           chatLog.textContent = ''; // a fresh join starts with an empty frame; a reconnect keeps what was said
           chatLog.hidden = false;
         }
+        chatWake();
         $('conn').hidden = true;
         $('roomName').textContent = m.roomLabel || S.room;
         try {
@@ -580,10 +581,23 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     chatLog.appendChild(li);
     while (chatLog.children.length > CHAT_LINES) chatLog.removeChild(chatLog.firstChild);
     if (atEnd || m.id === S.me) chatLog.scrollTop = chatLog.scrollHeight;
+    chatWake();
     if (p) {
       p.chat = m.text;
       p.chatT = CHAT_BUBBLE_S;
     }
+  }
+  // The frame fades out after 3 seconds without a new message, and comes back with the next one, when the box is
+  // focused (Enter or 💬) or while the pointer rests on it.
+  const CHAT_IDLE_MS = 3000;
+  let chatIdleTimer = 0;
+  function chatWake() {
+    chatLog.classList.remove('idle');
+    clearTimeout(chatIdleTimer);
+    chatIdleTimer = setTimeout(() => {
+      if (document.activeElement !== chatInput && !chatLog.matches(':hover')) chatLog.classList.add('idle');
+      else chatWake();
+    }, CHAT_IDLE_MS);
   }
   function chatOpen() {
     if (coarseUi) chatForm.classList.add('open');
@@ -592,8 +606,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   chatInput.addEventListener('focus', () => {
     S.keys.clear(); // a key held while clicking into the box must not keep walking
     S.smashHeld = false;
+    chatWake();
   });
-  chatInput.addEventListener('blur', () => chatForm.classList.remove('open'));
+  chatInput.addEventListener('blur', () => {
+    chatForm.classList.remove('open');
+    chatWake();
+  });
   chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') chatInput.blur();
   });
