@@ -32,7 +32,12 @@ Bấm vào một món ở xa thì nhân vật tự chạy tới và đập cho t
 
 Phòng rộng 3840×2160 (gấp 3 lần mỗi chiều so với bản đầu), camera bám theo người chơi. Có khu bàn làm việc (32 bàn), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh họp có bàn họp, sofa. Khoảng 140 món đập được. Bàn, tường, máy in, tủ server, bình nước, máy pha cà phê là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`).
 
-Mọi hình 3D (người, bàn ghế, laptop, tủ server...) được dựng bằng code từ các khối hộp, trụ, cầu, gộp thành mesh theo từng loại, nên không có file model hay texture nào và không vướng bản quyền. Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `node_modules/three/build/three.module.min.js` và `node_modules/three/examples/jsm/utils/BufferGeometryUtils.js` vào `public/vendor/`.
+Hình 3D gồm hai nguồn:
+
+- **Bộ Furniture Kit 2.0 của [Kenney](https://kenney.nl)** (CC0, dùng tự do, giấy phép nằm ở `public/assets/kenney/License.txt`): bàn, ghế xoay, màn hình, laptop, bàn phím, chuột, máy pha cà phê, cây, bàn, sofa, thảm. Chỉ chép những file `.glb` đang dùng (khoảng 140 KB). Mỗi file được gộp thành một mesh tô màu theo đỉnh, đặt chân xuống sàn và co giãn về kích thước mong muốn (`KENNEY_WIDTH` trong `scene3d.js`). Nếu một file không tải được thì game tự dùng bản dựng bằng code của món đó.
+- **Dựng bằng code** (khối hộp, trụ, cầu): nhân vật, máy in, bình nước, tủ server (Kenney không có), tường kính, đống đổ nát khi vỡ và các hiệu ứng.
+
+Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` và `GLTFLoader.js` (thư mục `examples/jsm`) vào `public/vendor/`. Hai file sau import lẫn nhau, nên sửa dòng import trong `GLTFLoader.js` thành `./BufferGeometryUtils.js`.
 
 Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, game tự giảm độ phân giải và bóng đổ trên màn hình cảm ứng.
 
@@ -106,7 +111,8 @@ lib/store-memory.js  cùng giao diện nhưng trong RAM, cho local và test
 lib/config.js        chọn store theo biến môi trường
 server.js            chạy local: file tĩnh + WebSocket ở /api/ws
 public/              index.html, style.css, game.js (mạng, input, HUD, âm thanh WebAudio),
-                     scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn)
+                     scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn),
+                     assets/kenney/ (model .glb của Kenney, CC0)
 test/                world.js (bố cục, đường đi), smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
 vercel.json          thư mục tĩnh và maxDuration
 ```

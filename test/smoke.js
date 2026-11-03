@@ -307,11 +307,13 @@ async function main() {
   });
 
   await step('furniture is solid: the server stops a player walking through a desk', async () => {
-    world.WORLD.spawn = { x: 260, y: 335, rx: 0, ry: 0 }; // just below the first desk
+    const desk = world.PROPS.find((p) => p.k === 'desk');
+    const edge = desk.y + desk.h / 2 + world.PLAYER_RADIUS; // lowest y a player's centre can reach
+    world.WORLD.spawn = { x: desk.x, y: edge + 40, rx: 0, ry: 0 }; // just in front of the first desk
     const O = await client('Obs', 'solidroom');
     const X = await client('Walker', 'solidroom');
     let y = X.y;
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 30; i++) {
       y -= 12; // straight up, through the desk
       send(X, { t: 'move', x: X.x, y, d: 1 });
       await sleep(60);
@@ -319,8 +321,7 @@ async function main() {
     await sleep(200);
     const last = O.msgs.filter((m) => m.t === 'ps').flatMap((m) => m.l).filter((e) => e[0] === X.id).pop();
     assert.ok(last, 'observer saw the walker move');
-    // desk 0 is centred at (260, 265), half height 35, and the walker has a 16 radius
-    assert.ok(last[2] >= 265 + 35 + 16 - 2, 'stopped at the desk edge, y=' + last[2]);
+    assert.ok(last[2] >= edge - 2, 'stopped at the desk edge ' + edge + ', got y=' + last[2]);
     // the server's own copy agrees with the shared collision maths
     const fixed = world.resolveCollisions(last[1], last[2]);
     assert.ok(Math.hypot(fixed.x - last[1], fixed.y - last[2]) < 3);

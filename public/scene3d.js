@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { GLTFLoader } from './vendor/GLTFLoader.js';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -43,7 +44,17 @@ const sph = (r, hex, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
   g.scale(sx, sy, sz);
   return place(paint(g, hex), x, y, z);
 };
-const merge = (list) => (list.length ? mergeGeometries(list, false) : null);
+// Kenney models arrive non-indexed with no UVs, the code-built ones are indexed
+// with UVs; bring both to the same shape so they can share one merged mesh.
+const merge = (list) => {
+  if (!list.length) return null;
+  const flat = list.map((g) => {
+    const n = g.index ? g.toNonIndexed() : g;
+    n.deleteAttribute('uv');
+    return n;
+  });
+  return mergeGeometries(flat, false);
+};
 
 function seeded(seed) {
   let s = (Math.abs(seed) % 2147483646) + 1;
@@ -61,8 +72,8 @@ function shade(hex, k) {
 // ----------------------------------------------------- breakable models ----
 // Origin = centre of the footprint at floor level. `lift` is how high above
 // the floor the thing stands (things on desks stand on the desk top).
-const DESK_TOP = 62;
-const LIFT = { monitor: DESK_TOP, laptop: DESK_TOP };
+let DESK_TOP = 62; // set from the Kenney desk once it has loaded
+const lift = (type) => (type === 'monitor' || type === 'laptop' ? DESK_TOP : 0);
 const PICK = { // invisible pick box, bigger than the model so small things are easy to click: [w, h, d]
   laptop: [56, 40, 40], monitor: [56, 66, 36], chair: [44, 66, 44], printer: [72, 50, 56],
   cooler: [48, 118, 48], coffee: [60, 82, 50], server: [68, 170, 58], plant: [44, 96, 44],
@@ -79,10 +90,81 @@ const RUBBLE = {
 };
 const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee']);
 
+// -------------------------------------------------------- Kenney models ----
+// Furniture Kit 2.0 by Kenney (CC0), flat-coloured low-poly .glb files in
+// public/assets/kenney. Each is flattened into one vertex-coloured geometry,
+// centred on the floor and scaled to a target width, because the files carry
+// their own node transforms and use different units from the game. If a file
+// fails to load the code-built model is used instead.
+const KENNEY_FILES = {
+  desk: 'desk', chair: 'chairDesk', monitor: 'computerScreen', laptop: 'laptop', keyboard: 'computerKeyboard',
+  mouse: 'computerMouse', coffee: 'kitchenCoffeeMachine', plant: 'pottedPlant', table: 'table', sofa: 'loungeSofa',
+  rug: 'rugRectangle',
+};
+const KENNEY_WIDTH = { desk: 150, chair: 62, monitor: 50, laptop: 56, keyboard: 30, mouse: 11, coffee: 54, plant: 44, table: 190, sofa: 250, rug: 420 };
+const kenney = {};
+
+function colored(src, color) {
+  const g = src.index ? src.toNonIndexed() : src.clone();
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', g.attributes.position);
+  out.setAttribute('normal', g.attributes.normal);
+  const n = g.attributes.position.count;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    a[i * 3] = color.r;
+    a[i * 3 + 1] = color.g;
+    a[i * 3 + 2] = color.b;
+  }
+  out.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  return out;
+}
+
+function fitKenney(root, width) {
+  root.updateMatrixWorld(true);
+  const parts = [];
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = colored(o.geometry, o.material.color || new THREE.Color(0xcccccc));
+    g.applyMatrix4(o.matrixWorld);
+    parts.push(g);
+  });
+  const geo = mergeGeometries(parts, false);
+  geo.computeBoundingBox();
+  const b = geo.boundingBox;
+  geo.translate(-(b.min.x + b.max.x) / 2, -b.min.y, -(b.min.z + b.max.z) / 2);
+  geo.scale(width / (b.max.x - b.min.x), width / (b.max.x - b.min.x), width / (b.max.x - b.min.x));
+  geo.computeBoundingBox();
+  const sz = geo.boundingBox.getSize(new THREE.Vector3());
+  return { geo, w: sz.x, h: sz.y, d: sz.z };
+}
+
+async function loadKenney() {
+  const loader = new GLTFLoader();
+  await Promise.all(
+    Object.entries(KENNEY_FILES).map(async ([key, file]) => {
+      try {
+        const gltf = await loader.loadAsync('./assets/kenney/' + file + '.glb');
+        kenney[key] = fitKenney(gltf.scene, KENNEY_WIDTH[key]);
+      } catch (e) {
+        /* keep the code-built fallback for this one */
+      }
+    }),
+  );
+  if (kenney.desk) DESK_TOP = kenney.desk.h;
+}
+const kgeo = (name) => (kenney[name] ? kenney[name].geo.clone() : null);
+
 function buildModel(type, types) {
   const body = [];
   const glow = [];
-  switch (type) {
+  let pick = null;
+  const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant'].includes(type);
+  if (useKenney) {
+    const k = kenney[type];
+    body.push(k.geo.clone());
+    pick = [Math.max(40, k.w + 10), Math.max(40, k.h + 10), Math.max(40, k.d + 10)];
+  } else switch (type) {
     case 'monitor':
       body.push(cyl(11, 13, 3, '#2b3240', 0, 1.5, 0));
       body.push(box(6, 20, 4, '#2b3240', 0, 13, -2));
@@ -172,7 +254,7 @@ function buildModel(type, types) {
         (rnd() - 0.5) * 1.2, rnd() * 3, (rnd() - 0.5) * 1.2),
     );
   }
-  return { body: merge(body), glow: merge(glow), wreck: merge(wreck) };
+  return { body: merge(body), glow: merge(glow), wreck: merge(wreck), pick };
 }
 
 // ------------------------------------------------------- static scenery ----
@@ -191,6 +273,39 @@ function deskGeometry() {
     box(10, 10, 0.5, '#ffd34d', 8, DESK_TOP + 5, -28), // sticky note
   ];
   return g;
+}
+
+// Static furniture from the Kenney kit; null means "use the code-built version".
+function kenneyProp(p) {
+  const DT = DESK_TOP;
+  if (p.k === 'desk' && kenney.desk) {
+    const g = [kgeo('desk'), cyl(4.5, 4.5, 10, '#e4572e', 58, DT + 5, -34, 10)];
+    if (kenney.keyboard) g.push(kgeo('keyboard').translate(-32, DT, 18));
+    if (kenney.mouse) g.push(kgeo('mouse').translate(-4, DT, 18));
+    return g;
+  }
+  if (p.k === 'table' && kenney.table) {
+    const TH = kenney.table.h;
+    return [kgeo('table'), cyl(7, 7, 12, '#e4572e', -30, TH + 6, 8, 10), cyl(5, 5, 8, '#f3f3f3', 40, TH + 4, -12, 10)];
+  }
+  if (p.k === 'conference' && kenney.table) {
+    const TH = kenney.table.h;
+    return [
+      ...[-190, 0, 190].map((dx) => kgeo('table').translate(dx, 0, 0)),
+      box(60, 2, 40, '#e9edf3', 0, TH + 1, 0),
+      cyl(5, 5, 9, '#ffffff', -150, TH + 4.5, 20, 10),
+      cyl(5, 5, 9, '#ffffff', 150, TH + 4.5, -20, 10),
+    ];
+  }
+  if (p.k === 'sofa' && kenney.sofa) return [kgeo('sofa')];
+  if (p.k === 'rug' && kenney.rug) {
+    const g = kgeo('rug');
+    g.scale(p.w / KENNEY_WIDTH.rug, 1, p.h / kenney.rug.d);
+    const c = g.attributes.color; // the kit's salmon is loud next to the dark office; tone it down
+    for (let i = 0; i < c.array.length; i++) c.array[i] *= 0.55;
+    return [g];
+  }
+  return null;
 }
 
 function makeCanvasTexture(w, h, draw, repeatX = 1, repeatY = 1) {
@@ -304,10 +419,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const staticGroup = new THREE.Group();
   scene.add(staticGroup);
   let built = false;
+  let loaded = false;
+  let pendingBuild = null;
+  let propList = [];
   let world = { w: 3840, h: 2160 };
 
   // ---- static world -------------------------------------------------------
-  function build(w, props, zones) {
+  function buildNow(w, props, zones) {
     if (built) return;
     built = true;
     world = w;
@@ -328,7 +446,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       for (const g of list) b[kind].push(at(g, x, 0, z));
     };
 
+    propList = props;
     for (const p of props) {
+      const kl = kenneyProp(p);
+      if (kl) {
+        addAll(kl, p.x, p.y);
+        continue;
+      }
       if (p.k === 'desk') addAll(deskGeometry(), p.x, p.y);
       else if (p.k === 'table') {
         addAll([
@@ -465,10 +589,43 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     staticGroup.add(clockMesh);
   }
 
+  const ready = loadKenney()
+    .catch(() => {})
+    .then(() => {
+      loaded = true;
+      if (pendingBuild) {
+        const a = pendingBuild;
+        pendingBuild = null;
+        buildNow(...a);
+      }
+    });
+  function build(w, props, zones) {
+    if (!loaded) pendingBuild = [w, props, zones];
+    else buildNow(w, props, zones);
+  }
+
   // ---- objects ------------------------------------------------------------
   const models = {};
   const rigs = new Map(); // object id -> rig
   const proxies = [];
+
+  // A chair turns to face the nearest desk or table (the model's front is +z).
+  const CHAIR_FRONT = 0;
+  function faceNearestFurniture(group, o) {
+    let best = null;
+    let bd = Infinity;
+    for (const p of propList) {
+      if (p.k !== 'desk' && p.k !== 'table' && p.k !== 'conference') continue;
+      const nx = Math.max(p.x - p.w / 2, Math.min(p.x + p.w / 2, o.x));
+      const ny = Math.max(p.y - p.h / 2, Math.min(p.y + p.h / 2, o.y));
+      const d = Math.hypot(nx - o.x, ny - o.y);
+      if (d < bd) {
+        bd = d;
+        best = [nx, ny];
+      }
+    }
+    if (best && bd < 160) group.rotation.y = Math.atan2(best[0] - o.x, best[1] - o.y) + CHAIR_FRONT;
+  }
 
   function objectRig(o, types) {
     let rig = rigs.get(o.id);
@@ -476,7 +633,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     if (!models[o.type]) models[o.type] = buildModel(o.type, types);
     const mod = models[o.type];
     const group = new THREE.Group();
-    group.position.set(o.x, LIFT[o.type] || 0, o.y);
+    group.position.set(o.x, lift(o.type), o.y);
     const mat = bodyMat.clone();
     const body = new THREE.Mesh(mod.body, mat);
     body.castShadow = true;
@@ -492,12 +649,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     wreck.castShadow = true;
     wreck.visible = false;
     group.add(wreck);
-    const pk = PICK[o.type] || [40, 40, 40];
+    const pk = mod.pick || PICK[o.type] || [40, 40, 40];
+    PICK[o.type] = pk;
     const proxy = new THREE.Mesh(new THREE.BoxGeometry(pk[0], pk[1], pk[2]), pickMat);
     proxy.position.y = pk[1] / 2;
     proxy.userData.objId = o.id;
     group.add(proxy);
     proxies.push(proxy);
+    if (o.type === 'chair') faceNearestFurniture(group, o);
     scene.add(group);
     rig = { group, body, glow, wreck, mat, proxy, o, popPrev: 0, shown: null };
     rigs.set(o.id, rig);
@@ -835,6 +994,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   // ---- per-frame ----------------------------------------------------------
   let time = 0;
   function update(dt, S) {
+    if (!loaded || !built) return; // models still loading
     time += dt;
     const me = S.players.get(S.me);
 
@@ -890,7 +1050,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (o.broken && ELECTRONIC.has(o.type)) {
         o.smokeT -= dt;
         if (o.smokeT <= 0) {
-          fxSmoke(o.x, (LIFT[o.type] || 0) + 16, o.y);
+          fxSmoke(o.x, lift(o.type) + 16, o.y);
           o.smokeT = rand(0.25, 0.6);
         }
       }
@@ -974,9 +1134,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, zoom, cameraTo,
+    renderer, build, update, pick, resize, zoom, cameraTo, ready,
     fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, floatText },
-    objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + (LIFT[type] || 0),
-    lift: (type) => LIFT[type] || 0,
+    objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
+    lift: (type) => lift(type),
   };
 }
