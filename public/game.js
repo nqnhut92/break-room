@@ -61,7 +61,7 @@ import { createScene3D } from './scene3d.js';
     lastSentD: 1,
     lastHit: 0,
     shake: 0,
-    muted: false,
+    muted: true, // sound is off until the player turns it on (the choice is remembered)
     retry: 0,
     t: 0,
   };
@@ -593,9 +593,22 @@ import { createScene3D } from './scene3d.js';
     }
   });
 
+  function showMute() {
+    $('mute').textContent = S.muted ? '🔇' : '🔊';
+    $('mute').setAttribute('aria-pressed', String(!S.muted));
+  }
+  try {
+    S.muted = localStorage.getItem('br-sound') !== '1';
+  } catch (e) { /* ignore */ }
+  showMute();
+
   $('mute').addEventListener('click', () => {
     S.muted = !S.muted;
-    $('mute').textContent = S.muted ? '🔇' : '🔊';
+    showMute();
+    if (!S.muted) initAudio();
+    try {
+      localStorage.setItem('br-sound', S.muted ? '0' : '1');
+    } catch (e) { /* ignore */ }
   });
 
   // ----------------------------------------------------------------- join ----
