@@ -101,6 +101,8 @@ A WebSocket is closed when the function reaches `maxDuration` (Hobby: 300 s, Pro
 
 If an instance dies without cleaning up, the others remove its players after 20 seconds without a heartbeat.
 
+Web Analytics: `public/index.html` loads Vercel's cookie-free `/_vercel/insights/script.js` (skipped on localhost). Switch it on once under the project's **Analytics** tab in Vercel; nothing else is needed.
+
 ### Beta limitations
 
 - WebSockets on Vercel are in **public beta** (since 2026-06-22); the docs say behaviour and API may change. Follow the changelog before relying on it for anything important.

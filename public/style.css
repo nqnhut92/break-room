@@ -272,7 +272,7 @@ canvas {
 #sideBtns {
   position: fixed;
   right: 12px;
-  bottom: 84px;
+  top: 64px; /* game.js moves it just under the damage board, whatever height that has */
   display: flex;
   flex-direction: column;
   gap: 8px;

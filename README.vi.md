@@ -99,6 +99,8 @@ Mỗi kết nối WebSocket bị đóng khi hàm hết `maxDuration` (Hobby: 300
 
 Nếu một instance chết mà không kịp dọn, các instance còn lại tự loại người chơi đó sau 20 giây không có nhịp tim.
 
+Web Analytics: `public/index.html` nạp `/_vercel/insights/script.js` của Vercel (không dùng cookie, bỏ qua trên localhost). Chỉ cần bật một lần ở tab **Analytics** của project trên Vercel, không cần làm gì thêm.
+
 ### Giới hạn của bản beta
 
 - WebSocket trên Vercel đang **public beta** (từ 22/06/2026), docs ghi rõ hành vi và API có thể đổi. Theo dõi changelog trước khi dùng cho thứ quan trọng.

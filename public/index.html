@@ -16,6 +16,17 @@
   <link rel="modulepreload" href="vendor/three.module.min.js">
   <link rel="modulepreload" href="scene3d.js">
   <script>
+    // Vercel Web Analytics (cookie-free page views). It only exists on Vercel, so it is skipped on localhost.
+    // Turn it on in the project's Analytics tab; until then the request is simply ignored.
+    if (!/^(localhost|127\.|\[::1\])/.test(location.hostname)) {
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+      var va = document.createElement('script');
+      va.defer = true;
+      va.src = '/_vercel/insights/script.js';
+      document.head.appendChild(va);
+    }
+  </script>
+  <script>
     // Ask for the server list right away; game.js picks the answer up once it has loaded.
     window.__rooms = fetch('/api/rooms', { cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return null; });
   </script>

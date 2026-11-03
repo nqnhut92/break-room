@@ -592,8 +592,15 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const bottom = board ? board.getBoundingClientRect().bottom : 0;
     mm.cv.style.top = Math.max(56, Math.round(bottom) + 8) + 'px';
   }
+  // the side buttons sit in the top-right corner, right under the damage board
+  function sidePlace() {
+    const board = $('board');
+    if (!board) return;
+    $('sideBtns').style.top = Math.max(56, Math.round(board.getBoundingClientRect().bottom) + 8) + 'px';
+  }
   setInterval(() => {
     mmPlace();
+    sidePlace();
     mmDraw();
     // zoom buttons fade out at the end of their range
     if (scene) {
