@@ -19,7 +19,7 @@ Local runs need no Redis: all state lives in the RAM of the `npm start` process.
 
 The game has **two fixed servers**, **BR-1** and **BR-2**, with at most 20 players each. The join screen shows "x online" per server, coloured green (under 50% full), orange (from 50%) and red (from 80%), and preselects the busiest server that still has room. To play with colleagues, pick the same server; the "Copy server link" button produces `/?room=br-1` or `/?room=br-2`. There are no private rooms: an unknown room name in an old link falls back to the first server. Rename or add servers in the `ROOMS` list in `lib/world.js` (`id` lowercase ASCII, `name` is the display name).
 
-Names are required, and a name that is already used by someone online on the same server (exact match, case-sensitive) is refused.
+The join screen also asks for a company role (boss, accountant, HR, IT, dev, sale, marketing, designer, intern, security, cleaner or plain employee; shown under the name, with a hat or headphones for some, and role-specific shout-outs when smashing) and the character's look (male or female skin). The role list lives in `public/roles.js` and must match `ROLE_IDS` in `lib/world.js` (a test checks it). Names are required, and a name that is already used by someone online on the same server (exact match, case-sensitive) is refused.
 
 ## Controls
 
@@ -28,20 +28,22 @@ Names are required, and a name that is already used by someone online on the sam
 | Move | WASD / arrow keys, or tap the floor |
 | Smash | Space (hold to keep smashing), the SMASH! button, or tap an object (touch screens) |
 | Emoji | Keys 1 to 8 or the emoji buttons |
-| Zoom | Mouse wheel |
+| Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
+| Mini map | M to hide or show it (click it too) |
 
-**Mana.** Every smash costs 8 mana out of 100 (the blue bar under your name). Mana comes back at 5/s while you keep swinging and 15/s once you have stopped for 1.2 seconds, so you can burst about 12 hits, then you have to rest for roughly 7 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
+**Mana.** Every smash costs 8 mana out of 100 (the blue bar under your name). Mana comes back at 2.5/s at first and 9/s once you have gone 2.5 seconds without smashing (so the walk between two far-apart objects only gives a little back), so you can burst about 12 hits, then you need roughly 12 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
 
 On touch screens (and with a pen), tapping the floor walks there and tapping an object walks to it and smashes it once per tap (it stops if a desk or wall is in the way); hold the SMASH! button to keep smashing. With a mouse the canvas ignores clicks: use the keyboard.
 
 ## The office
 
-The floor is 3840×2160, and the camera follows the player. There is a desk area (32 desks), a pantry with printers, a water cooler and a coffee machine, a server room with glass walls and a door on the west side, and a meeting lobby with a table and sofas. About 140 objects can be smashed. Desks, walls, printers, server racks, the water cooler and the coffee machine are obstacles: **both client and server** block them, so nobody can walk through by editing the client (`slideMove` in `lib/world.js`).
+The floor is 4800×3000 and the camera follows the player (a mini map in the corner shows the whole office: you in yellow, other players in white, smashed things in red). The north half is the open office (32 desks), a pantry with printers, a water cooler and a coffee machine, a server room with glass walls and a door on the west side, and the lobby with a conference table and sofa. The east wing has the toilets (three stalls and two sinks each, with opaque walls) and a hall with rows of chairs facing a screen. The south wing has two glass meeting rooms (table, chairs, a tv), the director's room (big desk, safe worth 200 million, tv, sofa) and a lounge with sofas, tvs and a coffee machine. About 230 objects can be smashed, desks, tvs, toilets, sinks and the safe included. Solid things (desks, walls, printers, server racks, toilets, sinks, the safe...) are obstacles: **both client and server** block them, so nobody can walk through by editing the client (`slideMove` in `lib/world.js`). A smashed solid object leaves its wreck behind, which keeps blocking (collisions never change while the game runs).
 
 The 3D art comes from two sources:
 
 - **[Kenney](https://kenney.nl) Furniture Kit 2.0** (CC0, free to use, licence in `public/assets/kenney/License.txt`): desks, office chairs, monitors, laptops, keyboards, mice, coffee machine, plants, tables, sofas, rugs. Only the `.glb` files in use are copied (about 140 KB). Each is merged into one vertex-coloured mesh, set on the floor and scaled to the wanted size (`KENNEY_WIDTH` in `scene3d.js`). If a file fails to load, the game falls back to the hand-built version of that object.
-- **Built in code** (boxes, cylinders, spheres): characters, printers, the water cooler, server racks (not in Kenney's kit), glass walls, the debris when something breaks, and the effects.
+- **Kenney Animated Characters Survivors** (CC0, `public/assets/characters/`): the player model with idle and run animations and two skins, chosen on the join screen (Nam = male, Nữ = female; the choice is remembered and shared with everyone in the server). The original FBX files were converted once to a single `character.glb` (rotation tracks only, about 0.5 MB). If it fails to load, players fall back to the blocky code-built body. The hammer is attached to the model's right-hand bone and the swing rotates the upper arm on top of the animation.
+- **Built in code** (boxes, cylinders, spheres): the fallback body, printers, the water cooler, server racks (not in Kenney's kit), glass walls, the debris when something breaks, and the effects.
 
 Three.js is vendored in `public/vendor/` (MIT, licence included), not loaded from a CDN. To upgrade: `npm install three@<version> --save-dev`, then copy `three.module.min.js` (from `build`) plus `BufferGeometryUtils.js` and `GLTFLoader.js` (from `examples/jsm`) into `public/vendor/`. The last two import each other, so change the import line in `GLTFLoader.js` to `./BufferGeometryUtils.js`.
 

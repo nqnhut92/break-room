@@ -1,4 +1,5 @@
 import { createScene3D } from './scene3d.js';
+import { ROLES, ROLE_BY_ID } from './roles.js';
 
 (() => {
   'use strict';
@@ -34,6 +35,11 @@ import { createScene3D } from './scene3d.js';
     coffee: ['#3a2f2a', '#ffffff', '#c0392b'],
     server: ['#0f1218', '#37e07a', '#2b3240'],
     plant: ['#8a5a3a', '#3e9b55', '#2f7d45'],
+    desk: ['#9c7e5a', '#7d6347', '#b08f66'],
+    tv: ['#11151d', '#4aa8ff', '#2b3240'],
+    toilet: ['#f2f5f8', '#cfd6e0', '#9aa3b2'],
+    sink: ['#eef2f6', '#cfd6e0', '#aab4c2'],
+    safe: ['#4b5262', '#2b3240', '#c9d1de'],
   };
   const MOVE_KEYS = {
     arrowleft: 'l', a: 'l',
@@ -59,6 +65,8 @@ import { createScene3D } from './scene3d.js';
     me: null,
     room: 'lobby',
     name: '',
+    gender: 'm',
+    role: 'nv',
     world: { w: 1280, h: 720 },
     types: {},
     desks: [],
@@ -205,7 +213,7 @@ import { createScene3D } from './scene3d.js';
   // ---------------------------------------------------------------- state ----
   function addPlayer(p) {
     S.players.set(p.id, {
-      id: p.id, name: p.name, hue: p.hue,
+      id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv',
       x: p.x, y: p.y, tx: p.x, ty: p.y, d: p.d || 1,
       swing: 0, emote: null, emoteT: 0, moving: false, heading: 0,
     });
@@ -255,7 +263,7 @@ import { createScene3D } from './scene3d.js';
     if (handover) S.pendingWs = ws;
     else S.ws = ws;
     ws.onopen = () => {
-      ws.send(JSON.stringify({ t: 'join', name: S.name, room: S.room, token: getToken() }));
+      ws.send(JSON.stringify({ t: 'join', name: S.name, gender: S.gender, role: S.role, room: S.room, token: getToken() }));
     };
     ws.onmessage = (ev) => {
       let m;
@@ -339,6 +347,7 @@ import { createScene3D } from './scene3d.js';
         S.target = null;
         S.attackId = null;
         if (scene) scene.build(m.world, m.props, m.zones);
+        mmBuild(m.world, m.props, m.zones);
         S.joined = true;
         $('overlay').classList.add('gone');
         $('hud').hidden = false;
@@ -387,7 +396,9 @@ import { createScene3D } from './scene3d.js';
         o.shake = 1;
         o.flash = 1;
         sparks(o, 8);
-        floatText(o, 22, pick(HIT_WORDS), '#ffffff', 16);
+        const hitter = S.players.get(m.by);
+        const roleWords = hitter && ROLE_BY_ID[hitter.role] ? ROLE_BY_ID[hitter.role].hit : null;
+        floatText(o, 22, roleWords && Math.random() < 0.4 ? pick(roleWords) : pick(HIT_WORDS), '#ffffff', 16);
         const v = volumeAt(o.x, o.y);
         sfxHit(v);
         S.shake = Math.min(1, S.shake + 0.25 * v);
@@ -416,7 +427,9 @@ import { createScene3D } from './scene3d.js';
         sfxBreak(v);
         S.shake = Math.min(1.4, S.shake + 0.8 * v);
         const label = S.types[m.type] ? S.types[m.type].label : 'đồ vật';
-        toast(m.name + ' đập nát ' + label + ' (-' + fmtShort(m.cost) + ')');
+        const breaker = S.players.get(m.by);
+        const rl = breaker && ROLE_BY_ID[breaker.role];
+        toast((rl ? rl.emoji + ' ' : '') + m.name + ' đập nát ' + label + ' (-' + fmtShort(m.cost) + ')' + (rl && m.cost >= 8 ? ' · ' + rl.joke : ''));
         break;
       }
       case 'respawn': {
@@ -487,6 +500,81 @@ import { createScene3D } from './scene3d.js';
       list.appendChild(li);
     }
   }
+
+  // -------------------------------------------------------------- minimap ----
+  const MM_ZONE = { tile: '#6d7f94', metal: '#505a6b', wood: '#6e5538' };
+  const mm = { cv: $('minimap'), base: null, k: 1, dpr: 1, on: true, w: 0, h: 0 };
+  try {
+    mm.on = localStorage.getItem('br-minimap') !== '0';
+  } catch (e) { /* ignore */ }
+  mm.cv.classList.toggle('off', !mm.on);
+  function mmToggle() {
+    mm.on = !mm.on;
+    mm.cv.classList.toggle('off', !mm.on);
+    try {
+      localStorage.setItem('br-minimap', mm.on ? '1' : '0');
+    } catch (e) { /* ignore */ }
+  }
+  mm.cv.addEventListener('click', mmToggle);
+  // the static part: floor zones and walls/furniture, drawn once per welcome into an offscreen canvas
+  function mmBuild(world, props, zones) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cw = mm.cv.clientWidth || 200;
+    const ch = Math.round((cw * world.h) / world.w);
+    mm.cv.style.height = ch + 'px';
+    mm.cv.width = Math.round(cw * dpr);
+    mm.cv.height = Math.round(ch * dpr);
+    mm.k = mm.cv.width / world.w;
+    mm.dpr = dpr;
+    const base = document.createElement('canvas');
+    base.width = mm.cv.width;
+    base.height = mm.cv.height;
+    const c = base.getContext('2d');
+    c.fillStyle = '#252d3f';
+    c.fillRect(0, 0, base.width, base.height);
+    for (const z of zones) {
+      c.fillStyle = MM_ZONE[z.k] || '#252d3f';
+      c.fillRect(z.x0 * mm.k, z.y0 * mm.k, (z.x1 - z.x0) * mm.k, (z.y1 - z.y0) * mm.k);
+    }
+    for (const p of props) {
+      if (p.k === 'rug') continue;
+      c.fillStyle = p.k === 'wall' ? (p.opaque ? '#aab4c4' : '#9fd4ff') : p.k === 'sofa' ? '#3d5a80' : '#d9d2c5';
+      const w = Math.max(1.5, p.w * mm.k);
+      const h = Math.max(1.5, p.h * mm.k);
+      c.fillRect(p.x * mm.k - w / 2, p.y * mm.k - h / 2, w, h);
+    }
+    mm.base = base;
+  }
+  function mmDraw() {
+    if (!mm.on || !mm.base || !S.joined) return;
+    const c = mm.cv.getContext('2d');
+    c.drawImage(mm.base, 0, 0);
+    for (const o of S.objects) {
+      const t = S.types[o.type];
+      const solid = t && t.w >= 44 && t.h >= 36 && o.type !== 'chair' && o.type !== 'plant';
+      c.fillStyle = o.broken ? '#ff5d4a' : solid ? '#8b6f4e' : '#7a869a';
+      const sz = Math.max(1.6, (solid ? t.w * 0.7 : 24) * mm.k);
+      c.fillRect(o.x * mm.k - sz / 2, o.y * mm.k - sz / 2, sz, sz);
+    }
+    for (const p of S.players.values()) {
+      if (p.id === S.me) continue;
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(p.x * mm.k, p.y * mm.k, 2.6 * mm.dpr, 0, Math.PI * 2);
+      c.fill();
+    }
+    const me = S.players.get(S.me);
+    if (me) {
+      c.fillStyle = '#ffd34d';
+      c.strokeStyle = '#000000';
+      c.lineWidth = 1.2 * mm.dpr;
+      c.beginPath();
+      c.arc(me.x * mm.k, me.y * mm.k, 3.8 * mm.dpr, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
+  }
+  setInterval(mmDraw, 250);
 
   // ---------------------------------------------------------------- input ----
   function nearest() {
@@ -582,6 +670,8 @@ import { createScene3D } from './scene3d.js';
     } else if (k === ' ') {
       e.preventDefault();
       S.keys.add('space');
+    } else if (k === 'm' && !e.repeat) {
+      mmToggle();
     } else if (k >= '1' && k <= '8' && !e.repeat) {
       send({ t: 'emote', e: Number(k) - 1 });
     }
@@ -598,7 +688,41 @@ import { createScene3D } from './scene3d.js';
     S.smashHeld = false;
   });
 
+  // Two fingers on the canvas pinch to zoom (out as well as in); the zoom buttons do the same in steps.
+  const fingers = new Map();
+  let pinchLast = 0;
+  const fingerDist = () => {
+    const [a, b] = [...fingers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  canvas.addEventListener('pointermove', (e) => {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size === 2 && scene) {
+      const d = fingerDist();
+      if (pinchLast > 0 && d > 0) scene.zoom(pinchLast / d - 1); // fingers apart: closer; together: further
+      pinchLast = d;
+    }
+  });
+  for (const ev of ['pointerup', 'pointercancel']) {
+    canvas.addEventListener(ev, (e) => {
+      fingers.delete(e.pointerId);
+      pinchLast = 0;
+    });
+  }
+  $('zoomIn').addEventListener('click', () => scene && scene.zoom(-0.2));
+  $('zoomOut').addEventListener('click', () => scene && scene.zoom(0.25));
+
   canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') {
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (fingers.size >= 2) {
+        S.target = null; // a second finger means pinching, not walking
+        S.attackId = null;
+        pinchLast = fingerDist();
+        return;
+      }
+    }
     if (!S.joined || !scene) return;
     // Tap-to-walk and tap-to-smash are for touch screens (and pens). With a mouse, play with the keyboard.
     if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
@@ -690,6 +814,40 @@ import { createScene3D } from './scene3d.js';
       savedName = localStorage.getItem('br-name') || '';
     } catch (e) { /* ignore */ }
     $('nameInput').value = savedName;
+    // company role: a native select (one choice from a plain list), remembered like the name
+    const roleSel = $('roleSelect');
+    for (const r of ROLES) {
+      const o = document.createElement('option');
+      o.value = r.id;
+      o.textContent = r.emoji + '  ' + r.label;
+      roleSel.appendChild(o);
+    }
+    try {
+      const sr = localStorage.getItem('br-role');
+      if (ROLE_BY_ID[sr]) roleSel.value = sr;
+    } catch (e) { /* ignore */ }
+    S.role = roleSel.value;
+    roleSel.addEventListener('change', () => {
+      S.role = roleSel.value;
+      try {
+        localStorage.setItem('br-role', S.role);
+      } catch (e) { /* ignore */ }
+    });
+    // character gender: remembered like the name
+    let savedGender = 'm';
+    try {
+      savedGender = localStorage.getItem('br-gender') === 'f' ? 'f' : 'm';
+    } catch (e) { /* ignore */ }
+    S.gender = savedGender;
+    for (const r of document.querySelectorAll('input[name="gender"]')) {
+      r.checked = r.value === savedGender;
+      r.addEventListener('change', () => {
+        S.gender = r.value;
+        try {
+          localStorage.setItem('br-gender', r.value);
+        } catch (e) { /* ignore */ }
+      });
+    }
     $('nameInput').addEventListener('input', syncJoin);
     syncJoin();
 

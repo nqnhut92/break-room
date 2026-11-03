@@ -125,6 +125,41 @@ async function contract(label, makeStore) {
     assert.ok(taker.id && taker.id !== a.id);
   });
 
+  await step(label + ': gender is stored with the player and read back', async () => {
+    const r3 = room + '-gender';
+    const big = { ...base, max: 10 };
+    const a = await store.join(r3, { ...big, token: T(51), connId: 'g1', name: 'Hoa', gender: 'f' });
+    const b = await store.join(r3, { ...big, token: T(52), connId: 'g2', name: 'Nam', gender: 'm' });
+    const snap = await store.read(r3, { now: NOW, ttlMs: 5000 });
+    const byId = Object.fromEntries(snap.players.map((p) => [p.id, p.gender]));
+    assert.strictEqual(byId[a.id], 'f');
+    assert.strictEqual(byId[b.id], 'm');
+    // a reconnect that does not say anything keeps the stored gender
+    await store.join(r3, { ...big, token: T(51), connId: 'g3', name: 'Hoa' });
+    const again = await store.read(r3, { now: NOW, ttlMs: 5000 });
+    assert.strictEqual(again.players.find((p) => p.id === a.id).gender, 'f');
+  });
+
+  await step(label + ': compaction forgets offline players who never scored, keeps scorers and online players', async () => {
+    const r4 = room + '-compact';
+    const big = { ...base, max: 10 };
+    const idle = await store.join(r4, { ...big, token: T(61), connId: 'k1', name: 'Idle' });
+    const scorer = await store.join(r4, { ...big, token: T(62), connId: 'k2', name: 'Scorer' });
+    const online = await store.join(r4, { ...big, token: T(63), connId: 'k3', name: 'Online' });
+    await store.hit(r4, { objId: 1, defaultHp: 1, cost: 5, playerId: scorer.id, now: NOW });
+    await store.leave(r4, idle.id, 'k1', null, NOW);
+    await store.leave(r4, scorer.id, 'k2', null, NOW);
+    const later = NOW + 130000;
+    // the online player keeps being refreshed by its instance, like in the real game
+    await store.housekeep(r4, { now: later, ttlMs: 5000, respawnMs: 25000, sweep: false, entries: [{ id: online.id, connId: 'k3', pos: null }] });
+    const idleAgain = await store.join(r4, { ...big, token: T(61), connId: 'k4', name: 'Idle', now: later });
+    const scorerAgain = await store.join(r4, { ...big, token: T(62), connId: 'k5', name: 'Scorer', now: later });
+    const onlineAgain = await store.join(r4, { ...big, token: T(63), connId: 'k6', name: 'Online', now: later });
+    assert.notStrictEqual(idleAgain.id, idle.id, 'the idle player was forgotten and gets a new id');
+    assert.strictEqual(scorerAgain.id, scorer.id, 'a player with a score is kept');
+    assert.strictEqual(onlineAgain.id, online.id, 'a player who is online is kept');
+  });
+
   await step(label + ': room capacity is enforced, existing players can still rejoin', async () => {
     await store.join(room, { ...base, token: T(3), connId: 'c5', name: 'Chi' });
     const full = await store.join(room, { ...base, token: T(4), connId: 'c6', name: 'Dung' });

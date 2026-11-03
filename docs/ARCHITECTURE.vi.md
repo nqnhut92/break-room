@@ -27,7 +27,7 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 | `o` | hash | id đồ vật → `hp:brokenAt` (không có = còn nguyên) |
 | `sc` | hash | id người chơi → điểm |
 | `bk` | hash | id người chơi → số món đã đập vỡ |
-| `nm` | hash | id người chơi → tên hiển thị |
+| `nm` | hash | id người chơi → tên hiển thị; field `g<id>` → giới tính (`m` hoặc `f`) |
 | `tok` | hash | token client → id người chơi (để reconnect giữ id và điểm) |
 | `meta` | hash | `nextid`, `total` thiệt hại, `lastReset` |
 | `on` | zset | id người chơi → nhịp tim cuối (ms); đây chính là "ai đang online" |
@@ -48,11 +48,11 @@ Redis không bị ghi vô hạn. Mọi thứ đều có hạn dùng hoặc kích
 | --- | --- |
 | Cả phòng (9 key) | `touch` đặt `EXPIRE` bằng `ROOM_TTL_S` (mặc định 1800 giây) ở mỗi lần vào, rời và dọn dẹp. Phòng 30 phút không ai chạm vào thì biến mất hoàn toàn, gồm cả điểm, tên và token |
 | Online (`on`, `own`) | Nhịp tim được làm mới khi dọn dẹp, khoảng mỗi giây (mỗi 2 giây khi chưa có gì vỡ). Người không có nhịp tim quá `PRESENCE_TTL_MS` (20 giây) bị loại, ví dụ khi instance chết |
-| Đồ vật vỡ (`o`) | Dọn dẹp xoá mục sau khi vỡ đủ `RESPAWN_MS` (25 giây); "Gọi IT" xoá cả hash. Món chưa bị đụng không được lưu, nên `o` tối đa chỉ có khoảng 140 món của văn phòng |
+| Đồ vật vỡ (`o`) | Dọn dẹp xoá mục sau khi vỡ đủ `RESPAWN_MS` (25 giây); "Gọi IT" xoá cả hash. Món chưa bị đụng không được lưu, nên `o` tối đa chỉ có khoảng 230 món (chỉ lưu món đã bị đập hoặc vỡ, mỗi món khoảng 20 byte) của văn phòng |
 | Lease theo IP | Mỗi lease hết hạn sau 60 giây và được làm mới khi kết nối còn sống |
 | `br:keepalive` | Hạn 3 ngày, ghi lại ở mỗi lần health check sâu |
 
-Giới hạn đã biết: khi một server còn hoạt động, `tok`, `nm`, `sc`, `bk` và `pos` giữ một mục nhỏ (khoảng 100 đến 200 byte) cho mỗi token khác nhau xuất hiện kể từ lần phòng hết hạn gần nhất. Chúng không bị dọn riêng lẻ. Trên thực tế chúng bị chặn bởi giới hạn 20 người, giới hạn kết nối theo IP và hạn 30 phút của phòng, nhưng một server không bao giờ trống 30 phút liền thì các mục này vẫn tích dần.
+Dọn nén (compaction): khi dọn dẹp, mỗi phòng còn chạy một lượt dọn nén nhỏ tối đa mỗi 2 phút (`lastCompact` trong `meta`). Nó quên token, tên, giới tính, vai trò, vị trí cuối và chỗ của mọi người chơi đã offline mà chưa từng ghi điểm. Người có điểm ở lại đến khi phòng hết hạn để bảng xếp hạng vẫn giữ họ. Nhờ vậy số mục theo token bị chặn bởi số người thật sự đã chơi chứ không phải mọi người từng ghé qua.
 
 Kích thước ước lượng (ước tính, chưa đo): state của một phòng vài chục KB. Redis Cloud còn tính cả phần overhead nền của nó, nên một database gần như trống vẫn hiện khoảng 2 MB.
 

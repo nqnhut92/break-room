@@ -19,7 +19,7 @@ Chạy local không cần Redis: toàn bộ state nằm trong RAM của tiến t
 
 Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối đa 20 người. Màn hình vào hiển thị "x online" của từng server, màu xanh lá (dưới 50% sức chứa), cam (từ 50%), đỏ (từ 80%), và tự chọn sẵn server đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một server; nút "Copy link server" tạo link `/?room=br-1` hoặc `/?room=br-2` để chọn sẵn. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
 
-Tên là bắt buộc, và tên đã có người đang online dùng ở cùng server (trùng y hệt, phân biệt hoa thường) sẽ bị từ chối.
+Màn vào còn hỏi vai trò trong công ty (sếp, kế toán, nhân sự, IT, dev, sale, marketing, designer, thực tập sinh, bảo vệ, tạp vụ hoặc nhân viên quèn; hiện dưới tên, một số vai có mũ hoặc tai nghe, và có câu hô riêng khi đập) và diện mạo nhân vật (nam hoặc nữ). Danh sách vai trò nằm ở `public/roles.js` và phải khớp `ROLE_IDS` trong `lib/world.js` (có test kiểm tra). Tên là bắt buộc, và tên đã có người đang online dùng ở cùng server (trùng y hệt, phân biệt hoa thường) sẽ bị từ chối.
 
 ## Điều khiển
 
@@ -28,20 +28,22 @@ Tên là bắt buộc, và tên đã có người đang online dùng ở cùng s
 | Di chuyển | WASD / phím mũi tên, hoặc chạm vào nền |
 | Đập | Space (giữ để đập liên tục), nút ĐẬP!, hoặc chạm vào đồ vật (màn hình cảm ứng) |
 | Thả emoji | Phím 1 đến 8 hoặc bấm các nút emoji |
-| Zoom camera | Lăn chuột |
+| Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |
+| Bản đồ nhỏ | Phím M để ẩn hoặc hiện (bấm vào nó cũng được) |
 
-**Mana.** Mỗi cú đập tốn 8 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 5/giây khi đang đập liên tục và 15/giây khi đã ngừng tay 1,2 giây, nên bạn đập dồn được khoảng 12 cú rồi phải nghỉ khoảng 7 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
+**Mana.** Mỗi cú đập tốn 8 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 2,5/giây lúc đầu và 9/giây khi đã quá 2,5 giây không đập (nên đi bộ giữa hai món xa nhau chỉ hồi được chút ít), nên bạn đập dồn được khoảng 12 cú rồi cần khoảng 12 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
 
 Trên màn hình cảm ứng (và bút), chạm vào nền thì đi tới đó, chạm vào một món thì đi tới và đập đúng một cú cho mỗi lần chạm (nếu bị bàn hay tường chặn thì dừng lại); giữ nút ĐẬP! để đập liên tục. Với chuột thì canvas bỏ qua cú click: chơi bằng bàn phím.
 
 ## Văn phòng
 
-Phòng rộng 3840×2160 (gấp 3 lần mỗi chiều so với bản đầu), camera bám theo người chơi. Có khu bàn làm việc (32 bàn), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh họp có bàn họp, sofa. Khoảng 140 món đập được. Bàn, tường, máy in, tủ server, bình nước, máy pha cà phê là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`).
+Phòng rộng 4800×3000, camera bám theo người chơi (bản đồ nhỏ ở góc cho thấy cả văn phòng: bạn màu vàng, người khác màu trắng, đồ đã vỡ màu đỏ). Nửa phía bắc là khu bàn làm việc (32 bàn), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh với bàn họp, sofa. Cánh đông có toilet (mỗi bên ba ngăn và hai bồn rửa, tường đặc) và một hội trường xếp ghế hướng về màn hình. Cánh nam có hai phòng họp kính (bàn, ghế, tivi), phòng giám đốc (bàn lớn, két sắt trị giá 200 triệu, tivi, sofa) và phòng nghỉ có sofa, tivi và máy pha cà phê. Khoảng 230 món đập được, kể cả bàn, tivi, bồn cầu, bồn rửa và két sắt. Đồ cứng (bàn, tường, máy in, tủ server, bồn cầu, bồn rửa, két sắt...) là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`). Đồ cứng bị đập vỡ để lại đống đổ nát vẫn chặn đường (va chạm không đổi trong lúc chơi).
 
 Hình 3D gồm hai nguồn:
 
 - **Bộ Furniture Kit 2.0 của [Kenney](https://kenney.nl)** (CC0, dùng tự do, giấy phép nằm ở `public/assets/kenney/License.txt`): bàn, ghế xoay, màn hình, laptop, bàn phím, chuột, máy pha cà phê, cây, bàn, sofa, thảm. Chỉ chép những file `.glb` đang dùng (khoảng 140 KB). Mỗi file được gộp thành một mesh tô màu theo đỉnh, đặt chân xuống sàn và co giãn về kích thước mong muốn (`KENNEY_WIDTH` trong `scene3d.js`). Nếu một file không tải được thì game tự dùng bản dựng bằng code của món đó.
-- **Dựng bằng code** (khối hộp, trụ, cầu): nhân vật, máy in, bình nước, tủ server (Kenney không có), tường kính, đống đổ nát khi vỡ và các hiệu ứng.
+- **Kenney Animated Characters Survivors** (CC0, `public/assets/characters/`): model nhân vật có animation đứng yên và chạy, hai skin chọn ở màn vào (Nam hoặc Nữ, được nhớ lại và mọi người trong server cùng thấy). Các file FBX gốc đã được chuyển một lần thành một file `character.glb` (chỉ giữ track xoay, khoảng 0,5 MB). Nếu tải lỗi thì người chơi dùng lại thân hình khối dựng bằng code. Búa gắn vào xương bàn tay phải của model và cú vung xoay cánh tay trên đè lên animation.
+- **Dựng bằng code** (khối hộp, trụ, cầu): thân hình dự phòng, máy in, bình nước, tủ server (Kenney không có), tường kính, đống đổ nát khi vỡ và các hiệu ứng.
 
 Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` và `GLTFLoader.js` (thư mục `examples/jsm`) vào `public/vendor/`. Hai file sau import lẫn nhau, nên sửa dòng import trong `GLTFLoader.js` thành `./BufferGeometryUtils.js`.
 

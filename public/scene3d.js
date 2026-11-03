@@ -7,6 +7,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
+import * as SkeletonUtils from './vendor/SkeletonUtils.js';
+import { ROLE_BY_ID } from './roles.js';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -77,6 +79,7 @@ const lift = (type) => (type === 'monitor' || type === 'laptop' ? DESK_TOP : 0);
 const PICK = { // invisible pick box, bigger than the model so small things are easy to click: [w, h, d]
   laptop: [56, 40, 40], monitor: [56, 66, 36], chair: [44, 66, 44], printer: [72, 50, 56],
   cooler: [48, 118, 48], coffee: [60, 82, 50], server: [68, 170, 58], plant: [44, 96, 44],
+  desk: [160, 76, 110], tv: [100, 118, 36], toilet: [50, 70, 64], sink: [54, 64, 44], safe: [64, 72, 60],
 };
 const RUBBLE = {
   laptop: ['#9aa3b2', '#1c2330', '#4aa8ff'],
@@ -87,8 +90,13 @@ const RUBBLE = {
   coffee: ['#3a2f2a', '#ffffff', '#c0392b'],
   server: ['#0f1218', '#37e07a', '#2b3240'],
   plant: ['#8a5a3a', '#3e9b55', '#2f7d45'],
+  desk: ['#9c7e5a', '#7d6347', '#b08f66'],
+  tv: ['#11151d', '#4aa8ff', '#2b3240'],
+  toilet: ['#f2f5f8', '#cfd6e0', '#9aa3b2'],
+  sink: ['#eef2f6', '#cfd6e0', '#aab4c2'],
+  safe: ['#4b5262', '#2b3240', '#c9d1de'],
 };
-const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee']);
+const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv']);
 
 // -------------------------------------------------------- Kenney models ----
 // Furniture Kit 2.0 by Kenney (CC0), flat-coloured low-poly .glb files in
@@ -153,6 +161,31 @@ async function loadKenney() {
   );
   if (kenney.desk) DESK_TOP = kenney.desk.h;
 }
+// Animated characters (Kenney "Animated Characters Survivors", CC0): one rigged mesh with idle/run/jump clips,
+// plus a skin texture per gender. If anything fails to load the players keep the blocky code-built body.
+const CHAR_SCALE = 0.32; // the model is about 376 units tall; players are about 120
+const SKIN_FILES = { m: 'survivorMaleB', f: 'survivorFemaleA' };
+let charAsset = null;
+async function loadCharacters() {
+  try {
+    const gltf = await new GLTFLoader().loadAsync('./assets/characters/character.glb');
+    const tl = new THREE.TextureLoader();
+    const skins = {};
+    for (const [g, file] of Object.entries(SKIN_FILES)) {
+      const t = await tl.loadAsync('./assets/characters/' + file + '.png');
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = 4;
+      skins[g] = t;
+    }
+    const clips = {};
+    for (const c of gltf.animations) clips[c.name] = c;
+    if (!clips.idle || !clips.run) throw new Error('missing animation clips');
+    charAsset = { scene: gltf.scene, clips, skins };
+  } catch (e) {
+    charAsset = null;
+  }
+}
+
 const kgeo = (name) => (kenney[name] ? kenney[name].geo.clone() : null);
 
 function buildModel(type, types) {
@@ -160,7 +193,10 @@ function buildModel(type, types) {
   const glow = [];
   let pick = null;
   const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant'].includes(type);
-  if (useKenney) {
+  if (type === 'desk') {
+    for (const g of kenneyProp({ k: 'desk' }) || deskGeometry()) body.push(g);
+    pick = [170, 80, 120];
+  } else if (useKenney) {
     const k = kenney[type];
     body.push(k.geo.clone());
     pick = [Math.max(40, k.w + 10), Math.max(40, k.h + 10), Math.max(40, k.d + 10)];
@@ -236,6 +272,34 @@ function buildModel(type, types) {
       body.push(sph(11, '#2f7d45', -10, 62, 4));
       body.push(sph(11, '#4db26a', 9, 60, -5));
       body.push(sph(9, '#3e9b55', 2, 74, 2));
+      break;
+    case 'tv':
+      body.push(box(44, 3, 26, '#2b3240', 0, 1.5, 0));
+      body.push(box(5, 40, 5, '#2b3240', 0, 22, -2));
+      body.push(box(92, 56, 5, '#12151c', 0, 74, 0));
+      glow.push(box(84, 48, 0.8, '#4aa8ff', 0, 74, 2.7));
+      glow.push(box(60, 4, 0.9, '#bfe3ff', 0, 90, 2.9));
+      break;
+    case 'toilet':
+      body.push(box(30, 26, 38, '#f2f5f8', 0, 13, 6));
+      body.push(cyl(17, 15, 6, '#e6ebf0', 0, 29, 7, 12));
+      body.push(box(32, 36, 14, '#e8edf3', 0, 36, -16));
+      body.push(box(34, 4, 16, '#cfd6e0', 0, 56, -16));
+      body.push(box(8, 3, 4, '#aab4c2', 0, 58, -16));
+      break;
+    case 'sink':
+      body.push(cyl(7, 9, 46, '#eef2f6', 0, 23, 0, 8));
+      body.push(box(46, 10, 36, '#f6f8fb', 0, 51, 0));
+      body.push(box(34, 2, 24, '#cfe3f5', 0, 56.5, 0));
+      body.push(box(4, 12, 4, '#aab4c2', 0, 62, -12));
+      body.push(box(4, 3, 10, '#aab4c2', 0, 68, -8));
+      break;
+    case 'safe':
+      body.push(box(54, 62, 50, '#4b5262', 0, 31, 0));
+      body.push(box(46, 54, 2, '#3a404d', 0, 31, 25.5));
+      body.push(cyl(8, 8, 3, '#c9d1de', 0, 34, 27, 12));
+      body.push(box(14, 3, 3, '#f2c744', 0, 34, 29));
+      glow.push(box(6, 3, 1, '#37e07a', -16, 52, 26.5));
       break;
     default:
       body.push(box(30, 30, 30, '#888888', 0, 15, 0));
@@ -493,7 +557,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         const b = bucket(p.x, p.y);
         b.body.push(at(box(p.w + 2, 18, p.h + 2, '#3a4458', 0, 9, 0), p.x, 0, p.y));
         b.body.push(at(box(p.w + 2, 10, p.h + 2, '#3a4458', 0, hgt - 5, 0), p.x, 0, p.y));
-        b.glass.push(at(box(p.w, hgt - 28, p.h, '#9fd4ff', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
+        if (p.opaque) b.body.push(at(box(p.w, hgt - 28, p.h, '#5a6478', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
+        else b.glass.push(at(box(p.w, hgt - 28, p.h, '#9fd4ff', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
         // posts
         const long = Math.max(p.w, p.h);
         const horiz = p.w >= p.h;
@@ -600,8 +665,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     staticGroup.add(clockMesh);
   }
 
-  const ready = loadKenney()
-    .catch(() => {})
+  const ready = Promise.all([loadKenney().catch(() => {}), loadCharacters()])
     .then(() => {
       loaded = true;
       if (pendingBuild) {
@@ -679,6 +743,137 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const SKIN = ['#f1c9a5', '#e0ac82', '#c68a5f', '#8d5a3b', '#f6d6b8'];
   const HAIR = ['#1b1b22', '#3a2a1c', '#6b4a2a', '#c9a227', '#7a2e2e'];
 
+  // Animated body: a skinned clone of the character with the player's skin, idle/run blended by speed.
+  // The blocky body's parts keep being updated (cheap) but are not in the scene when this exists.
+  function buildCharacterRig(g, p, hammer) {
+    const wrap = new THREE.Group();
+    wrap.scale.setScalar(CHAR_SCALE);
+    const obj = SkeletonUtils.clone(charAsset.scene);
+    wrap.add(obj);
+    const mat = new THREE.MeshStandardMaterial({ map: charAsset.skins[p.gender] || charAsset.skins.m, roughness: 0.85, metalness: 0 });
+    obj.traverse((o) => {
+      if (o.isMesh) {
+        o.material = mat;
+        o.castShadow = true;
+        o.receiveShadow = true;
+        o.frustumCulled = false; // skinned bounds are not tracked
+      }
+    });
+    const mixer = new THREE.AnimationMixer(obj);
+    const idle = mixer.clipAction(charAsset.clips.idle);
+    const run = mixer.clipAction(charAsset.clips.run);
+    idle.play();
+    run.play();
+    idle.setEffectiveWeight(1);
+    run.setEffectiveWeight(0);
+    const hand = obj.getObjectByName('RightHand');
+    const arm = obj.getObjectByName('RightArm');
+    g.add(wrap);
+    const head = obj.getObjectByName('Head');
+    const acc = head ? buildAccessory(p.role) : null;
+    if (acc) {
+      wrap.updateMatrixWorld(true);
+      const hs = head.getWorldScale(new THREE.Vector3()).x || 1;
+      head.add(acc);
+      acc.scale.setScalar(ACCESSORY_SCALE / hs);
+      acc.position.set(ACCESSORY_POS[0] / hs, ACCESSORY_POS[1] / hs, ACCESSORY_POS[2] / hs);
+    }
+    if (hand) {
+      // The rig is in the FBX's centimetre units, so a bone's world scale is not 1: counter it so the hammer
+      // keeps its own size (and offsets are in hammer units).
+      wrap.updateMatrixWorld(true);
+      const ws = hand.getWorldScale(new THREE.Vector3()).x || 1;
+      hand.add(hammer);
+      hammer.scale.setScalar(HAMMER_IN_HAND.scale / ws);
+      hammer.position.set(HAMMER_IN_HAND.pos[0] / ws, HAMMER_IN_HAND.pos[1] / ws, HAMMER_IN_HAND.pos[2] / ws);
+      hammer.rotation.set(...HAMMER_IN_HAND.rot);
+    }
+    return { wrap, obj, mixer, idle, run, arm, hand, run01: 0 };
+  }
+
+  // Small hats and gear per company role, built in head units (about 1 unit = 1 world unit, y up from the head's
+  // centre) and parented to the head bone. Roles without an entry wear nothing.
+  const ACCESSORY_POS = [0, 31, 0];
+  const ACCESSORY_SCALE = 1.6; // the cartoon head is big
+  function accessoryParts(role) {
+    switch (role) {
+      case 'sep': {
+        const g = '#f2c744';
+        const parts = [cyl(8.4, 8.4, 3, g, 0, 0, 0, 10)];
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          parts.push(box(2.4, 5.5, 2.4, g, Math.sin(a) * 7, 4, Math.cos(a) * 7));
+        }
+        return parts;
+      }
+      case 'it':
+        return [
+          box(17, 1.6, 2, '#2b2f3a', 0, 1, 0),
+          box(1.6, 12, 2, '#2b2f3a', -8.4, -5, 0),
+          box(1.6, 12, 2, '#2b2f3a', 8.4, -5, 0),
+          sph(3.6, '#ff5d4a', -9.2, -10, 0, 0.55, 1, 1),
+          sph(3.6, '#ff5d4a', 9.2, -10, 0, 0.55, 1, 1),
+        ];
+      case 'dev':
+        return [sph(9, '#2f3d52', 0, 0, 0, 1, 0.7, 1), sph(1.6, '#2f3d52', 0, 6, 0)];
+      case 'mkt':
+        return [sph(10.2, '#c0392b', 0, 0, 0, 1, 0.4, 1), sph(1.2, '#7a2218', 0, 4.2, 0)];
+      case 'dsg':
+        return [sph(10.2, '#2d6cdf', 0, 0, 0, 1, 0.4, 1), sph(1.2, '#1c3f86', 0, 4.2, 0)];
+      case 'ts':
+        return [
+          sph(8.2, '#3aa0ff', 0, 0, 0, 1, 0.6, 1),
+          box(1, 4, 1, '#cfd6e0', 0, 5, 0),
+          box(12, 0.7, 2.4, '#ffd34d', 0, 7.2, 0),
+          box(2.4, 0.7, 12, '#ffd34d', 0, 7.3, 0),
+        ];
+      case 'bv':
+        return [cyl(8.8, 8.8, 4.2, '#1f2a44', 0, 0, 0, 10), box(12, 0.8, 7, '#141a2c', 0, -1, 7), sph(1.6, '#f2c744', 0, 0.5, 8.8)];
+      case 'kt':
+        return [cyl(8.6, 8.6, 1.4, '#2f8f5a', 0, 0, 0, 10), box(15, 0.8, 7.5, '#2f8f5a', 0, 0, 7)];
+      default:
+        return null;
+    }
+  }
+  function buildAccessory(role) {
+    const parts = accessoryParts(role);
+    if (!parts) return null;
+    const m = new THREE.Mesh(merge(parts), bodyMat);
+    m.castShadow = true;
+    const grp = new THREE.Group();
+    grp.add(m);
+    return grp;
+  }
+
+  const HAMMER_IN_HAND = { scale: 0.62, pos: [0, 5, 0], rot: [-0.2, 0, Math.PI - 0.3] };
+  const _qa = new THREE.Quaternion();
+  const _qb = new THREE.Quaternion();
+  const _ax = new THREE.Vector3();
+  function updateCharacter(rig, p, dt) {
+    const m = rig.model;
+    const target = p.moving ? 1 : 0;
+    m.run01 += (target - m.run01) * Math.min(1, dt * 10);
+    m.run.setEffectiveWeight(m.run01);
+    m.idle.setEffectiveWeight(1 - m.run01);
+    m.mixer.update(dt);
+    // swing: rotate the upper arm about the body's side-to-side axis, on top of the animation
+    if (m.arm && p.swing > 0) {
+      rig.g.updateMatrixWorld(true);
+      m.arm.parent.getWorldQuaternion(_qa);
+      _qa.invert();
+      rig.g.getWorldQuaternion(_qb);
+      _ax.set(1, 0, 0).applyQuaternion(_qb).applyQuaternion(_qa);
+      // positive raises the arm: wind up overhead, smash down and forward, then recover
+      const ph = 1 - p.swing;
+      let ang;
+      if (ph < 0.35) ang = (ph / 0.35) * 2.4;
+      else if (ph < 0.6) ang = 2.4 - ((ph - 0.35) / 0.25) * 3.2;
+      else ang = -0.8 + ((ph - 0.6) / 0.4) * 0.8;
+      _qb.setFromAxisAngle(_ax, ang);
+      m.arm.quaternion.premultiply(_qb);
+    }
+  }
+
   function makePlayer(p) {
     const g = new THREE.Group();
     const hue = p.hue;
@@ -705,8 +900,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       m.castShadow = true;
       return m;
     };
-    const root = new THREE.Group(); // bobbing part
-    g.add(root);
+    const root = new THREE.Group(); // bobbing part (blocky fallback body only)
+    if (!charAsset) g.add(root);
     const torsoM = mk(torso);
     torsoM.position.y = 58;
     root.add(torsoM);
@@ -720,7 +915,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const legR = legL.clone();
     legR.position.x = 8;
     // clone shares mesh geometry but not materials issues: fine, same material
-    g.add(legL, legR);
+    if (!charAsset) g.add(legL, legR);
 
     // The model faces +z, towards the camera, so its own right hand is on the -x side (the viewer's left).
     const armL = new THREE.Group();
@@ -733,39 +928,46 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // a wide rectangular steel head with darker bevelled end caps and gold rune inlays.
     const STEEL = '#c3ccda';
     const STEEL_DARK = '#8591a5';
-    const GOLD = '#d1b65a';
+    const PEWTER = '#6f7a8c';
+    const WIRE = '#c9d1dd';
     const LEATHER = '#4a3020';
     const hammer = new THREE.Group();
     hammer.position.set(0, -32, 4);
     hammer.add(mk(merge([
-      // handle and grip wraps
-      cyl(2.7, 2.7, 40, '#6b4a2a', 0, 12, 0, 8),
-      cyl(3.1, 3.1, 2.2, LEATHER, 0, 2, 0, 8),
-      cyl(3.1, 3.1, 2.2, LEATHER, 0, 8, 0, 8),
-      cyl(3.1, 3.1, 2.2, LEATHER, 0, 14, 0, 8),
-      cyl(3.1, 3.1, 2.2, LEATHER, 0, 20, 0, 8),
-      // pommel and lanyard loop
-      sph(3.6, STEEL_DARK, 0, -8, 0),
-      box(1.4, 9, 1.4, LEATHER, -3.4, -14, 0),
-      box(1.4, 9, 1.4, LEATHER, 3.4, -14, 0),
-      box(8.2, 1.4, 1.4, LEATHER, 0, -18.6, 0),
-      // head: long block across the top of the handle, end caps slightly bigger
+      // handle: dark red leather with silver wire wraps, a metal collar where it enters the head
+      cyl(2.9, 2.9, 40, '#6a3b2a', 0, 11, 0, 8),
+      ...[0, 5, 10, 15, 20, 25].map((y) => cyl(3.25, 3.25, 1.1, WIRE, 0, y, 0, 8)),
+      cyl(4.6, 4.6, 3.2, STEEL_DARK, 0, 30.4, 0, 10),
+      // pommel cap and the leather strap loop hanging from it
+      cyl(3.9, 3.1, 5.5, STEEL_DARK, 0, -8.2, 0, 8),
+      cyl(4.1, 4.1, 1.2, STEEL, 0, -5.4, 0, 8),
+      box(1.2, 16, 1.2, LEATHER, -5.2, -17, 0),
+      box(1.2, 16, 1.2, LEATHER, 5.2, -17, 0),
+      box(11.6, 1.2, 1.2, LEATHER, 0, -25, 0),
+      // head: a bright block with chamfered corners, seams on top, pewter knotwork panels at both ends
       box(34, 19, 17, STEEL, 0, 40, 0),
-      box(5, 21, 19, STEEL_DARK, -19, 40, 0),
-      box(5, 21, 19, STEEL_DARK, 19, 40, 0),
-      box(34, 2.4, 18.4, STEEL_DARK, 0, 30.6, 0),
-      box(34, 2.4, 18.4, STEEL_DARK, 0, 49.4, 0),
-      // gold rune inlays on both faces
-      box(22, 1.6, 0.6, GOLD, 0, 43, 8.8),
-      box(22, 1.6, 0.6, GOLD, 0, 37, 8.8),
-      box(1.6, 8, 0.6, GOLD, -7, 40, 8.8),
-      box(1.6, 8, 0.6, GOLD, 7, 40, 8.8),
-      box(22, 1.6, 0.6, GOLD, 0, 43, -8.8),
-      box(22, 1.6, 0.6, GOLD, 0, 37, -8.8),
+      box(34, 15, 18.6, STEEL, 0, 40, 0), // slightly proud middle band = the chamfer line
+      box(36.4, 12.5, 14.5, STEEL, 0, 40, 0),
+      box(0.9, 0.5, 15, STEEL_DARK, -6, 49.7, 0),
+      box(0.9, 0.5, 15, STEEL_DARK, 6, 49.7, 0),
+      box(0.9, 18, 0.5, STEEL_DARK, -6.5, 40, 8.9),
+      box(0.9, 18, 0.5, STEEL_DARK, 6.5, 40, 8.9),
+      box(8.4, 5.2, 0.7, PEWTER, -12.8, 45.6, 8.9),
+      box(8.4, 5.2, 0.7, PEWTER, 12.8, 45.6, 8.9),
+      box(8.4, 5.2, 0.7, PEWTER, -12.8, 34.4, 8.9),
+      box(8.4, 5.2, 0.7, PEWTER, 12.8, 34.4, 8.9),
+      box(8.4, 5.2, 0.7, PEWTER, -12.8, 45.6, -8.9),
+      box(8.4, 5.2, 0.7, PEWTER, 12.8, 45.6, -8.9),
+      // end faces: square knotwork medallions
+      box(0.7, 9, 9, PEWTER, -18.5, 40, 0),
+      box(0.7, 9, 9, PEWTER, 18.5, 40, 0),
+      box(0.6, 5, 5, STEEL, -18.9, 40, 0),
+      box(0.6, 5, 5, STEEL, 18.9, 40, 0),
     ])));
     hammer.rotation.set(0.4, 0, 0.55); // carried up and slightly outward so the head reads from the front
     armR.add(hammer);
     root.add(armL, armR);
+    const model = charAsset ? buildCharacterRig(g, p, hammer) : null; // moves the hammer into the model's hand
 
     const blob = new THREE.Mesh(
       new THREE.CircleGeometry(22, 20),
@@ -795,11 +997,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     bar.className = 'mana';
     const fill = document.createElement('i');
     bar.appendChild(fill);
-    label.append(emo, nm, bar);
+    const rl = document.createElement('span'); // company role under the name
+    rl.className = 'rl';
+    label.append(emo, nm, rl, bar);
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, ring, label, emo, nm, bar, fill, walk: 0, lastName: p.name, lastEmote: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, emo, nm, rl, bar, fill, walk: 0, lastRole: '', lastName: p.name, lastEmote: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -826,11 +1030,17 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.root.rotation.x = ph > 0.35 && ph < 0.6 ? 0.18 : 0;
     } else rig.root.rotation.x = 0;
     rig.armR.rotation.x = a;
+    if (rig.model) updateCharacter(rig, p, dt);
 
     rig.ring.visible = isMe;
     if (rig.lastName !== p.name) {
       rig.nm.textContent = p.name;
       rig.lastName = p.name;
+    }
+    if (rig.lastRole !== p.role) {
+      rig.lastRole = p.role;
+      const r = ROLE_BY_ID[p.role];
+      rig.rl.textContent = r ? r.emoji + ' ' + r.short : '';
     }
     const em = p.emoteT > 0 && p.emote ? p.emote : '';
     if (em !== rig.lastEmote) {
@@ -1042,7 +1252,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- health bars over damaged objects -------------------------------------
   // Green while healthy, orange once half gone, red on the last hit. Undamaged and broken objects show none.
-  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88 };
+  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88, desk: 78, tv: 112, toilet: 72, sink: 72, safe: 74 };
   const hpBars = new Map(); // object id -> { el, fill, tone, ratio }
   function hpTone(hp, max) {
     const r = hp / max;
@@ -1244,7 +1454,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   function zoom(delta) {
-    cam.dist = Math.min(1700, Math.max(560, cam.dist * (1 + delta)));
+    cam.dist = Math.min(2300, Math.max(560, cam.dist * (1 + delta)));
   }
 
   function cameraTo(x, y) {

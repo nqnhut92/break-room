@@ -24,6 +24,18 @@ html, body {
 
 [hidden] { display: none !important; }
 
+/* thin native scrollbars with a transparent track, same look everywhere */
+:root { --scroll-thumb: rgba(238, 241, 246, 0.2); --scroll-thumb-active: rgba(238, 241, 246, 0.34); }
+:where(*) { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+:where(*:hover, *:focus-within) { scrollbar-color: var(--scroll-thumb-active) transparent; }
+:where(*)::-webkit-scrollbar { width: 8px; height: 8px; }
+:where(*)::-webkit-scrollbar-track { background: transparent; }
+:where(*)::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--scroll-thumb); background-clip: padding-box; }
+:where(*:hover, *:focus-within)::-webkit-scrollbar-thumb { background-color: var(--scroll-thumb-active); }
+@media (forced-colors: active) {
+  :where(*) { scrollbar-width: auto; scrollbar-color: auto; }
+}
+
 canvas {
   position: fixed;
   inset: 0;
@@ -62,6 +74,8 @@ canvas {
   text-shadow: 0 1px 2px #000;
 }
 .plabel.me .nm { color: #ffd34d; }
+.plabel .rl { font-size: 10.5px; font-weight: 600; color: #c9d1de; text-shadow: 0 1px 2px #000; line-height: 1.1; }
+.plabel .rl:empty { display: none; }
 .plabel .emo { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
 .plabel .emo:empty { display: none; }
 /* mana bar under our own name */
@@ -130,9 +144,11 @@ canvas {
 }
 .btn:hover { border-color: rgba(255, 255, 255, 0.35); }
 .btn:active { transform: translateY(1px); }
-.btn:focus-visible, input:focus-visible {
-  outline: 2px solid var(--accent-2);
-  outline-offset: 2px;
+.btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+/* text-like fields: a 1px ring plus a soft halo instead of an offset outline */
+.card select:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 4px rgba(255, 176, 46, 0.28);
 }
 .btn.pill { padding: 6px 12px; border-radius: 999px; }
 
@@ -236,6 +252,34 @@ canvas {
 #emotes button:hover { background: rgba(255, 255, 255, 0.1); }
 
 #smashBtn { font-size: 18px; padding: 12px 22px; touch-action: none; }
+/* mini map: the whole office, you in yellow, other players in white, smashed things in red */
+#minimap {
+  position: fixed;
+  left: 12px;
+  top: 60px;
+  width: 200px;
+  height: 125px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(10, 13, 20, 0.7);
+  z-index: 4;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#minimap.off { display: none; }
+@media (max-width: 640px) { #minimap { width: 140px; height: 88px; top: 56px; left: 8px; } }
+/* zoom buttons: for touch screens, where there is no mouse wheel (pinching works too) */
+#zoomBtns {
+  position: fixed;
+  right: 12px;
+  bottom: 84px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+#zoomBtns .btn { width: 44px; height: 44px; padding: 0; font-size: 22px; line-height: 1; border-radius: 12px; touch-action: manipulation; }
+@media (pointer: coarse) { #zoomBtns { display: flex; } }
 
 #hint {
   position: fixed;
@@ -277,12 +321,12 @@ canvas {
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 16px;
   background: radial-gradient(circle at 50% 30%, rgba(40, 50, 75, 0.92), rgba(8, 10, 15, 0.97));
   z-index: 10;
+  overflow-y: auto; /* the card is taller than a phone in landscape */
 }
+#overlay .card { margin: auto; }
 #overlay.gone { display: none; }
 
 .card {
@@ -302,6 +346,21 @@ canvas {
 .card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .roompick { display: flex; flex-direction: column; gap: 6px; }
 .roompick .lbl { font-size: 13px; color: var(--muted); }
+.gender { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gender label { position: relative; display: block; }
+.gender input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.gender span {
+  display: block;
+  text-align: center;
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 15px;
+  background: #0f131c;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.gender input:checked + span { border-color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent-2); }
+.gender input:focus-visible + span { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 .roomlist { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .roomcard {
   font: inherit;
@@ -350,6 +409,29 @@ canvas {
   padding: 10px 12px;
   -webkit-user-select: text;
   user-select: text;
+}
+/* native select, one custom chevron (colour baked into the image) */
+.card select {
+  -webkit-appearance: none;
+  appearance: none;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background-color: #0f131c;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a4adbd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 2.25rem 10px 12px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  width: 100%;
+}
+.card select option { background: #151a25; color: var(--text); }
+@media (forced-colors: active) {
+  .card select { appearance: auto; background-image: none; }
 }
 .err { min-height: 1.2em; margin: 0; color: #ff8a78; font-size: 13px; }
 

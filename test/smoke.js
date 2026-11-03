@@ -295,11 +295,11 @@ async function main() {
     assert.deepStrictEqual({ max: cfg.max, cost: cfg.cost }, { max: server.MANA.max, cost: server.MANA.cost });
     const m = await take(A, (x) => x.t === 'mana');
     assert.ok(m.v >= 0 && m.v <= cfg.max && m.ago >= 0);
-    // pure regeneration rule shared with the client: 5/s while swinging, 15/s after 1.2 s of rest
+    // pure regeneration rule shared with the client: 2.5/s at first, 9/s after 2.5 s without smashing
     const probe = (ms) => server.manaAt({ mana: 0, manaAt: 0 }, ms);
-    assert.strictEqual(probe(500), 2.5);
-    assert.strictEqual(probe(1200), 6);
-    assert.strictEqual(probe(2000), 18);
+    assert.strictEqual(probe(1000), 2.5);
+    assert.strictEqual(probe(2500), 6.25);
+    assert.strictEqual(probe(3500), 15.25);
     assert.strictEqual(probe(60000), server.MANA.max);
   });
 
@@ -327,6 +327,51 @@ async function main() {
     first.ws.close();
   });
 
+  await step('gender is validated, stored and shown to everyone (default male)', async () => {
+    const join = (name, gender) => new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, gender, room: 'genders', token: h.newToken() })));
+      ws.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        if (m.t === 'welcome') resolve({ ws, m });
+      });
+    });
+    const f = await join('Lan', 'f');
+    const odd = await join('Minh', 'robot');
+    const none = await join('Tuan', undefined);
+    const seen = (w, name) => w.m.players.find((p) => p.name === name);
+    assert.strictEqual(seen(f, 'Lan').gender, 'f');
+    assert.strictEqual(seen(odd, 'Minh').gender, 'm');
+    assert.strictEqual(seen(none, 'Tuan').gender, 'm');
+    // a later arrival sees what the stored state says about the others
+    assert.strictEqual(seen(none, 'Lan').gender, 'f');
+    assert.strictEqual(seen(none, 'Minh').gender, 'm');
+    for (const x of [f, odd, none]) x.ws.close();
+  });
+
+  await step('company roles: the client list matches the server list, and an unknown role becomes the default', async () => {
+    const url = require('url').pathToFileURL(require('path').join(__dirname, '../public/roles.js')).href;
+    const { ROLES } = await import(url);
+    assert.deepStrictEqual(ROLES.map((r) => r.id), world.ROLE_IDS);
+    const join = (name, role) => new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, role, room: 'roles', token: h.newToken() })));
+      ws.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        if (m.t === 'welcome') resolve({ ws, m });
+      });
+    });
+    const boss = await join('Sep', 'sep');
+    const bad = await join('Bad', '<script>');
+    const watcher = await join('Watch', 'it');
+    const seen = (w, name) => w.m.players.find((p) => p.name === name);
+    assert.strictEqual(seen(boss, 'Sep').role, 'sep');
+    assert.strictEqual(seen(bad, 'Bad').role, 'nv');
+    assert.strictEqual(seen(watcher, 'Sep').role, 'sep');
+    assert.strictEqual(seen(watcher, 'Watch').role, 'it');
+    for (const x of [boss, bad, watcher]) x.ws.close();
+  });
+
   await step('a full room rejects new players', async () => {
     const socks = [];
     for (let i = 0; i < 20; i++) {
@@ -345,7 +390,8 @@ async function main() {
   });
 
   await step('furniture is solid: the server stops a player walking through a desk', async () => {
-    const desk = world.PROPS.find((p) => p.k === 'desk');
+    const deskObj = world.OBJECTS.find((o) => o.type === 'desk');
+    const desk = { x: deskObj.x, y: deskObj.y, h: world.TYPES.desk.h };
     const edge = desk.y + desk.h / 2 + world.PLAYER_RADIUS; // lowest y a player's centre can reach
     world.WORLD.spawn = { x: desk.x, y: edge + 40, rx: 0, ry: 0 }; // just in front of the first desk
     const O = await client('Obs', 'solidroom');

@@ -27,7 +27,7 @@ Redis  (single source of truth for each server's state)
 | `o` | hash | object id → `hp:brokenAt` (absent = full health) |
 | `sc` | hash | player id → score |
 | `bk` | hash | player id → number of objects broken |
-| `nm` | hash | player id → display name |
+| `nm` | hash | player id → display name; field `g<id>` → gender (`m` or `f`) |
 | `tok` | hash | client token → player id (lets a reconnect keep id and score) |
 | `meta` | hash | `nextid`, `total` damage, `lastReset` |
 | `on` | zset | player id → last heartbeat (ms); this is "who is online" |
@@ -52,13 +52,13 @@ Redis is not written to forever. Everything has an expiry or a bounded size:
 | Per-IP leases | Each lease expires after 60 s and is refreshed while the connection lives |
 | `br:keepalive` | 3-day expiry, rewritten by each deep health check |
 
-Known limit: while a server stays active, `tok`, `nm`, `sc`, `bk` and `pos` keep one small entry (roughly 100 to 200 bytes) for every distinct player token seen since the room last expired. They are not pruned individually. This is bounded in practice by the 20-player cap, the per-IP connection limit and the 30-minute room expiry, but a server that is never empty for 30 minutes keeps accumulating entries.
+Compaction: housekeeping also runs a small compaction at most every 2 minutes per room (`lastCompact` in `meta`). It forgets the token, name, gender, role, last position and slot of every player who is offline and never scored. Players with a score stay until the room expires so the leaderboard keeps them. This bounds the per-token entries by the number of people who actually played, not by everyone who ever visited.
 
 Rough size (estimate, not measured): the state of one room is tens of KB. Redis Cloud counts its own baseline overhead too, which is why an almost empty database already shows about 2 MB.
 
 ## Capacity and limits
 
-- **Storage.** The dataset is bounded by 2 servers × (≈140 objects + at most 20 online players + the token entries above). It should stay far below the 30 MB of Redis Cloud Free. If memory ever fills up, the eviction policy decides what happens: with `volatile-lru` (the Redis Cloud default seen in the dashboard) Redis evicts keys that have an expiry, that is, stale room keys, instead of refusing writes. The worst case is a room losing its state mid-game (objects respawn, scores reset), not a crash.
+- **Storage.** The dataset is bounded by 2 servers × (≈230 objects (only damaged or broken ones are stored, about 20 bytes each) + at most 20 online players + the token entries above). It should stay far below the 30 MB of Redis Cloud Free. If memory ever fills up, the eviction policy decides what happens: with `volatile-lru` (the Redis Cloud default seen in the dashboard) Redis evicts keys that have an expiry, that is, stale room keys, instead of refusing writes. The worst case is a room losing its state mid-game (objects respawn, scores reset), not a crash.
 - **Throughput is the tighter limit.** Free Redis Cloud allows 100 ops/s and 30 connections. Each room with players costs about 1 command per second per instance holding it for housekeeping, plus pub/sub while players move, plus a few commands per smash. Watch **Metrics → Throughput** under load. Each Vercel instance holds up to two Redis connections (commands and a lazy subscriber); with several instances 30 connections can become the real ceiling.
 - **Latency.** Every action crosses Redis, so keep the function region and the database in the same region (both Singapore here). `check:store` run from elsewhere does not represent this latency; use `/api/health?deep=<HEALTH_KEY>` (`pingMs`) from the deployed function.
 - **Idle database.** Redis Cloud Free deletes a database with no commands for about 14 days. A monitor hitting the deep health check at least once a day prevents that.
