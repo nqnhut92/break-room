@@ -238,12 +238,25 @@ async function main() {
     await sleep(400); // let the server release the leases
   });
 
+  await step('the board lists everyone online: best score first, zero scores in joining order', async () => {
+    const room = 'boardorder';
+    const A = await client('Aa', room);
+    const B = await client('Bb', room);
+    const C = await client('Cc', room);
+    await h.smashPlant(C, server.TYPES);
+    const board = await take(A, (m) => m.t === 'board' && m.board.some((e) => e.score > 0));
+    assert.deepStrictEqual(board.board.map((e) => e.name), ['Cc', 'Aa', 'Bb']);
+    assert.strictEqual(board.online, 3);
+    for (const x of [A, B, C]) x.ws.close();
+    await sleep(300);
+  });
+
   await step('rejoining with the same token keeps id, score and position', async () => {
     const room = 'rejoinroom';
     const O = await client('Obs', room);
     const X = await client('Xuan', room);
     await h.smashPlant(X, server.TYPES);
-    const board = await take(O, (m) => m.t === 'board' && m.board.some((e) => e.name === 'Xuan'));
+    const board = await take(O, (m) => m.t === 'board' && m.board.some((e) => e.name === 'Xuan' && e.score > 0));
     assert.strictEqual(board.board[0].score, server.TYPES.plant.cost);
     const spot = { x: X.x, y: X.y };
     X.ws.terminate(); // like the platform cutting the connection

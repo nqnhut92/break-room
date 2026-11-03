@@ -487,12 +487,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
   }
 
+  const BOARD_TOP = 3; // rows shown in the panel; the dialog shows everyone
   function renderBoard(m) {
     $('total').textContent = fmtMoney(m.total);
     $('online').textContent = String(m.online);
+    S.board = m.board;
     const list = $('boardList');
     list.textContent = '';
-    for (const e of m.board) {
+    for (const e of m.board.slice(0, BOARD_TOP)) {
       const li = document.createElement('li');
       li.textContent = e.name + ' ';
       const span = document.createElement('span');
@@ -500,7 +502,55 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       li.appendChild(span);
       list.appendChild(li);
     }
+    $('boardMore').hidden = m.board.length <= BOARD_TOP;
+    if (!rankEl.hidden) renderRanking();
   }
+
+  // Full ranking dialog: everyone online, best score first, then joining order.
+  function renderRanking() {
+    const list = $('rankList');
+    list.textContent = '';
+    for (const e of S.board || []) {
+      const li = document.createElement('li');
+      if (e.id === S.me) li.className = 'me';
+      const who = document.createElement('div');
+      who.className = 'who';
+      const nm = document.createElement('b');
+      nm.textContent = e.name;
+      who.appendChild(nm);
+      const p = S.players.get(e.id);
+      const rl = p && ROLE_BY_ID[p.role];
+      const sub = [rl ? rl.emoji + ' ' + rl.short : '', p && p.company ? p.company : ''].filter(Boolean).join(' · ');
+      if (sub) {
+        const s = document.createElement('small');
+        s.textContent = sub;
+        who.appendChild(s);
+      }
+      const sc = document.createElement('span');
+      sc.className = 'sc';
+      sc.textContent = fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
+      li.append(who, sc);
+      list.appendChild(li);
+    }
+  }
+  const rankEl = $('ranking');
+  function rankOpen() {
+    renderRanking();
+    rankEl.hidden = false;
+    $('rankClose').focus();
+  }
+  function rankClose() {
+    rankEl.hidden = true;
+    $('boardMore').focus();
+  }
+  $('boardMore').addEventListener('click', rankOpen);
+  $('rankClose').addEventListener('click', rankClose);
+  rankEl.addEventListener('pointerdown', (e) => {
+    if (e.target === rankEl) rankClose();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !rankEl.hidden) rankClose();
+  });
 
   // -------------------------------------------------------------- minimap ----
   const MM_ZONE = { tile: '#6d7f94', metal: '#505a6b', wood: '#6e5538' };
