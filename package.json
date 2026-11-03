@@ -1,0 +1,17 @@
+{
+  "name": "break-room",
+  "version": "1.0.0",
+  "description": "Multiplayer office rage room: walk around a shared office and smash laptops, monitors and printers together.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "MIT"
+}

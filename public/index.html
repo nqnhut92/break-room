@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0d1017">
+  <meta name="description" content="Văn phòng đập phá nhiều người chơi: vào phòng, đập laptop, màn hình, máy in cùng đồng nghiệp.">
+  <title>Office Rage Room</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div id="hud" hidden>
+    <div id="topbar">
+      <span class="pill">Phòng <b id="roomName">lobby</b></span>
+      <span class="pill"><b id="online">1</b> online</span>
+      <button id="copyLink" class="pill btn" type="button">Copy link phòng</button>
+      <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh">🔊</button>
+    </div>
+
+    <div id="board">
+      <div class="board-title">Tổng thiệt hại</div>
+      <div id="total" class="board-total">0 triệu</div>
+      <ol id="boardList"></ol>
+    </div>
+
+    <div id="bottombar">
+      <div id="emotes"></div>
+      <button id="resetBtn" class="btn it" type="button">Gọi IT thay đồ mới</button>
+      <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
+    </div>
+
+    <div id="hint">WASD / mũi tên để di chuyển · Space hoặc bấm vào đồ vật để đập · phím 1-8 để thả emoji</div>
+  </div>
+
+  <div id="overlay">
+    <form id="joinForm" class="card" autocomplete="off">
+      <h1>Office Rage Room</h1>
+      <p class="sub">Vào văn phòng, xả stress cùng đồng nghiệp. Đập laptop, màn hình, máy in thoải mái, IT sẽ thay đồ mới sau.</p>
+      <label>Tên của bạn
+        <input id="nameInput" maxlength="14" placeholder="Ví dụ: Nick" required>
+      </label>
+      <label>Phòng (gửi link cho đồng nghiệp để vào cùng)
+        <input id="roomInput" maxlength="24" placeholder="lobby" pattern="[A-Za-z0-9\-]*">
+      </label>
+      <button id="joinBtn" class="btn smash" type="submit">Vào văn phòng</button>
+      <p id="joinErr" class="err" role="alert"></p>
+    </form>
+  </div>
+
+  <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
