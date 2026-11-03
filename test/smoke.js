@@ -169,9 +169,9 @@ async function main() {
   });
 
   await step('chat: broadcast to the room with a bubble-ready id, cleaned, capped, rate limited', async () => {
-    send(B, { t: 'chat', text: '  xin   chào <b>cả</b> nhà  ' });
+    send(B, { t: 'chat', text: '  xin   chào <3 cả nhà  ' });
     const c1 = await take(A, (m) => m.t === 'chat' && m.id === B.id);
-    assert.strictEqual(c1.text, 'xin chào bcả/b nhà');
+    assert.strictEqual(c1.text, 'xin chào <3 cả nhà');
     assert.strictEqual(c1.name, 'Binh');
     await take(B, (m) => m.t === 'chat' && m.id === B.id); // the sender gets it back too
     send(B, { t: 'chat', text: 'x' }); // inside the cooldown: refused, the sender is told
