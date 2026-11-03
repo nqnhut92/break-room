@@ -84,4 +84,23 @@ step('every breakable object can be reached from the spawn point', () => {
   assert.deepStrictEqual(unreachable.map((o) => o.type + '#' + o.id), []);
 });
 
+step('stamp-assets puts one version on every module URL and can run twice', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const { execFileSync } = require('child_process');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stamp-'));
+  fs.cpSync(path.join(__dirname, '..', 'public'), tmp, { recursive: true });
+  const run = (v) => execFileSync('node', [path.join(__dirname, '..', 'scripts', 'stamp-assets.js'), tmp, v]);
+  run('aaa111');
+  run('bbb222');
+  const read = (f) => fs.readFileSync(path.join(tmp, f), 'utf8');
+  const html = read('index.html');
+  for (const f of ['game.js', 'scene3d.js', 'style.css']) assert.ok(html.includes(f + '?v=bbb222'), f + ' stamped in index.html');
+  assert.ok(!/aaa111/.test(html + read('game.js') + read('scene3d.js')), 'the old stamp is replaced, not stacked');
+  assert.ok(read('game.js').includes("from './scene3d.js?v=bbb222'") && read('game.js').includes("from './roles.js?v=bbb222'"));
+  assert.ok(read('scene3d.js').includes("from './roles.js?v=bbb222'"), 'scene3d and game.js import roles.js by the same URL');
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 console.log('\nAll ' + passed + ' checks passed');

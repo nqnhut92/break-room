@@ -510,12 +510,19 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   mm.cv.classList.toggle('off', !mm.on);
   function mmToggle() {
     mm.on = !mm.on;
+    if (typeof syncMapBtn === 'function') syncMapBtn();
     mm.cv.classList.toggle('off', !mm.on);
     try {
       localStorage.setItem('br-minimap', mm.on ? '1' : '0');
     } catch (e) { /* ignore */ }
   }
   mm.cv.addEventListener('click', mmToggle);
+  const syncMapBtn = () => $('mapBtn').setAttribute('aria-pressed', String(mm.on));
+  $('mapBtn').addEventListener('click', () => {
+    mmToggle();
+    syncMapBtn();
+  });
+  syncMapBtn();
   // the static part: floor zones and walls/furniture, drawn once per welcome into an offscreen canvas
   function mmBuild(world, props, zones) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -574,7 +581,66 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.stroke();
     }
   }
-  setInterval(mmDraw, 250);
+  // On narrow screens the top bar wraps onto two rows and the damage board sits under it: keep the map below all of it.
+  function mmPlace() {
+    const narrow = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    if (!narrow) {
+      mm.cv.style.top = '';
+      return;
+    }
+    const board = $('board');
+    const bottom = board ? board.getBoundingClientRect().bottom : 0;
+    mm.cv.style.top = Math.max(56, Math.round(bottom) + 8) + 'px';
+  }
+  setInterval(() => {
+    mmPlace();
+    mmDraw();
+    // zoom buttons fade out at the end of their range
+    if (scene) {
+      const z = scene.zoomLimits();
+      $('zoomIn').classList.toggle('dim', z.atMin);
+      $('zoomOut').classList.toggle('dim', z.atMax);
+      $('zoomIn').setAttribute('aria-disabled', String(z.atMin));
+      $('zoomOut').setAttribute('aria-disabled', String(z.atMax));
+    }
+  }, 250);
+
+  // help panel: what the controls are on this device, plus the rules people only discover by accident
+  const helpEl = $('help');
+  function helpOpen() {
+    const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const items = touch
+      ? [
+          '<b>Chạm vào nền</b> để đi tới đó, <b>chạm vào đồ vật</b> để đi tới và đập một cú.',
+          '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
+          '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
+        ]
+      : [
+          '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
+          '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, <b>1 đến 8</b> để thả emoji.',
+        ];
+    items.push(
+      '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
+      'Đồ đã bị đập hiện <b>thanh máu</b>: xanh khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối.',
+      'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',
+      'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
+    );
+    $('helpList').innerHTML = items.map((t) => '<li>' + t + '</li>').join('');
+    helpEl.hidden = false;
+    $('helpClose').focus();
+  }
+  function helpClose() {
+    helpEl.hidden = true;
+    $('helpBtn').focus();
+  }
+  $('helpBtn').addEventListener('click', helpOpen);
+  $('helpClose').addEventListener('click', helpClose);
+  helpEl.addEventListener('pointerdown', (e) => {
+    if (e.target === helpEl) helpClose();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !helpEl.hidden) helpClose();
+  });
 
   // ---------------------------------------------------------------- input ----
   function nearest() {

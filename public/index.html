@@ -48,9 +48,20 @@
       <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
     </div>
     <canvas id="minimap" width="200" height="125" role="img" aria-label="Bản đồ văn phòng (phím M để ẩn hoặc hiện)" title="Bản đồ (M)"></canvas>
-    <div id="zoomBtns" aria-label="Thu phóng">
-      <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
-      <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ">−</button>
+    <div id="sideBtns">
+      <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog">?</button>
+      <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true">🗺</button>
+      <div id="zoomBtns" role="group" aria-label="Thu phóng">
+        <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
+        <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ">−</button>
+      </div>
+    </div>
+    <div id="help" hidden>
+      <div class="card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <h2 id="helpTitle">Cách chơi</h2>
+        <ul id="helpList"></ul>
+        <button id="helpClose" class="btn smash" type="button">Đã hiểu</button>
+      </div>
     </div>
 
     <div id="hint">WASD / mũi tên để di chuyển · Space để đập · phím 1-8 để thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>

@@ -462,6 +462,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   scene.fog = new THREE.Fog(BG, 2200, 5200);
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
+  const ZOOM_MIN = 560;
+  const ZOOM_MAX = 2300;
   const cam = { x: 0, z: 0, dist: 820, pitch: 0.97, ready: false };
   let shadowR = 900;
 
@@ -1453,8 +1455,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     camera.updateProjectionMatrix();
   }
 
+  // for the zoom buttons: are we at the closest or the furthest view?
+  function zoomLimits() {
+    return { atMin: cam.dist <= ZOOM_MIN + 1, atMax: cam.dist >= ZOOM_MAX - 1 };
+  }
+
   function zoom(delta) {
-    cam.dist = Math.min(2300, Math.max(560, cam.dist * (1 + delta)));
+    cam.dist = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, cam.dist * (1 + delta)));
   }
 
   function cameraTo(x, y) {
@@ -1464,7 +1471,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, zoom, cameraTo, ready,
+    renderer, build, update, pick, resize, zoom, zoomLimits, cameraTo, ready,
     fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
