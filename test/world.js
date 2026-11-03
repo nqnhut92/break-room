@@ -103,4 +103,29 @@ step('stamp-assets puts one version on every module URL and can run twice', () =
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+step('exit door: a free spot in the lobby, reachable from the spawn', () => {
+  const e = W.WORLD.exit;
+  assert.ok(e && e.x1 > e.x0 && e.y1 > e.y0);
+  const lobby = W.ZONES.find((z) => z.k === 'wood' && z.x0 === 0 && z.y0 === 1420);
+  assert.ok(e.y0 >= lobby.y0 && e.y1 <= lobby.y1, 'inside the lobby');
+  for (let x = e.x0; x <= e.x1; x += 10) for (let y = e.y0; y <= e.y1; y += 10) assert.ok(free(x, y), 'free at ' + x + ',' + y);
+  const mx = (e.x0 + e.x1) / 2;
+  const my = (e.y0 + e.y1) / 2;
+  const start = { x: W.WORLD.spawn.x, y: W.WORLD.spawn.y };
+  const seen = new Set([Math.round(start.x / G) + ':' + Math.round(start.y / G)]);
+  const queue = [[Math.round(start.x / G), Math.round(start.y / G)]];
+  let ok = false;
+  while (queue.length && !ok) {
+    const [cx, cy] = queue.shift();
+    if (Math.abs(cx * G - mx) <= 40 && Math.abs(cy * G - my) <= 40) ok = true;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const k = cx + dx + ':' + (cy + dy);
+      if (seen.has(k) || !free((cx + dx) * G, (cy + dy) * G)) continue;
+      seen.add(k);
+      queue.push([cx + dx, cy + dy]);
+    }
+  }
+  assert.ok(ok, 'the door can be walked to from the spawn');
+});
+
 console.log('\nAll ' + passed + ' checks passed');

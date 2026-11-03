@@ -552,6 +552,51 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (e.key === 'Escape' && !rankEl.hidden) rankClose();
   });
 
+  // Exit door (west wall of the lobby): walking into the zone asks to leave the office. Leaving closes our
+  // socket like any disconnect, so the others get the usual "left the server" toast and the score is kept.
+  const exitEl = $('exitDlg');
+  let exitArmed = true; // false after "Ở lại", until we have walked away from the door
+  function inExit(me) {
+    const e = S.world && S.world.exit;
+    return !!e && me.x >= e.x0 - 30 && me.x <= e.x1 && me.y >= e.y0 && me.y <= e.y1;
+  }
+  function exitOpen() {
+    S.keys.clear();
+    S.smashHeld = false;
+    S.target = null;
+    S.attackId = null;
+    exitEl.hidden = false;
+    $('exitStay').focus();
+  }
+  function exitStay() {
+    exitEl.hidden = true;
+    exitArmed = false;
+    const me = S.players.get(S.me);
+    if (me && S.world && S.world.exit) S.target = { x: S.world.exit.x1 + 140, y: me.y }; // step back into the room
+  }
+  function exitLeave() {
+    exitEl.hidden = true;
+    S.fatal = true; // no auto-reconnect
+    S.joined = false;
+    S.keys.clear();
+    S.smashHeld = false;
+    S.target = null;
+    S.attackId = null;
+    for (const ws of [S.pendingWs, S.ws]) if (ws) ws.close(1000);
+    S.pendingWs = null;
+    $('conn').hidden = true;
+    $('overlay').classList.remove('gone');
+    setJoinBusy(false);
+    const err = $('joinErr');
+    err.textContent = 'Bạn đã rời văn phòng. Bấm "Vào văn phòng" để quay lại, điểm của bạn vẫn còn.';
+    err.classList.add('ok');
+  }
+  $('exitStay').addEventListener('click', exitStay);
+  $('exitLeave').addEventListener('click', exitLeave);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !exitEl.hidden) exitStay();
+  });
+
   // -------------------------------------------------------------- minimap ----
   const MM_ZONE = { tile: '#6d7f94', metal: '#505a6b', wood: '#6e5538' };
   const mm = { cv: $('minimap'), base: null, k: 1, dpr: 1, on: true, w: 0, h: 0 };
@@ -600,6 +645,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       const w = Math.max(1.5, p.w * mm.k);
       const h = Math.max(1.5, p.h * mm.k);
       c.fillRect(p.x * mm.k - w / 2, p.y * mm.k - h / 2, w, h);
+    }
+    if (world.exit) {
+      c.fillStyle = '#3ddc84';
+      c.fillRect(0, world.exit.y0 * mm.k, Math.max(3, 6 * mm.dpr), (world.exit.y1 - world.exit.y0) * mm.k);
     }
     mm.base = base;
   }
@@ -786,7 +835,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   window.addEventListener('keydown', (e) => {
-    if (!S.joined || typing()) return;
+    if (!S.joined || typing() || !exitEl.hidden) return;
     const k = e.key.toLowerCase();
     if (MOVE_KEYS[k]) {
       e.preventDefault();
@@ -1086,6 +1135,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       S.fatal = false;
       S.started = true;
       $('joinErr').textContent = '';
+      $('joinErr').classList.remove('ok');
       setJoinBusy(true);
       initAudio();
       connect();
@@ -1171,6 +1221,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (me.swing <= 0) me.heading = Math.atan2(dx, dy);
     }
     me.moving = Math.hypot(me.x - ox, me.y - oy) > 0.1;
+
+    if (inExit(me)) {
+      if (exitArmed && exitEl.hidden) exitOpen();
+    } else if (!exitEl.hidden) {
+      exitEl.hidden = true;
+    } else exitArmed = true;
 
     // a click-to-walk that is pinned against furniture gives up instead of pushing forever
     if (len > 0 && !me.moving && (S.target || S.attackId !== null) && !S.keys.size) {

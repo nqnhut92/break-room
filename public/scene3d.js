@@ -492,6 +492,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   let world = { w: 3840, h: 2160 };
 
   // ---- static world -------------------------------------------------------
+  let exitMat = null;
   function buildNow(w, props, zones) {
     if (built) return;
     built = true;
@@ -583,6 +584,34 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const b = bucket(Math.max(0, Math.min(W - 1, x)), Math.max(0, Math.min(H - 1, z)));
       b.body.push(at(box(w, h, d, c, 0, h / 2, 0), x, 0, z));
     }
+    // exit door in the west wall: frame, green door, sign and a mat in front of it
+    if (world.exit) {
+      const ex = world.exit;
+      const ey = (ex.y0 + ex.y1) / 2;
+      const dw = ex.y1 - ex.y0;
+      const b = bucket(2, ey);
+      b.body.push(at(box(8, 120, 8, '#1b2130', 4, 60, 0), 0, 0, ex.y0 - 4));
+      b.body.push(at(box(8, 120, 8, '#1b2130', 4, 60, 0), 0, 0, ex.y1 + 4));
+      b.body.push(at(box(8, 10, dw + 16, '#1b2130', 4, 124, 0), 0, 0, ey));
+      b.glow.push(at(box(2, 112, dw, '#3ddc84', 1, 56, 0), 0, 0, ey));
+      const exitSign = makeCanvasTexture(256, 64, (ctx, w, h) => {
+        ctx.fillStyle = '#0f3d27';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#3ddc84';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(3, 3, w - 6, h - 6);
+        ctx.fillStyle = '#c9ffe2';
+        ctx.font = '800 38px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('EXIT · LỐI RA', w / 2, h / 2 + 2);
+      });
+      const exitMesh = new THREE.Mesh(new THREE.PlaneGeometry(200, 50), new THREE.MeshBasicMaterial({ map: exitSign }));
+      exitMesh.rotation.y = Math.PI / 2; // faces east, into the office
+      exitMesh.position.set(5, 146, ey);
+      staticGroup.add(exitMesh);
+      exitMat = { x0: ex.x0 - 20, y0: ex.y0, x1: ex.x1, y1: ex.y1 };
+    }
     // windows and light strips on the north wall
     for (let x = 220; x < W; x += 480) {
       const b = bucket(x, 0);
@@ -622,6 +651,29 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     };
     floorPlane('carpet', -60, -60, W + 60, H + 60, 0);
     for (const z of zones) floorPlane(z.k, z.x0, z.y0, z.x1, z.y1, 0.4);
+    if (exitMat) {
+      const m = exitMat;
+      const tex = makeCanvasTexture(128, 256, (ctx, w, h) => {
+        ctx.fillStyle = 'rgba(61,220,132,.28)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(61,220,132,.9)';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(3, 3, w - 6, h - 6);
+        ctx.fillStyle = 'rgba(201,255,226,.95)';
+        ctx.font = '800 40px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.save();
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate(-Math.PI / 2); // reads along the corridor, from the room towards the door
+        ctx.fillText('◀ EXIT', 0, 0);
+        ctx.restore();
+      });
+      const mat = new THREE.Mesh(new THREE.PlaneGeometry(m.x1 - m.x0, m.y1 - m.y0), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+      mat.rotation.x = -Math.PI / 2;
+      mat.position.set((m.x0 + m.x1) / 2, 0.8, (m.y0 + m.y1) / 2);
+      staticGroup.add(mat);
+    }
 
     // wall sign and clock
     const sign = makeCanvasTexture(1024, 128, (ctx, w, h) => {

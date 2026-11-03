@@ -284,7 +284,7 @@ canvas {
 #sideBtns .btn.dim { opacity: 0.3; cursor: default; }
 #zoomBtns { display: none; flex-direction: column; gap: 8px; }
 @media (pointer: coarse) { #zoomBtns { display: flex; } }
-#help, #ranking {
+#help, #ranking, #exitDlg {
   position: fixed;
   inset: 0;
   display: flex;
@@ -293,8 +293,13 @@ canvas {
   overflow-y: auto;
   padding: 16px;
 }
-#help[hidden], #ranking[hidden] { display: none; }
-#help .card, #ranking .card { margin: auto; width: min(460px, 100%); }
+#help[hidden], #ranking[hidden], #exitDlg[hidden] { display: none; }
+#help .card, #ranking .card, #exitDlg .card { margin: auto; width: min(460px, 100%); }
+#exitDlg h2 { margin: 0; font-size: 20px; }
+#exitDlg .exit-note { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); }
+#exitDlg .exit-actions { display: flex; gap: 10px; }
+#exitDlg .exit-actions .btn { flex: 1; }
+.err.ok { color: #7be0a4; }
 #help h2, #ranking h2 { margin: 0; font-size: 20px; }
 #help ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45; color: var(--text); }
 #help li b { color: var(--accent-2); }
