@@ -607,8 +607,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         ctx.fillText('EXIT · LỐI RA', w / 2, h / 2 + 2);
       });
       const exitMesh = new THREE.Mesh(new THREE.PlaneGeometry(200, 50), new THREE.MeshBasicMaterial({ map: exitSign }));
-      exitMesh.rotation.y = Math.PI / 2; // faces east, into the office
-      exitMesh.position.set(5, 146, ey);
+      // The camera looks from the south, so a sign flat on the west wall is seen edge-on. Hang it across the
+      // corridor instead, facing south, just north of the door.
+      exitMesh.position.set(70, 150, ex.y0 - 14);
       staticGroup.add(exitMesh);
       exitMat = { x0: ex.x0 - 20, y0: ex.y0, x1: ex.x1, y1: ex.y1 };
     }
