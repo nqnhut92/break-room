@@ -656,12 +656,19 @@ import { createScene3D } from './scene3d.js';
     let chosenByUser = picked !== null;
 
     let loaded = false;
+    let lastSig = '';
 
     function render() {
       const box = $('roomList');
-      box.textContent = '';
+      // Skip identical repaints: the page already shows the skeleton from the HTML, and rebuilding the
+      // list every 15 s would restart animations and drop hover/focus.
+      const sig = loaded ? JSON.stringify([rooms, picked]) : 'skeleton';
+      if (sig === lastSig) return;
+      lastSig = sig;
       box.setAttribute('aria-busy', String(!loaded));
       if (!loaded) {
+        if (box.querySelector('.roomskel')) return; // the HTML skeleton is already there
+        box.textContent = '';
         // Skeleton rows while the first /api/rooms answer is on its way.
         for (let i = 0; i < rooms.length; i++) {
           const s = document.createElement('div');
@@ -671,6 +678,7 @@ import { createScene3D } from './scene3d.js';
         }
         return;
       }
+      box.textContent = '';
       for (const r of rooms) {
         const full = r.online !== null && r.online >= r.max;
         const b = document.createElement('button');

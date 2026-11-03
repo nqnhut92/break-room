@@ -11,6 +11,8 @@
   <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
+  <!-- the import map must come before any module or modulepreload that imports "three" -->
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
   <link rel="modulepreload" href="vendor/three.module.min.js">
   <link rel="modulepreload" href="scene3d.js">
   <script>
@@ -51,6 +53,7 @@
 
   <div id="overlay">
     <form id="joinForm" class="card" autocomplete="off">
+      <img class="logo" src="/favicon.svg" width="64" height="64" alt="">
       <h1>Office Rage Room</h1>
       <p class="sub">Vào văn phòng, xả stress cùng đồng nghiệp. Đập laptop, màn hình, máy in thoải mái, IT sẽ thay đồ mới sau.</p>
       <label>Tên của bạn
@@ -68,7 +71,6 @@
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
   <div id="toasts" aria-live="polite"></div>
 
-  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
   <script type="module" src="game.js"></script>
 </body>
 </html>

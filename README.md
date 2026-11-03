@@ -1,155 +1,162 @@
 # Break Room
 
-Văn phòng đập phá nhiều người chơi, vẽ 3D bằng three.js. Vào phòng, đi quanh văn phòng cùng đồng nghiệp và đập laptop, màn hình, máy in, tủ server. Mỗi món vỡ sẽ cộng vào "tổng thiệt hại" của cả phòng, ai đập nhiều nhất lên bảng xếp hạng. IT sẽ thay đồ mới sau 25 giây, hoặc bấm nút "Gọi IT" để thay hết ngay.
+English · [Tiếng Việt](README.vi.md) · [Architecture](docs/ARCHITECTURE.md)
 
-## Chạy thử trên máy
+A multiplayer 3D office-smashing game drawn with three.js. Join a server, walk around the office with your colleagues and smash laptops, monitors, printers and server racks. Every broken item adds to the server's "total damage", and whoever smashes the most tops the leaderboard. IT replaces everything after 25 seconds, or press "Call IT" to restore it all immediately.
+
+## Run locally
 
 ```bash
 npm install
 npm start
 ```
 
-Mở http://localhost:3000. Muốn chơi chung thì mở thêm tab khác (hoặc gửi link cho người khác nếu máy bạn truy cập được từ ngoài).
+Open http://localhost:3000. Open another tab to play together (or send the link to someone who can reach your machine).
 
-Chạy local không cần Redis: toàn bộ state nằm trong RAM của tiến trình `npm start`. Muốn thử đúng như bản Vercel (nhiều server dùng chung state) thì đặt `REDIS_URL=redis://localhost:6379` rồi chạy `npm start` ở hai terminal với `PORT` khác nhau, mở mỗi cổng một tab, hai tab vẫn thấy cùng một văn phòng. `vercel dev` cũng dùng được nếu bạn cần chạy chính xác hàm `api/ws.js`, nhưng không bắt buộc.
+Local runs need no Redis: all state lives in the RAM of the `npm start` process. To mimic the Vercel setup (several servers sharing state) set `REDIS_URL=redis://localhost:6379` and start `npm start` in two terminals with different `PORT`s; tabs on both ports show the same office. `vercel dev` also works if you need the exact `api/ws.js` function, but it is not required.
 
-## Chơi chung với đồng nghiệp
+## Playing together
 
-Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối đa 20 người. Màn hình vào hiển thị "x online" của từng server, màu xanh lá (dưới 50% sức chứa), cam (từ 50%), đỏ (từ 80%), và tự chọn sẵn server đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một server; nút "Copy link server" tạo link `/?room=br-1` hoặc `/?room=br-2` để chọn sẵn. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
+The game has **two fixed servers**, **BR-1** and **BR-2**, with at most 20 players each. The join screen shows "x online" per server, coloured green (under 50% full), orange (from 50%) and red (from 80%), and preselects the busiest server that still has room. To play with colleagues, pick the same server; the "Copy server link" button produces `/?room=br-1` or `/?room=br-2`. There are no private rooms: an unknown room name in an old link falls back to the first server. Rename or add servers in the `ROOMS` list in `lib/world.js` (`id` lowercase ASCII, `name` is the display name).
 
-## Điều khiển
+Names are required, and a name that is already used by someone online on the same server (exact match, case-sensitive) is refused.
 
-| Hành động | Cách làm |
+## Controls
+
+| Action | How |
 | --- | --- |
-| Di chuyển | WASD / phím mũi tên, hoặc chạm vào nền |
-| Đập | Space (giữ để đập liên tục), hoặc bấm thẳng vào đồ vật, hoặc nút ĐẬP! |
-| Thả emoji | Phím 1 đến 8 hoặc bấm các nút emoji |
-| Zoom camera | Lăn chuột |
+| Move | WASD / arrow keys, or tap the floor |
+| Smash | Space (hold to keep smashing), click an object directly, or the SMASH! button |
+| Emoji | Keys 1 to 8 or the emoji buttons |
+| Zoom | Mouse wheel |
 
-Bấm vào một món ở xa thì nhân vật tự chạy tới và đập cho tới khi vỡ (đi thẳng tới món, nếu bị bàn hay tường chặn thì dừng lại).
+Clicking a far-away object makes your character run to it and keep smashing until it breaks (it walks straight there and stops if a desk or wall is in the way).
 
-## Văn phòng
+## The office
 
-Phòng rộng 3840×2160 (gấp 3 lần mỗi chiều so với bản đầu), camera bám theo người chơi. Có khu bàn làm việc (32 bàn), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh họp có bàn họp, sofa. Khoảng 140 món đập được. Bàn, tường, máy in, tủ server, bình nước, máy pha cà phê là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`).
+The floor is 3840×2160, and the camera follows the player. There is a desk area (32 desks), a pantry with printers, a water cooler and a coffee machine, a server room with glass walls and a door on the west side, and a meeting lobby with a table and sofas. About 140 objects can be smashed. Desks, walls, printers, server racks, the water cooler and the coffee machine are obstacles: **both client and server** block them, so nobody can walk through by editing the client (`slideMove` in `lib/world.js`).
 
-Hình 3D gồm hai nguồn:
+The 3D art comes from two sources:
 
-- **Bộ Furniture Kit 2.0 của [Kenney](https://kenney.nl)** (CC0, dùng tự do, giấy phép nằm ở `public/assets/kenney/License.txt`): bàn, ghế xoay, màn hình, laptop, bàn phím, chuột, máy pha cà phê, cây, bàn, sofa, thảm. Chỉ chép những file `.glb` đang dùng (khoảng 140 KB). Mỗi file được gộp thành một mesh tô màu theo đỉnh, đặt chân xuống sàn và co giãn về kích thước mong muốn (`KENNEY_WIDTH` trong `scene3d.js`). Nếu một file không tải được thì game tự dùng bản dựng bằng code của món đó.
-- **Dựng bằng code** (khối hộp, trụ, cầu): nhân vật, máy in, bình nước, tủ server (Kenney không có), tường kính, đống đổ nát khi vỡ và các hiệu ứng.
+- **[Kenney](https://kenney.nl) Furniture Kit 2.0** (CC0, free to use, licence in `public/assets/kenney/License.txt`): desks, office chairs, monitors, laptops, keyboards, mice, coffee machine, plants, tables, sofas, rugs. Only the `.glb` files in use are copied (about 140 KB). Each is merged into one vertex-coloured mesh, set on the floor and scaled to the wanted size (`KENNEY_WIDTH` in `scene3d.js`). If a file fails to load, the game falls back to the hand-built version of that object.
+- **Built in code** (boxes, cylinders, spheres): characters, printers, the water cooler, server racks (not in Kenney's kit), glass walls, the debris when something breaks, and the effects.
 
-Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` và `GLTFLoader.js` (thư mục `examples/jsm`) vào `public/vendor/`. Hai file sau import lẫn nhau, nên sửa dòng import trong `GLTFLoader.js` thành `./BufferGeometryUtils.js`.
+Three.js is vendored in `public/vendor/` (MIT, licence included), not loaded from a CDN. To upgrade: `npm install three@<version> --save-dev`, then copy `three.module.min.js` (from `build`) plus `BufferGeometryUtils.js` and `GLTFLoader.js` (from `examples/jsm`) into `public/vendor/`. The last two import each other, so change the import line in `GLTFLoader.js` to `./BufferGeometryUtils.js`.
 
-Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, game tự giảm độ phân giải và bóng đổ trên màn hình cảm ứng.
+A browser with WebGL is required. Weak phones may stutter; on touch screens the game lowers resolution and shadows by itself.
 
-## Deploy lên Vercel
+## Deploy to Vercel
 
-Game chạy trên Vercel Functions với WebSocket native (public beta, Fluid Compute). Trang tĩnh trong `public/` do Vercel phục vụ, còn kết nối WebSocket vào hàm `api/ws.js` tại `wss://<domain>/api/ws`.
+The game runs on Vercel Functions with native WebSockets (public beta, Fluid Compute). Static pages in `public/` are served by Vercel; WebSocket connections go to the `api/ws.js` function at `wss://<domain>/api/ws`.
 
-### Vì sao cần Redis
+### Why Redis
 
-Vercel có thể chạy nhiều instance của hàm cùng lúc. Mỗi kết nối WebSocket bị ghim vào instance nhận nó, nhưng kết nối mới (kể cả reconnect) có thể rơi vào instance khác, và RAM không dùng chung. Nếu giữ state trong RAM thì hai người cùng phòng có thể thấy hai văn phòng khác nhau. Vì vậy mọi state dùng chung nằm trong Redis, và mọi broadcast đi qua Redis pub/sub. **Không có `REDIS_URL` thì trên Vercel game không cho vào phòng** (hiện thông báo lỗi) thay vì âm thầm chia đôi thế giới.
+Vercel may run several instances of the function at once. Each WebSocket connection is pinned to the instance that accepted it, but a new connection (including a reconnect) can land on another instance, and RAM is not shared. Keeping state in RAM would let two players in the same server see two different offices. So all shared state lives in Redis and every broadcast goes through Redis pub/sub. **Without `REDIS_URL`, the game refuses to let anyone in on Vercel** (it shows an error) instead of silently splitting the world in two. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the data model, cleanup and limits.
 
-| Nằm trong Redis (dùng chung) | Nằm trong từng kết nối (an toàn vì kết nối bị ghim) |
+| In Redis (shared) | In each connection (safe because connections are pinned) |
 | --- | --- |
-| máu và trạng thái vỡ của đồ vật, điểm, tổng thiệt hại, ai đang online, vị trí cuối của mỗi người, cooldown "Gọi IT", số kết nối theo IP, kênh pub/sub | vị trí hiện tại để chống teleport, cooldown đập và emote, giới hạn số tin nhắn mỗi giây |
+| object health and broken state, scores, total damage, who is online, each player's last position, the "Call IT" cooldown, connection counts per IP, pub/sub channels | current position (for anti-teleport), smash and emote cooldowns, per-second message limit |
 
-Các lớp kiểm tra phía server giữ nguyên: tầm với, tốc độ di chuyển, cooldown, rate limit, làm sạch tên, kích thước tin nhắn tối đa. Việc trừ máu và tính điểm là một script Lua chạy nguyên tử trong Redis, nên hai người ở hai instance đập cùng một món chỉ làm nó vỡ đúng một lần và điểm chỉ cộng một lần.
+All server-side checks stay: reach, movement speed, cooldowns, rate limits, name sanitising, maximum message size. Subtracting health and awarding points is one atomic Lua script in Redis, so two players on two instances hitting the same object break it exactly once and the points are credited once.
 
-Giới hạn kết nối theo IP (10 kết nối mỗi IP) được chuyển sang Redis luôn. Nếu để trong RAM thì mỗi instance đếm riêng và giới hạn thực tế thành 10 nhân số instance. Lease của mỗi kết nối tự hết hạn sau 60 giây nếu instance chết, nên không bị kẹt chỗ.
+The per-IP connection limit (10 connections per IP) lives in Redis too. In RAM each instance would count separately and the effective limit would become 10 times the number of instances. Each connection's lease expires after 60 seconds if its instance dies, so slots are not stuck.
 
-### Các bước
+### Steps
 
-1. Đẩy repo lên GitHub, trên Vercel chọn **Add New Project** và import repo. Không cần Build Command. `vercel.json` đã đặt thư mục tĩnh là `public` và `maxDuration` của `api/ws.js`.
-2. Tạo Redis qua **Storage > Marketplace** (ví dụ Upstash Redis) và nối vào project. Integration sẽ tự thêm biến môi trường `KV_URL` hoặc `REDIS_URL` (dạng `rediss://...`, kết nối TCP, cần cho pub/sub). Game đọc `REDIS_URL` trước, rồi `KV_URL`. Nếu integration của bạn chỉ cho biến REST (`KV_REST_API_URL`) thì thêm tay `REDIS_URL` bằng chuỗi kết nối TCP/TLS của database.
-3. Kiểm tra project đang bật **Fluid Compute** (mặc định bật với project tạo từ 23/04/2025; project cũ bật ở Settings > Functions rồi deploy lại).
-4. Deploy. Mở `https://<domain>/api/health`: trả `{"ok":true,"store":"redis"}` là đã có Redis. Rồi mở trang chính, vào phòng bằng hai trình duyệt.
+1. Push the repo to GitHub, choose **Add New Project** on Vercel and import it. No build command is needed. `vercel.json` already sets the static directory to `public` and the `maxDuration` of `api/ws.js`.
+2. Create a Redis database (via **Storage > Marketplace**, for example Upstash Redis, or any provider, see below) and connect it. An integration adds `KV_URL` or `REDIS_URL` (a `rediss://...` TCP connection string, required for pub/sub). The game reads `REDIS_URL` first, then `KV_URL`. If your integration only provides REST variables (`KV_REST_API_URL`), add `REDIS_URL` by hand with the database's TCP/TLS connection string.
+3. Make sure **Fluid Compute** is on (default for projects created after 2025-04-23; for older ones enable it under Settings > Functions and redeploy).
+4. Deploy. Open `https://<domain>/api/health`: `{"ok":true,"store":"redis"}` means Redis is configured. Then open the main page and join from two browsers.
 
-### Biến môi trường
+Put the function in the same region as the database (for example both in Singapore); every message crosses Redis.
 
-| Biến | Ý nghĩa |
+### Environment variables
+
+| Variable | Meaning |
 | --- | --- |
-| `REDIS_URL` hoặc `KV_URL` | Chuỗi kết nối Redis (TCP). Bắt buộc trên Vercel. Local có thể bỏ trống |
-| `WS_MAX_DURATION_S` | Thời gian tối đa của một kết nối WebSocket. Mặc định 300 trên Vercel, 0 (không giới hạn) khi chạy local. Đặt bằng `maxDuration` nếu bạn nâng lên (gói Pro) |
-| `RESPAWN_MS` | Thời gian đồ vật tự thay mới, mặc định 25000 |
-| `AFK_MS` | Người chơi đứng yên (không đi, đập, emoji) quá từng này mili giây thì bị ngắt với mã 4002, mặc định 180000 (3 phút). Client không tự kết nối lại, hiện nút vào lại, điểm vẫn còn. Chặn tab bỏ quên giữ instance Vercel sống (bộ nhớ tính theo thời gian instance còn sống) |
-| `MAX_CONNECTIONS` | Số kết nối tối đa mỗi instance. Mặc định 200 trên Vercel, không giới hạn khi chạy local |
-| `MAX_ROOMS` | Số phòng tối đa mỗi instance. Mặc định 40 trên Vercel, không giới hạn khi chạy local. Với danh sách phòng cố định thì gần như không còn tác dụng |
-| `FIXED_ROOMS=0` | Cho phép vào phòng có tên bất kỳ thay vì chỉ các phòng trong `ROOMS` (dùng khi thử nghiệm hoặc chạy test) |
-| `GAME_DISABLED=1` | Công tắc tắt khẩn cấp: mọi người vào đều nhận "Game đang tạm đóng" và server không mở kết nối Redis nào. Đặt biến rồi redeploy |
-| `REDIS_TLS_CA` | Chứng chỉ CA (nội dung PEM) cho nhà cung cấp Redis dùng chứng chỉ tự ký, ví dụ gói trả phí của Redis Cloud. Có thể viết `\n` thay cho xuống dòng |
-| `HEALTH_KEY` | Nếu đặt, `/api/health?deep=<HEALTH_KEY>` mới được kiểm tra sâu (xem dưới) |
-| `ROOM_TTL_S` | Phòng không có ai thì state bị xóa sau từng này giây, mặc định 1800 |
-| `PORT` | Cổng khi chạy local, mặc định 3000 |
-| `TRUST_PROXY=1` | Chỉ cần khi chạy `server.js` sau reverse proxy ngoài Vercel (Render, Railway, Nginx...) để đếm kết nối theo IP thật. Trên Vercel luôn bật sẵn |
+| `REDIS_URL` or `KV_URL` | Redis (TCP) connection string. Required on Vercel. Optional locally |
+| `WS_MAX_DURATION_S` | Maximum lifetime of a WebSocket connection. Default 300 on Vercel, 0 (no limit) locally. Set it to your `maxDuration` if you raise it (Pro plan) |
+| `RESPAWN_MS` | Time before smashed objects are replaced, default 25000 |
+| `AFK_MS` | A player who does nothing (no move, smash or emoji) for this many ms is disconnected with code 4002, default 180000 (3 minutes). The client does not reconnect by itself and shows a join button; the score is kept. Stops forgotten tabs from keeping a Vercel instance alive (memory is billed while an instance is alive) |
+| `MAX_CONNECTIONS` | Maximum connections per instance. Default 200 on Vercel, unlimited locally |
+| `MAX_ROOMS` | Maximum rooms per instance. Default 40 on Vercel, unlimited locally. Almost irrelevant with the fixed server list |
+| `FIXED_ROOMS=0` | Allow any room name instead of only those in `ROOMS` (for experiments and tests) |
+| `GAME_DISABLED=1` | Kill switch: everyone gets "Game temporarily closed" and the server opens no Redis connection. Set it and redeploy |
+| `REDIS_TLS_CA` | CA certificate (PEM) for Redis providers with a self-signed chain, for example Redis Cloud paid plans. `\n` may stand for a newline |
+| `HEALTH_KEY` | If set, `/api/health?deep=<HEALTH_KEY>` performs the deep check (below) |
+| `ROOM_TTL_S` | A room with nobody in it loses its state after this many seconds, default 1800 |
+| `PORT` | Port for local runs, default 3000 |
+| `TRUST_PROXY=1` | Only needed when running `server.js` behind a reverse proxy outside Vercel (Render, Railway, Nginx...) so connections are counted per real IP. Always on in Vercel |
 
-### Kết nối bị cắt sau 5 phút thì sao
+### What happens when a connection is cut after 5 minutes
 
-Mỗi kết nối WebSocket bị đóng khi hàm hết `maxDuration` (Hobby: 300 giây, Pro: tối đa 800 giây, beta mở rộng tới 1800 giây). Game xử lý việc này theo hai lớp:
+A WebSocket is closed when the function reaches `maxDuration` (Hobby: 300 s, Pro: up to 800 s, the beta extends it to 1800 s). The game handles this in two layers:
 
-- **Chuyển kết nối êm**: khoảng 25 giây trước hạn, server báo `renew`. Client mở socket mới, vào lại bằng cùng token, rồi mới đóng socket cũ. Không ai thấy "rời phòng/vào phòng", không rớt khung hình.
-- **Reconnect khi rớt bất ngờ** (mạng, deploy mới, instance bị thu hồi): client thử lại với exponential backoff 1s, 2s, 4s... tối đa 10s, có jitter. Mỗi tab giữ một token trong `sessionStorage`, nên vào lại vẫn giữ nguyên id, điểm, vị trí và đồ đã đập. Người chơi chỉ rời khỏi danh sách online nếu thật sự mất kết nối.
+- **Seamless handover**: about 25 seconds before the deadline the server sends `renew`. The client opens a new socket, rejoins with the same token, then closes the old one. Nobody sees "left/joined", no frame drops.
+- **Reconnect on sudden loss** (network, new deploy, reclaimed instance): the client retries with exponential backoff 1 s, 2 s, 4 s... up to 10 s with jitter. Each tab keeps a token in `sessionStorage`, so rejoining keeps the same id, score, position and smashed objects. A player only leaves the online list if the connection is really gone.
 
-Nếu một instance chết mà không kịp dọn, các instance còn lại tự loại người chơi đó sau 20 giây không có nhịp tim.
+If an instance dies without cleaning up, the others remove its players after 20 seconds without a heartbeat.
 
-### Giới hạn của bản beta
+### Beta limitations
 
-- WebSocket trên Vercel đang **public beta** (từ 22/06/2026), docs ghi rõ hành vi và API có thể đổi. Theo dõi changelog trước khi dùng cho thứ quan trọng.
-- Tài liệu không nêu con số giới hạn kết nối đồng thời mỗi instance. Chưa có số liệu tải thực tế cho game này.
-- Mọi tin nhắn đi qua Redis, nên độ trễ phụ thuộc khoảng cách giữa region của hàm và của database. Hãy đặt hai cái cùng region.
-- Chi phí: tính theo Active CPU, Provisioned Memory, Invocations của Fluid Compute, cộng số lệnh Redis. Mỗi phòng có người chơi tốn khoảng 1 lệnh Redis mỗi giây cho việc dọn dẹp và nhịp tim (mỗi instance giữ phòng đó), cộng pub/sub cho các tin vị trí khi có người đang di chuyển và vài lệnh cho mỗi lần đập. Kiểm tra hạn mức của gói Redis bạn chọn.
-- Pub/sub của Redis không đảm bảo giao tin. Nếu đứt kết nối Redis giữa chừng, một tin có thể rơi mất. Client được đồng bộ lại đầy đủ ở lần vào phòng kế tiếp.
-- Firewall và rate limit của Vercel áp dụng cho mỗi request upgrade, đừng đặt rule quá chặt.
+- WebSockets on Vercel are in **public beta** (since 2026-06-22); the docs say behaviour and API may change. Follow the changelog before relying on it for anything important.
+- The docs give no number for concurrent connections per instance. There is no real-world load data for this game yet.
+- Every message goes through Redis, so latency depends on the distance between the function region and the database. Put them in the same region.
+- Cost: Fluid Compute Active CPU, Provisioned Memory and Invocations, plus Redis commands. Each room with players costs about 1 Redis command per second for housekeeping and heartbeats (per instance holding that room), plus pub/sub for position messages while someone moves, plus a few commands per smash. Check your Redis plan's limits.
+- Redis pub/sub does not guarantee delivery. If the Redis connection drops, a message may be lost. Clients are fully resynchronised the next time they join.
+- Vercel's firewall and rate limits apply to every upgrade request, so do not set rules too tightly.
 
-### Phương án dự phòng
+### Fallback
 
-`server.js` chạy được trên mọi host Node thường trực (Render, Railway, Fly.io, VPS): `npm install && npm start`. Một tiến trình duy nhất thì không cần Redis (state nằm trong RAM, mất khi khởi động lại). Muốn chạy nhiều instance thì đặt `REDIS_URL` như trên. Repo hiện không có Dockerfile.
+`server.js` runs on any always-on Node host (Render, Railway, Fly.io, a VPS): `npm install && npm start`. A single process needs no Redis (state lives in RAM and is lost on restart). To run several instances set `REDIS_URL` as above. The repo has no Dockerfile.
 
-Health check: `GET /healthz` khi chạy `server.js`, `GET /api/health` trên Vercel (chỉ kiểm tra đã có biến Redis). `GET /api/health?deep=<HEALTH_KEY>` kết nối thật tới Redis, ghi một khoá `br:keepalive` có hạn 3 ngày và trả `pingMs`. Các gói Redis miễn phí xoá database khi khoảng 2 tuần không có lệnh nào, nên trỏ một dịch vụ uptime miễn phí (ví dụ UptimeRobot) tới địa chỉ này mỗi ngày một lần vừa giữ database sống vừa báo khi game hỏng.
+Health checks: `GET /healthz` with `server.js`, `GET /api/health` on Vercel (only checks that the Redis variable is set). `GET /api/health?deep=<HEALTH_KEY>` really connects to Redis, writes a `br:keepalive` key with a 3-day expiry and returns `pingMs`. Free Redis plans delete a database after about two weeks without any command, so point a free uptime monitor (for example UptimeRobot) at this URL once or twice a day: it keeps the database alive and alerts you when the game breaks.
 
-### Chọn và kiểm tra nhà cung cấp Redis
+### Choosing and testing a Redis provider
 
-Trước khi dán `REDIS_URL` vào Vercel, chạy thử trên máy:
+Before pasting `REDIS_URL` into Vercel, run this on your machine:
 
 ```bash
 REDIS_URL='rediss://user:password@host:port' npm run check:store
 ```
 
-Script kiểm tra: kết nối, độ trễ, `SET`/`GET`, Lua (`EVAL`), pub/sub, 20 kết nối cùng lúc, và chạy thử chính store của game (vào phòng, đập, snapshot, dọn dẹp, gọi IT). Nó chỉ tạo khoá trong một phòng tạm rồi xoá, và không in chuỗi kết nối. Ghi chú về các gói (số liệu tính đến 2026-11, hãy xem lại trang giá của họ):
+The script checks connection, latency, `SET`/`GET`, Lua (`EVAL`), pub/sub, 20 simultaneous connections, and runs the game's own store (join, smash, snapshot, housekeeping, Call IT). It only creates keys in a temporary room, deletes them, and never prints the connection string. Notes on plans (figures as of 2026-11, check their pricing pages again):
 
-- **Redis Cloud Free (30 MB)**: 30 kết nối, 100 ops/giây, 5 GB băng thông/tháng, không có hạn mức số lệnh theo tháng. **Không có TLS** (docs ghi rõ) nên dùng mật khẩu riêng của database này, và database tự bị xoá nếu khoảng 14 ngày không có lệnh nào (dùng `deep` health ở trên). Chưa có tài liệu xác nhận Lua và pub/sub có chạy trên gói Free hay không, vì vậy hãy chạy script trước.
-- **Redis Cloud Essentials (trả phí, khoảng $5/tháng)**: có TLS (phải bật trong Security, có thể cần `REDIS_TLS_CA`), 256 kết nối, 1000 ops/giây, 100 GB băng thông.
-- **Upstash Free**: 500K lệnh/tháng, chỉ 1 database. Nếu gắn thẻ thanh toán, theo tài liệu của họ mọi tài nguyên free của cả tài khoản chuyển sang trả phí.
-- Game giảm số lệnh khi mọi người ở cùng một instance (vị trí gửi nội bộ, chỉ dùng Redis khi có người ở instance khác), nhưng vẫn tốn lệnh cho dọn dẹp mỗi vài giây và cho mỗi lần đập.
+- **Redis Cloud Free (30 MB)**: 30 connections, 100 ops/s, 5 GB bandwidth per month, no monthly command quota. **No TLS** (stated in their docs), so use a password unique to this database. The database is deleted after about 14 days without any command (use the `deep` health check above). Their docs do not confirm that Lua and pub/sub work on the Free plan, so run the script first.
+- **Redis Cloud Essentials (paid, about $5/month)**: TLS (enable it under Security; may need `REDIS_TLS_CA`), 256 connections, 1000 ops/s, 100 GB bandwidth.
+- **Upstash Free**: 500K commands/month, one database. If you attach a payment card, their docs say all free resources on the account become paid.
+- The game cuts commands when everyone is on one instance (positions stay in-process, Redis is used only when someone is on another instance), but it still spends commands on housekeeping every few seconds and on every smash.
 
-## Cấu trúc
+## Layout
 
 ```
-api/ws.js            hàm Vercel nhận WebSocket (export http server có gắn WebSocketServer)
-api/health.js        báo đã cấu hình Redis chưa; ?deep=KEY ping Redis thật
-api/rooms.js         danh sách phòng + số người online cho màn hình vào (CDN cache 10 giây)
-lib/room-list.js     đếm người mỗi phòng bằng 1 lệnh store, cache ngắn trong tiến trình
-scripts/check-store.js  kiểm tra một Redis có chạy được game không
-lib/realtime.js      logic game và nối WebSocket, không biết đang chạy ở đâu
-lib/world.js         bố cục văn phòng, loại đồ vật, vật cản và hàm va chạm (cố định)
-lib/store-redis.js   state dùng chung + pub/sub trong Redis (script Lua nguyên tử)
-lib/store-memory.js  cùng giao diện nhưng trong RAM, cho local và test
-lib/config.js        chọn store theo biến môi trường
-server.js            chạy local: file tĩnh + WebSocket ở /api/ws
-public/              index.html, style.css, game.js (mạng, input, HUD, âm thanh WebAudio),
-                     scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn),
-                     assets/kenney/ (model .glb của Kenney, CC0)
-test/                world.js (bố cục, đường đi), smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
-vercel.json          thư mục tĩnh và maxDuration
+api/ws.js            Vercel function that accepts WebSockets (exports an http server with a WebSocketServer)
+api/health.js        reports whether Redis is configured; ?deep=KEY pings Redis for real
+api/rooms.js         server list with online counts for the join screen (CDN cached 10 s)
+lib/room-list.js     counts players per server with one store command, short in-process cache
+scripts/check-store.js  checks whether a given Redis can run the game
+lib/realtime.js      game logic and WebSocket wiring, unaware of where it runs
+lib/world.js         office layout, object types, obstacles and collision helpers (fixed)
+lib/store-redis.js   shared state + pub/sub in Redis (atomic Lua scripts)
+lib/store-memory.js  same interface in RAM, for local runs and tests
+lib/config.js        picks the store from environment variables
+server.js            local run: static files + WebSocket at /api/ws
+public/              index.html, style.css, game.js (network, input, HUD, WebAudio sound),
+                     scene3d.js (all the three.js code), vendor/ (vendored three.js),
+                     assets/kenney/ (Kenney .glb models, CC0)
+test/                world.js (layout, paths), smoke.js (end-to-end, RAM), shared.js (real Redis, two instances)
+vercel.json          static directory and maxDuration
+docs/                ARCHITECTURE.md (English) and ARCHITECTURE.vi.md: what Redis does, cleanup, limits
 ```
 
-## Test
+## Tests
 
 ```bash
 npm test
 ```
 
-`test/world.js` kiểm tra bố cục và đường đi. `test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM (gồm AFK, giới hạn kết nối/phòng và công tắc tắt khẩn cấp). `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`.
+`test/world.js` checks the layout and paths. `test/smoke.js` runs a real server with real WebSockets and the RAM store (including AFK, connection/room limits, name rules and the kill switch). `test/shared.js` runs one store contract against both the RAM and Redis stores, then starts two servers sharing one Redis to play across instances (smash one object from two instances, reconnect to another instance, cross-instance IP limit, sudden instance death). It starts a temporary `redis-server` on a free port by itself; if the machine has no `redis-server`, the Redis part is skipped with a `SKIP` line. Point it at an existing Redis with `TEST_REDIS_URL`.
 
-## Ghi chú thiết kế
+## Design notes
 
-Server là nơi quyết định mọi thứ quan trọng: client chỉ gửi vị trí và yêu cầu đập, server kiểm tra khoảng cách, chống dịch chuyển tức thời, giới hạn tốc độ đập và số tin nhắn mỗi giây. Tên người chơi được làm sạch ở server và chỉ hiển thị bằng `textContent` hoặc canvas ở client. Token của người chơi chỉ để nhận lại chỗ cũ sau khi reconnect, nó không phải thông tin xác thực: không có tài khoản, và id công khai của người chơi là số nguyên không liên quan tới token.
+The server decides everything important: the client only sends its position and smash requests, and the server checks distance, prevents teleporting, and limits smash rate and messages per second. Player names are sanitised on the server and displayed only through `textContent` or canvas on the client. A player's token only lets them reclaim their place after a reconnect; it is not an authentication credential: there are no accounts, and a player's public id is an integer unrelated to the token.
