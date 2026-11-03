@@ -216,7 +216,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.players.set(p.id, {
       id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv', company: String(p.company || ''),
       x: p.x, y: p.y, tx: p.x, ty: p.y, d: p.d || 1,
-      swing: 0, emote: null, emoteT: 0, moving: false, heading: 0,
+      swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0, moving: false, heading: 0,
     });
   }
 
@@ -459,6 +459,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         }
         break;
       }
+      case 'chat':
+        chatReceive(m);
+        break;
       case 'board':
         renderBoard(m);
         break;
@@ -551,6 +554,57 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !rankEl.hidden) rankClose();
   });
+
+  // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
+  // while under the system toasts, and each message also shows as a bubble over the speaker for 3 seconds.
+  const CHAT_LINES = 5;
+  const CHAT_LINE_MS = 20000;
+  const CHAT_BUBBLE_S = 3;
+  const chatForm = $('chatForm');
+  const chatInput = $('chatInput');
+  const chatLog = $('chatLog');
+  const coarseUi = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  function chatReceive(m) {
+    if (typeof m.text !== 'string' || !m.text) return;
+    const p = S.players.get(m.id);
+    const li = document.createElement('li');
+    li.className = 'chatline' + (m.id === S.me ? ' me' : '');
+    const nm = document.createElement('b');
+    nm.textContent = (p ? p.name : String(m.name || '?')) + ': ';
+    li.append(nm, document.createTextNode(m.text)); // text nodes only: never HTML
+    chatLog.appendChild(li);
+    chatLog.hidden = false;
+    while (chatLog.children.length > CHAT_LINES) chatLog.removeChild(chatLog.firstChild);
+    setTimeout(() => {
+      if (li.parentNode) li.parentNode.removeChild(li);
+      if (!chatLog.children.length) chatLog.hidden = true;
+    }, CHAT_LINE_MS);
+    if (p) {
+      p.chat = m.text;
+      p.chatT = CHAT_BUBBLE_S;
+    }
+  }
+  function chatOpen() {
+    if (coarseUi) chatForm.classList.add('open');
+    chatInput.focus();
+  }
+  chatInput.addEventListener('focus', () => {
+    S.keys.clear(); // a key held while clicking into the box must not keep walking
+    S.smashHeld = false;
+  });
+  chatInput.addEventListener('blur', () => chatForm.classList.remove('open'));
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') chatInput.blur();
+  });
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.replace(/\s+/g, ' ').trim().slice(0, 120);
+    chatInput.value = '';
+    if (text && S.joined) send({ t: 'chat', text });
+    chatInput.blur(); // back to the game: WASD walks again
+  });
+  $('chatSend').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus so the click still sends
+  $('chatBtn').addEventListener('click', chatOpen);
 
   // Exit door (west wall of the lobby): walking into the zone asks to leave the office. Leaving closes our
   // socket like any disconnect, so the others get the usual "left the server" toast and the score is kept.
@@ -720,10 +774,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       ? [
           '<b>Chạm vào nền</b> để đi tới đó, <b>chạm vào đồ vật</b> để đi tới và đập một cú.',
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
+          '<b>Bấm 💬</b> để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
+          '<b>Enter</b> hoặc bấm vào ô chat để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, <b>1 đến 8</b> để thả emoji.',
         ];
     items.push(
@@ -843,6 +899,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if (k === ' ') {
       e.preventDefault();
       S.keys.add('space');
+    } else if (k === 'enter' && !e.repeat) {
+      e.preventDefault();
+      chatOpen();
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
     } else if (k >= '1' && k <= '8' && !e.repeat) {
@@ -1163,6 +1222,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       p.swing = Math.max(0, p.swing - dt * 4);
       if (p.emoteT > 0) p.emoteT -= dt;
+      if (p.chatT > 0) p.chatT -= dt;
     }
 
     for (const o of S.objects) {

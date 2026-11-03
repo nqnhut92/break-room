@@ -77,6 +77,19 @@ canvas {
 .plabel .rl { font-size: 10.5px; font-weight: 600; color: #c9d1de; text-shadow: 0 1px 2px #000; line-height: 1.1; }
 #joinForm .opt { color: var(--muted); opacity: .7; font-size: 12px; }
 .plabel .rl:empty { display: none; }
+.plabel .bub {
+  max-width: 220px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.3;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(60, 66, 80, 0.82);
+  color: #fff;
+}
+.plabel .bub:empty { display: none; }
 .plabel .emo { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
 .plabel .emo:empty { display: none; }
 /* mana bar under our own name */
@@ -330,7 +343,8 @@ canvas {
 }
 #hint.fade { opacity: 0; }
 
-#toasts {
+/* bottom-left column: system toasts on top, room chat fixed underneath them */
+#leftCol {
   position: fixed;
   left: 10px;
   bottom: 110px;
@@ -339,6 +353,53 @@ canvas {
   gap: 6px;
   pointer-events: none;
   max-width: min(360px, calc(100vw - 20px));
+}
+#toasts { display: flex; flex-direction: column; gap: 6px; }
+#chatLog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+#chatLog[hidden] { display: none; }
+.chatline {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #fff;
+  overflow-wrap: anywhere;
+  animation: pop 0.2s ease-out;
+}
+.chatline b { font-weight: 700; }
+.chatline.me b { color: var(--accent-2); }
+#chatForm {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 4px;
+}
+#chatInput {
+  width: 230px;
+  min-width: 0;
+  font: inherit;
+  font-size: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+#chatInput::placeholder { color: var(--muted); }
+#chatInput:focus { outline: none; border-color: var(--accent-2); }
+#chatSend { padding: 6px 10px; }
+#chatBtn { display: none; }
+@media (pointer: coarse) {
+  #chatBtn { display: block; }
+  /* on touch screens the box only appears when 💬 is tapped, over the bottom bar while the keyboard is up */
+  #chatForm { display: none; }
+  #chatForm.open { display: flex; position: fixed; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 25; }
+  #chatForm.open #chatInput { flex: 1; width: auto; font-size: 16px; }
 }
 .toast {
   background: var(--panel);
@@ -486,7 +547,7 @@ canvas {
   #hint { display: none; }
   #board { width: 100%; font-size: 12px; }
   .board-total { font-size: 15px; }
-  #toasts { bottom: 120px; }
+  #leftCol { bottom: 120px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

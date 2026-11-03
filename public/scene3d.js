@@ -1043,6 +1043,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     const label = document.createElement('div');
     label.className = 'plabel';
+    const bub = document.createElement('span'); // chat bubble, shown for a few seconds after a message
+    bub.className = 'bub';
     const emo = document.createElement('span');
     emo.className = 'emo';
     const nm = document.createElement('span');
@@ -1054,11 +1056,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     bar.appendChild(fill);
     const rl = document.createElement('span'); // company role under the name
     rl.className = 'rl';
-    label.append(emo, nm, rl, bar);
+    label.append(bub, emo, nm, rl, bar);
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, emo, nm, rl, bar, fill, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, bub, emo, nm, rl, bar, fill, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1105,6 +1107,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     if (em !== rig.lastEmote) {
       rig.emo.textContent = em;
       rig.lastEmote = em;
+    }
+    const ch = p.chatT > 0 && p.chat ? p.chat : '';
+    if (ch !== rig.lastChat) {
+      rig.bub.textContent = ch;
+      rig.lastChat = ch;
     }
     rig.label.classList.toggle('me', isMe);
     rig.bar.style.display = isMe ? '' : 'none';

@@ -56,12 +56,17 @@
 
     <div id="bottombar">
       <div id="emotes"></div>
+      <form id="chatForm" autocomplete="off">
+        <input id="chatInput" maxlength="120" placeholder="Nhắn cả phòng… (Enter để gửi)" aria-label="Tin nhắn cho cả phòng" enterkeyhint="send">
+        <button id="chatSend" class="btn" type="submit" aria-label="Gửi">➤</button>
+      </form>
       <button id="resetBtn" class="btn it" type="button">Gọi IT thay đồ mới</button>
       <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
     </div>
     <canvas id="minimap" width="200" height="125" role="img" aria-label="Bản đồ văn phòng (phím M để ẩn hoặc hiện)" title="Bản đồ (M)"></canvas>
     <div id="sideBtns">
       <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog">?</button>
+      <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả phòng">💬</button>
       <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true">🗺</button>
       <div id="zoomBtns" role="group" aria-label="Thu phóng">
         <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
@@ -95,7 +100,7 @@
       </div>
     </div>
 
-    <div id="hint">WASD / mũi tên để di chuyển · Space để đập · phím 1-8 để thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
+    <div id="hint">WASD / mũi tên để di chuyển · Space để đập · Enter để chat · phím 1-8 để thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
   </div>
 
   <div id="overlay">
@@ -130,7 +135,10 @@
   </div>
 
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
-  <div id="toasts" aria-live="polite"></div>
+  <div id="leftCol">
+    <div id="toasts" aria-live="polite"></div>
+    <ol id="chatLog" aria-label="Tin nhắn trong phòng" hidden></ol>
+  </div>
 
   <script type="module" src="game.js"></script>
 </body>

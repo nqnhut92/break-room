@@ -28,6 +28,7 @@ The join screen also asks for a company role (boss, accountant, HR, IT, dev, sal
 | Move | WASD / arrow keys, or tap the floor |
 | Smash | Space (hold to keep smashing), the SMASH! button, or tap an object (touch screens) |
 | Emoji | Keys 1 to 8 or the emoji buttons |
+| Chat | Enter or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game |
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
 | Mini map | M to hide or show it (click it too) |
 

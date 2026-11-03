@@ -168,6 +168,23 @@ async function main() {
     assert.strictEqual(hit.hp, info.hp - 1);
   });
 
+  await step('chat: broadcast to the room with a bubble-ready id, cleaned, capped, rate limited', async () => {
+    send(B, { t: 'chat', text: '  xin   chào <b>cả</b> nhà  ' });
+    const c1 = await take(A, (m) => m.t === 'chat' && m.id === B.id);
+    assert.strictEqual(c1.text, 'xin chào bcả/b nhà');
+    assert.strictEqual(c1.name, 'Binh');
+    await take(B, (m) => m.t === 'chat' && m.id === B.id); // the sender gets it back too
+    send(B, { t: 'chat', text: 'x' }); // inside the cooldown: refused, the sender is told
+    await take(B, (m) => m.t === 'err');
+    await none(A, (m) => m.t === 'chat' && m.text === 'x');
+    await sleep(1050);
+    send(B, { t: 'chat', text: '   ' }); // blank: ignored without an error
+    send(B, { t: 'chat', text: 'y'.repeat(500) });
+    const c2 = await take(A, (m) => m.t === 'chat' && m.text.startsWith('yyy'));
+    assert.strictEqual(c2.text.length, 120);
+    await sleep(1050);
+  });
+
   await step('emotes are broadcast and invalid ones are ignored', async () => {
     send(B, { t: 'emote', e: 3 });
     const e = await take(A, (m) => m.t === 'emote' && m.id === B.id && m.e === 3);

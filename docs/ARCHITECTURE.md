@@ -38,7 +38,7 @@ Per-IP connection leases (one zset per IP) and the `br:keepalive` health key liv
 
 **2. Atomic operations.** Join, leave, hit, housekeeping, snapshot and reset are single Lua scripts. Two players hitting one object from two instances break it exactly once and the score is credited once. Name checks happen inside the join script, so two players cannot claim one name at the same instant.
 
-**3. Pub/sub.** An instance that receives an action (smash, emote, position, join/leave) publishes it on the room's channel; every instance holding players of that room forwards it to its own clients. Pub/sub is transient and costs no storage. Delivery is not guaranteed; clients resynchronise on their next join. When every player of a room is on one instance, positions stay in-process and are not published.
+**3. Pub/sub.** An instance that receives an action (smash, emote, chat, position, join/leave) publishes it on the room's channel; every instance holding players of that room forwards it to its own clients. Pub/sub is transient and costs no storage. Delivery is not guaranteed; clients resynchronise on their next join. When every player of a room is on one instance, positions stay in-process and are not published.
 
 ## Lifecycle and cleanup
 
