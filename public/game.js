@@ -67,6 +67,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     name: '',
     gender: 'm',
     role: 'nv',
+    company: '',
     world: { w: 1280, h: 720 },
     types: {},
     desks: [],
@@ -213,7 +214,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // ---------------------------------------------------------------- state ----
   function addPlayer(p) {
     S.players.set(p.id, {
-      id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv',
+      id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv', company: String(p.company || ''),
       x: p.x, y: p.y, tx: p.x, ty: p.y, d: p.d || 1,
       swing: 0, emote: null, emoteT: 0, moving: false, heading: 0,
     });
@@ -263,7 +264,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (handover) S.pendingWs = ws;
     else S.ws = ws;
     ws.onopen = () => {
-      ws.send(JSON.stringify({ t: 'join', name: S.name, gender: S.gender, role: S.role, room: S.room, token: getToken() }));
+      ws.send(JSON.stringify({ t: 'join', name: S.name, gender: S.gender, role: S.role, company: S.company, room: S.room, token: getToken() }));
     };
     ws.onmessage = (ev) => {
       let m;
@@ -887,6 +888,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       savedName = localStorage.getItem('br-name') || '';
     } catch (e) { /* ignore */ }
     $('nameInput').value = savedName;
+    // company name (optional): free text, remembered like the name
+    try {
+      $('companyInput').value = (localStorage.getItem('br-company') || '').slice(0, 20);
+    } catch (e) { /* ignore */ }
     // company role: a native select (one choice from a plain list), remembered like the name
     const roleSel = $('roleSelect');
     for (const r of ROLES) {
@@ -1023,6 +1028,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         localStorage.setItem('br-name', name);
       } catch (err) { /* ignore */ }
       S.name = name;
+      S.company = $('companyInput').value.replace(/\s+/g, ' ').trim().slice(0, 20);
+      try {
+        localStorage.setItem('br-company', S.company);
+      } catch (err) { /* ignore */ }
       S.room = picked || rooms[0].id;
       S.fatal = false;
       S.started = true;

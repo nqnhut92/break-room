@@ -372,6 +372,25 @@ async function main() {
     for (const x of [boss, bad, watcher]) x.ws.close();
   });
 
+  await step('company name is optional, cleaned, capped at 20 characters and shown to everyone', async () => {
+    const join = (name, company) => new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, company, room: 'company', token: h.newToken() })));
+      ws.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        if (m.t === 'welcome') resolve({ ws, m });
+      });
+    });
+    const a = await join('Ann', '  Acme   <b>Corp</b>  ');
+    const b = await join('Bob', 'x'.repeat(50));
+    const c = await join('Cy', '');
+    const seen = (w, name) => w.m.players.find((p) => p.name === name);
+    assert.strictEqual(seen(c, 'Ann').company, 'Acme bCorp/b');
+    assert.strictEqual(seen(c, 'Bob').company, 'x'.repeat(20));
+    assert.strictEqual(seen(c, 'Cy').company, '');
+    for (const x of [a, b, c]) x.ws.close();
+  });
+
   await step('a full room rejects new players', async () => {
     const socks = [];
     for (let i = 0; i < 20; i++) {

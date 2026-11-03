@@ -27,7 +27,7 @@ Redis  (single source of truth for each server's state)
 | `o` | hash | object id → `hp:brokenAt` (absent = full health) |
 | `sc` | hash | player id → score |
 | `bk` | hash | player id → number of objects broken |
-| `nm` | hash | player id → display name; field `g<id>` → gender (`m` or `f`) |
+| `nm` | hash | player id → display name; field `g<id>` → gender (`m` or `f`), `r<id>` → role, `c<id>` → company name |
 | `tok` | hash | client token → player id (lets a reconnect keep id and score) |
 | `meta` | hash | `nextid`, `total` damage, `lastReset` |
 | `on` | zset | player id → last heartbeat (ms); this is "who is online" |
@@ -52,7 +52,7 @@ Redis is not written to forever. Everything has an expiry or a bounded size:
 | Per-IP leases | Each lease expires after 60 s and is refreshed while the connection lives |
 | `br:keepalive` | 3-day expiry, rewritten by each deep health check |
 
-Compaction: housekeeping also runs a small compaction at most every 2 minutes per room (`lastCompact` in `meta`). It forgets the token, name, gender, role, last position and slot of every player who is offline and never scored. Players with a score stay until the room expires so the leaderboard keeps them. This bounds the per-token entries by the number of people who actually played, not by everyone who ever visited.
+Compaction: housekeeping also runs a small compaction at most every 2 minutes per room (`lastCompact` in `meta`). It forgets the token, name, gender, role, company, last position and slot of every player who is offline and never scored. Players with a score stay until the room expires so the leaderboard keeps them. This bounds the per-token entries by the number of people who actually played, not by everyone who ever visited.
 
 Rough size (estimate, not measured): the state of one room is tens of KB. Redis Cloud counts its own baseline overhead too, which is why an almost empty database already shows about 2 MB.
 

@@ -1005,7 +1005,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, emo, nm, rl, bar, fill, walk: 0, lastRole: '', lastName: p.name, lastEmote: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, emo, nm, rl, bar, fill, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1039,10 +1039,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.nm.textContent = p.name;
       rig.lastName = p.name;
     }
-    if (rig.lastRole !== p.role) {
+    if (rig.lastRole !== p.role || rig.lastCompany !== p.company) {
       rig.lastRole = p.role;
+      rig.lastCompany = p.company;
       const r = ROLE_BY_ID[p.role];
-      rig.rl.textContent = r ? r.emoji + ' ' + r.short : '';
+      const parts = [];
+      if (r) parts.push(r.emoji + ' ' + r.short);
+      if (p.company) parts.push(p.company);
+      rig.rl.textContent = parts.join(' · ');
     }
     const em = p.emoteT > 0 && p.emote ? p.emote : '';
     if (em !== rig.lastEmote) {
