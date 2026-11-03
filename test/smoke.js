@@ -290,6 +290,19 @@ async function main() {
     await short.stop();
   });
 
+  await step('smashing costs mana, the server reports it, and mana comes back (fast once you stop)', async () => {
+    const cfg = A.welcome.mana;
+    assert.deepStrictEqual({ max: cfg.max, cost: cfg.cost }, { max: server.MANA.max, cost: server.MANA.cost });
+    const m = await take(A, (x) => x.t === 'mana');
+    assert.ok(m.v >= 0 && m.v <= cfg.max && m.ago >= 0);
+    // pure regeneration rule shared with the client: 10/s while swinging, 30/s after 1 s of rest
+    const probe = (ms) => server.manaAt({ mana: 0, manaAt: 0 }, ms);
+    assert.strictEqual(probe(500), 5);
+    assert.strictEqual(probe(1000), 10);
+    assert.strictEqual(probe(2000), 40);
+    assert.strictEqual(probe(60000), server.MANA.max);
+  });
+
   await step('a missing or duplicate name is refused, a reconnect with the same token is not', async () => {
     const tryJoin = (name, token) => new Promise((resolve) => {
       const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');

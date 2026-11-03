@@ -562,10 +562,20 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = '#ff5d4a';
       ctx.fillRect(0, 0, 14, h);
-      ctx.font = '800 52px system-ui, sans-serif';
+      const text = 'BREAK ROOM · XẢ STRESS CÙNG ĐỒNG NGHIỆP';
+      // Shrink the font until the whole sentence fits: system fonts differ in width (macOS is wider than Linux)
+      // and the end of the sentence used to be cut off.
+      let size = 52;
+      ctx.font = '800 ' + size + 'px system-ui, sans-serif';
+      const room = w - 44 - 32;
+      const needed = ctx.measureText(text).width;
+      if (needed > room) {
+        size = Math.max(24, Math.floor(size * (room / needed)));
+        ctx.font = '800 ' + size + 'px system-ui, sans-serif';
+      }
       ctx.fillStyle = '#eef1f6';
       ctx.textBaseline = 'middle';
-      ctx.fillText('BREAK ROOM · XẢ STRESS CÙNG ĐỒNG NGHIỆP', 44, h / 2 + 2);
+      ctx.fillText(text, 44, h / 2 + 2);
     });
     const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(1000, 125), new THREE.MeshBasicMaterial({ map: sign, transparent: true }));
     signMesh.position.set(W / 2, 215, 3);
@@ -711,21 +721,48 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // clone shares mesh geometry but not materials issues: fine, same material
     g.add(legL, legR);
 
+    // The model faces +z, towards the camera, so its own right hand is on the -x side (the viewer's left).
     const armL = new THREE.Group();
-    armL.position.set(-19, 72, 0);
+    armL.position.set(19, 72, 0);
     armL.add(mk(limb(shirtHex)));
     const armR = new THREE.Group();
-    armR.position.set(19, 72, 0);
+    armR.position.set(-19, 72, 0);
     armR.add(mk(limb(shirtHex)));
-    // hammer in the right hand
+    // Mjolnir-ish hammer in the right hand: short leather-wrapped handle with a lanyard loop,
+    // a wide rectangular steel head with darker bevelled end caps and gold rune inlays.
+    const STEEL = '#c3ccda';
+    const STEEL_DARK = '#8591a5';
+    const GOLD = '#d1b65a';
+    const LEATHER = '#4a3020';
     const hammer = new THREE.Group();
     hammer.position.set(0, -32, 4);
     hammer.add(mk(merge([
-      cyl(2.6, 2.6, 52, '#6b4a2a', 0, 14, 0, 8),
-      box(24, 15, 15, '#9aa3b2', 0, 42, 0),
-      box(26, 4, 17, '#6f7886', 0, 36, 0),
+      // handle and grip wraps
+      cyl(2.7, 2.7, 40, '#6b4a2a', 0, 12, 0, 8),
+      cyl(3.1, 3.1, 2.2, LEATHER, 0, 2, 0, 8),
+      cyl(3.1, 3.1, 2.2, LEATHER, 0, 8, 0, 8),
+      cyl(3.1, 3.1, 2.2, LEATHER, 0, 14, 0, 8),
+      cyl(3.1, 3.1, 2.2, LEATHER, 0, 20, 0, 8),
+      // pommel and lanyard loop
+      sph(3.6, STEEL_DARK, 0, -8, 0),
+      box(1.4, 9, 1.4, LEATHER, -3.4, -14, 0),
+      box(1.4, 9, 1.4, LEATHER, 3.4, -14, 0),
+      box(8.2, 1.4, 1.4, LEATHER, 0, -18.6, 0),
+      // head: long block across the top of the handle, end caps slightly bigger
+      box(34, 19, 17, STEEL, 0, 40, 0),
+      box(5, 21, 19, STEEL_DARK, -19, 40, 0),
+      box(5, 21, 19, STEEL_DARK, 19, 40, 0),
+      box(34, 2.4, 18.4, STEEL_DARK, 0, 30.6, 0),
+      box(34, 2.4, 18.4, STEEL_DARK, 0, 49.4, 0),
+      // gold rune inlays on both faces
+      box(22, 1.6, 0.6, GOLD, 0, 43, 8.8),
+      box(22, 1.6, 0.6, GOLD, 0, 37, 8.8),
+      box(1.6, 8, 0.6, GOLD, -7, 40, 8.8),
+      box(1.6, 8, 0.6, GOLD, 7, 40, 8.8),
+      box(22, 1.6, 0.6, GOLD, 0, 43, -8.8),
+      box(22, 1.6, 0.6, GOLD, 0, 37, -8.8),
     ])));
-    hammer.rotation.x = Math.PI / 2.4;
+    hammer.rotation.set(0.4, 0, 0.55); // carried up and slightly outward so the head reads from the front
     armR.add(hammer);
     root.add(armL, armR);
 
@@ -753,14 +790,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const nm = document.createElement('span');
     nm.className = 'nm';
     nm.textContent = p.name;
-    label.append(emo, nm);
+    const bar = document.createElement('span'); // mana bar, only shown for our own player
+    bar.className = 'mana';
+    const fill = document.createElement('i');
+    bar.appendChild(fill);
+    label.append(emo, nm, bar);
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, ring, label, emo, nm, walk: 0, lastName: p.name, lastEmote: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, ring, label, emo, nm, bar, fill, walk: 0, lastName: p.name, lastEmote: '' };
   }
 
-  function updatePlayer(rig, p, dt, isMe) {
+  function updatePlayer(rig, p, dt, isMe, S) {
     rig.g.position.set(p.x, 0, p.y);
     // face the heading smoothly
     let diff = p.heading - rig.g.rotation.y;
@@ -796,6 +837,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.lastEmote = em;
     }
     rig.label.classList.toggle('me', isMe);
+    rig.bar.style.display = isMe ? '' : 'none';
+    if (isMe) {
+      const f = Math.max(0, Math.min(1, S.manaFrac == null ? 1 : S.manaFrac));
+      rig.fill.style.transform = 'scaleX(' + f.toFixed(3) + ')';
+      rig.bar.classList.toggle('low', f < 0.2);
+      rig.bar.classList.toggle('flash', S.manaEmptyT > 0);
+    }
   }
 
   function disposePlayer(rig) {
@@ -991,6 +1039,64 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return { sx: (v3.x * 0.5 + 0.5) * W, sy: (-v3.y * 0.5 + 0.5) * H, ok: v3.z < 1 && v3.z > -1 };
   }
 
+  // ---- health bars over damaged objects -------------------------------------
+  // Green while healthy, orange once half gone, red on the last hit. Undamaged and broken objects show none.
+  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88 };
+  const hpBars = new Map(); // object id -> { el, fill, tone, ratio }
+  function hpTone(hp, max) {
+    const r = hp / max;
+    if (hp <= 1 || r <= 0.34) return 'hot';
+    return r <= 0.6 ? 'warm' : 'cool';
+  }
+  function updateHealthBars(S) {
+    for (const o of S.objects) {
+      const damaged = !o.broken && o.hp > 0 && o.hp < o.hpMax;
+      let b = hpBars.get(o.id);
+      if (!damaged) {
+        if (b && !b.hidden) {
+          b.el.style.display = 'none';
+          b.hidden = true;
+        }
+        continue;
+      }
+      const pr = project(o.x, BAR_LIFT[o.type] || 70, o.y);
+      const on = pr.ok && pr.sx > -60 && pr.sx < W + 60 && pr.sy > -30 && pr.sy < H + 30;
+      if (!b) {
+        const el = document.createElement('div');
+        el.className = 'hpbar';
+        el.setAttribute('aria-hidden', 'true');
+        el.style.display = 'none'; // shown below once it is on screen and positioned
+        const fill = document.createElement('i');
+        el.appendChild(fill);
+        labelsEl.appendChild(el);
+        b = { el, fill, tone: '', ratio: -1, hidden: true };
+        hpBars.set(o.id, b);
+      }
+      if (!on) {
+        if (!b.hidden) {
+          b.el.style.display = 'none';
+          b.hidden = true;
+        }
+        continue;
+      }
+      if (b.hidden) {
+        b.el.style.display = '';
+        b.hidden = false;
+      }
+      const ratio = o.hp / o.hpMax;
+      if (ratio !== b.ratio) {
+        b.ratio = ratio;
+        b.fill.style.transform = 'scaleX(' + ratio.toFixed(3) + ')';
+      }
+      const tone = hpTone(o.hp, o.hpMax);
+      if (tone !== b.tone) {
+        b.tone = tone;
+        b.el.className = 'hpbar ' + tone;
+      }
+      b.el.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
+    }
+  }
+
   // ---- per-frame ----------------------------------------------------------
   let time = 0;
   function update(dt, S) {
@@ -1063,7 +1169,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig = makePlayer(p);
         players.set(id, rig);
       }
-      updatePlayer(rig, p, dt, id === S.me);
+      updatePlayer(rig, p, dt, id === S.me, S);
     }
     for (const [id, rig] of players) {
       if (!S.players.has(id)) {
@@ -1076,6 +1182,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     renderer.render(scene, camera);
 
     // DOM overlays (after render so the camera matrices are current)
+    updateHealthBars(S);
     for (const [id, rig] of players) {
       const p = S.players.get(id);
       if (!p) continue;

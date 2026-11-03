@@ -27,6 +27,9 @@ html, body {
 canvas {
   position: fixed;
   inset: 0;
+  /* a canvas is a replaced element: without this it keeps its pixel size, so on a 2x screen it is drawn twice as large as the window */
+  width: 100%;
+  height: 100%;
   display: block;
   touch-action: none;
 }
@@ -61,6 +64,41 @@ canvas {
 .plabel.me .nm { color: #ffd34d; }
 .plabel .emo { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
 .plabel .emo:empty { display: none; }
+/* mana bar under our own name */
+.plabel .mana {
+  display: block;
+  width: 46px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(10, 13, 20, 0.7);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.plabel .mana i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(180deg, #7cc4ff, #2f86e6);
+}
+.plabel .mana.low i { background: linear-gradient(180deg, #a3b4d0, #5d6f91); }
+.plabel .mana.flash { box-shadow: 0 0 0 1px #ff5d4a, 0 0 8px rgba(255, 93, 74, 0.8); }
+/* health bar over a damaged object */
+.hpbar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 38px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(10, 13, 20, 0.75);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  will-change: transform;
+}
+.hpbar i { display: block; height: 100%; width: 100%; transform-origin: left center; background: #3ddc84; }
+.hpbar.warm i { background: #ffb02e; }
+.hpbar.hot i { background: #ff5d4a; }
 .ftext {
   position: absolute;
   left: 0;

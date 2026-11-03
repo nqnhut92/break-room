@@ -44,6 +44,10 @@ import { createScene3D } from './scene3d.js';
   const SPEED = 420;
 
   const S = {
+    mana: null, // { v, t }: value stored at time t (performance.now), same model as lib/realtime.js
+    manaCfg: null,
+    manaFrac: 1,
+    manaToastAt: 0,
     ws: null,
     pendingWs: null,
     stuck: 0,
@@ -327,6 +331,8 @@ import { createScene3D } from './scene3d.js';
         S.types = m.types;
         S.colliders = m.colliders;
         S.hitRange = m.hitRange;
+        S.manaCfg = m.mana;
+        S.mana = { v: m.mana.v, t: performance.now() - m.mana.ago };
         S.players = new Map();
         m.players.forEach(addPlayer);
         S.objects = m.objects.map(makeObject);
@@ -369,6 +375,9 @@ import { createScene3D } from './scene3d.js';
             p.d = e[3];
           }
         }
+        break;
+      case 'mana':
+        if (S.manaCfg) S.mana = { v: m.v, t: performance.now() - m.ago };
         break;
       case 'hit': {
         const o = S.objects[m.id];
@@ -495,11 +504,29 @@ import { createScene3D } from './scene3d.js';
     return best;
   }
 
+  // Same regeneration rule as manaAt() in lib/realtime.js.
+  function manaNow() {
+    const c = S.manaCfg;
+    if (!c || !S.mana) return 0;
+    const e = Math.max(0, performance.now() - S.mana.t);
+    const slow = Math.min(e, c.restMs);
+    const fast = Math.max(0, e - c.restMs);
+    return Math.min(c.max, S.mana.v + (slow * c.regen + fast * c.restRegen) / 1000);
+  }
+
   function tryHit(o) {
     const me = S.players.get(S.me);
     if (!me || !o || o.broken) return false;
     const now = performance.now();
     if (now - S.lastHit < 190) return false;
+    if (S.manaCfg && manaNow() < S.manaCfg.cost) {
+      S.manaEmptyT = 1; // flash the bar
+      if (now - S.manaToastAt > 2500) {
+        S.manaToastAt = now;
+        toast('Hết mana, nghỉ tay một chút nhé');
+      }
+      return false;
+    }
     if (Math.hypot(o.x - me.x, o.y - me.y) > S.hitRange - 5) return false;
     S.lastHit = now;
     send({ t: 'hit', id: o.id });
@@ -891,6 +918,8 @@ import { createScene3D } from './scene3d.js';
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt);
+    if (S.manaCfg) S.manaFrac = manaNow() / S.manaCfg.max;
+    if (S.manaEmptyT > 0) S.manaEmptyT = Math.max(0, S.manaEmptyT - dt * 2.5);
     if (scene && S.joined) scene.update(dt, S);
     requestAnimationFrame(frame);
   }

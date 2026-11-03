@@ -7,7 +7,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS } = require('./lib/realtime');
+const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS, MANA, manaAt } = require('./lib/realtime');
 const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv } = require('./lib/config');
 const { TYPES, ROOMS } = require('./lib/world');
 const { createRoomList } = require('./lib/room-list');
@@ -122,4 +122,4 @@ if (require.main === module) {
   process.on('SIGTERM', shutdown);
 }
 
-module.exports = { createApp, start, stop, TYPES, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS };
+module.exports = { createApp, start, stop, TYPES, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS, MANA, manaAt };

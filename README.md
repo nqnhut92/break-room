@@ -30,6 +30,8 @@ Names are required, and a name that is already used by someone online on the sam
 | Emoji | Keys 1 to 8 or the emoji buttons |
 | Zoom | Mouse wheel |
 
+**Mana.** Every smash costs 6 mana out of 100 (the blue bar under your name). Mana comes back at 10/s while you keep swinging and 30/s once you have stopped for a second, so you can burst about 16 hits and then have to pace yourself or rest. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
+
 Clicking a far-away object makes your character run to it and keep smashing until it breaks (it walks straight there and stops if a desk or wall is in the way).
 
 ## The office
