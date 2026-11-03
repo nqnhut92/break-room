@@ -429,7 +429,18 @@ import { createScene3D } from './scene3d.js';
         renderBoard(m);
         break;
       case 'err':
-        if (!S.joined) {
+        if (m.code === 'name') {
+          // name missing or taken (also if someone took it while we were reconnecting): back to the join form
+          S.fatal = true;
+          S.joined = false;
+          S.keys.clear();
+          S.smashHeld = false;
+          $('conn').hidden = true;
+          $('overlay').classList.remove('gone');
+          $('joinBtn').disabled = false;
+          $('joinErr').textContent = m.m;
+          $('nameInput').focus();
+        } else if (!S.joined) {
           S.fatal = true;
           $('joinErr').textContent = m.m;
           $('joinBtn').disabled = false;
@@ -696,10 +707,16 @@ import { createScene3D } from './scene3d.js';
       picked = (best || rooms[0]).id;
     }
 
-    async function refresh() {
+    async function refresh(first) {
       try {
-        const res = await fetch('/api/rooms', { cache: 'no-store' });
-        const data = await res.json();
+        let data;
+        if (first && window.__rooms) {
+          data = await window.__rooms; // already requested by the page head
+          window.__rooms = null;
+        } else {
+          const res = await fetch('/api/rooms', { cache: 'no-store' });
+          data = await res.json();
+        }
         if (data && Array.isArray(data.rooms) && data.rooms.length) rooms = data.rooms;
       } catch (e) { /* keep what we have */ }
       loaded = true;
@@ -708,7 +725,7 @@ import { createScene3D } from './scene3d.js';
     }
     preselect();
     render();
-    refresh();
+    refresh(true);
     setInterval(() => {
       if (!$('overlay').classList.contains('gone')) refresh();
     }, 15000);

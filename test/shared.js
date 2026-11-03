@@ -104,11 +104,32 @@ async function contract(label, makeStore) {
     assert.deepStrictEqual(snap.players.map((p) => p.id).sort(), [a.id, b.id].sort());
   });
 
+  await step(label + ': a name already used by someone online is refused (exact, case-sensitive)', async () => {
+    const r2 = room + '-names';
+    const big = { ...base, max: 10 };
+    const a = await store.join(r2, { ...big, token: T(11), connId: 'n1', name: 'Nick' });
+    assert.ok(a.id);
+    const dup = await store.join(r2, { ...big, token: T(12), connId: 'n2', name: 'Nick' });
+    assert.strictEqual(dup.taken, true);
+    const other = await store.join(r2, { ...big, token: T(13), connId: 'n3', name: 'nick' });
+    assert.ok(other.id, 'a different case is a different name');
+    // the refused attempt left nothing behind: it did not consume an id or a token
+    const again = await store.join(r2, { ...big, token: T(12), connId: 'n4', name: 'Nick2' });
+    assert.strictEqual(again.id, other.id + 1);
+    // the owner reconnecting with the same token is not a clash
+    const back = await store.join(r2, { ...big, token: T(11), connId: 'n5', name: 'Nick' });
+    assert.strictEqual(back.id, a.id);
+    // once the owner is gone the name is free again
+    await store.leave(r2, a.id, 'n5', null, NOW);
+    const taker = await store.join(r2, { ...big, token: T(14), connId: 'n6', name: 'Nick' });
+    assert.ok(taker.id && taker.id !== a.id);
+  });
+
   await step(label + ': room capacity is enforced, existing players can still rejoin', async () => {
-    await store.join(room, { ...base, token: T(3), connId: 'c5' });
-    const full = await store.join(room, { ...base, token: T(4), connId: 'c6' });
+    await store.join(room, { ...base, token: T(3), connId: 'c5', name: 'Chi' });
+    const full = await store.join(room, { ...base, token: T(4), connId: 'c6', name: 'Dung' });
     assert.strictEqual(full.full, true);
-    const again = await store.join(room, { ...base, token: T(2), connId: 'c7' });
+    const again = await store.join(room, { ...base, token: T(2), connId: 'c7', name: 'Binh' });
     assert.ok(again.id);
   });
 
@@ -136,7 +157,7 @@ async function contract(label, makeStore) {
     assert.deepStrictEqual([hk.remaining, hk.respawned], [0, [1]]);
     assert.strictEqual((await store.read(r3, { now: NOW, ttlMs: 5000 })).objects[1], undefined);
 
-    const j = await store.join(r3, { ...base, token: T(9), connId: 'x1', now: NOW });
+    const j = await store.join(r3, { ...base, token: T(9), connId: 'x1', now: NOW, name: 'P1' });
     // heartbeats keep a player alive; silence past the ttl removes them
     hk = await store.housekeep(r3, {
       now: NOW + 4000, ttlMs: 5000, respawnMs: 1000, sweep: false,
@@ -179,8 +200,8 @@ async function contract(label, makeStore) {
 
   await step(label + ': housekeeping reports players that live on other instances', async () => {
     const r5 = room + '-inst';
-    const j1 = await store.join(r5, { ...base, token: T(21), connId: 'instA-1', now: NOW });
-    await store.join(r5, { ...base, token: T(22), connId: 'instB-1', now: NOW });
+    const j1 = await store.join(r5, { ...base, token: T(21), connId: 'instA-1', now: NOW, name: 'P2' });
+    await store.join(r5, { ...base, token: T(22), connId: 'instB-1', now: NOW, name: 'P3' });
     const hk = (instanceId) =>
       store.housekeep(r5, { now: NOW + 100, ttlMs: 5000, respawnMs: 1000, sweep: false, entries: [], instanceId });
     if (label === 'redis') {
@@ -209,9 +230,9 @@ async function contract(label, makeStore) {
   await step(label + ': online counts for the room list come from one call', async () => {
     const rA = room + '-cnt-a';
     const rB = room + '-cnt-b';
-    const a = await store.join(rA, { ...base, token: T(41), connId: 'o1', now: NOW });
-    await store.join(rA, { ...base, token: T(42), connId: 'o2', now: NOW });
-    await store.join(rB, { ...base, token: T(43), connId: 'o3', now: NOW });
+    const a = await store.join(rA, { ...base, token: T(41), connId: 'o1', now: NOW, name: 'O1' });
+    await store.join(rA, { ...base, token: T(42), connId: 'o2', now: NOW, name: 'O2' });
+    await store.join(rB, { ...base, token: T(43), connId: 'o3', now: NOW, name: 'P4' });
     const o = { now: NOW + 100, ttlMs: 5000 };
     assert.deepStrictEqual(await store.online([rA, rB, room + '-none'], o), [2, 1, 0]);
     await store.leave(rA, a.id, 'o1', null, NOW);

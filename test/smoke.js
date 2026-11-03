@@ -290,6 +290,30 @@ async function main() {
     await short.stop();
   });
 
+  await step('a missing or duplicate name is refused, a reconnect with the same token is not', async () => {
+    const tryJoin = (name, token) => new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, room: 'dupnames', token })));
+      ws.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        if (m.t === 'err') resolve(m);
+        if (m.t === 'welcome') { ws.close(); resolve(m); }
+      });
+    });
+    const empty = await tryJoin('   ', h.newToken());
+    assert.strictEqual(empty.t, 'err');
+    assert.strictEqual(empty.code, 'name');
+    const first = await h.client(port, 'Hoa', 'dupnames');
+    const dup = await tryJoin('Hoa', h.newToken());
+    assert.strictEqual(dup.code, 'name');
+    assert.ok(/đã có người dùng/.test(dup.m));
+    const lower = await tryJoin('hoa', h.newToken());
+    assert.strictEqual(lower.t, 'welcome');
+    const same = await tryJoin('Hoa', first.token);
+    assert.strictEqual(same.t, 'welcome');
+    first.ws.close();
+  });
+
   await step('a full room rejects new players', async () => {
     const socks = [];
     for (let i = 0; i < 20; i++) {
