@@ -166,6 +166,45 @@ async function contract(label, makeStore) {
     assert.strictEqual(await store.acquireConn(ip, 'd', { ...o, now: NOW + 2000 }), true);
   });
 
+  await step(label + ': refreshing leases in one batch keeps them alive past their first expiry', async () => {
+    const ip = '10.9.9.' + (Date.now() % 250);
+    const o = { max: 1, ttlMs: 1000, now: NOW };
+    assert.strictEqual(await store.acquireConn(ip, 'only', o), true);
+    await store.touchConns([{ ip, connId: 'only' }], { ttlMs: 1000, now: NOW + 800 });
+    // without the refresh the first lease would be gone by now and this would succeed
+    assert.strictEqual(await store.acquireConn(ip, 'second', { ...o, now: NOW + 1500 }), false);
+    assert.strictEqual(await store.acquireConn(ip, 'second', { ...o, now: NOW + 2000 }), true);
+  });
+
+  await step(label + ': housekeeping reports players that live on other instances', async () => {
+    const r5 = room + '-inst';
+    const j1 = await store.join(r5, { ...base, token: T(21), connId: 'instA-1', now: NOW });
+    await store.join(r5, { ...base, token: T(22), connId: 'instB-1', now: NOW });
+    const hk = (instanceId) =>
+      store.housekeep(r5, { now: NOW + 100, ttlMs: 5000, respawnMs: 1000, sweep: false, entries: [], instanceId });
+    if (label === 'redis') {
+      assert.strictEqual((await hk('instA')).others, 1, 'A sees the player on B');
+      assert.strictEqual((await hk('instB')).others, 1, 'B sees the player on A');
+      await store.leave(r5, j1.id, 'instA-1', null, NOW);
+      assert.strictEqual((await hk('instB')).others, 0, 'once A is gone, B is alone');
+    } else {
+      assert.strictEqual((await hk('instA')).others, 0, 'a memory store is a single process');
+    }
+  });
+
+  await step(label + ': one-command snapshot returns players, objects and totals', async () => {
+    const r6 = room + '-snap';
+    const a = await store.join(r6, { ...base, token: T(31), connId: 's1', name: 'Snap', now: NOW });
+    await store.hit(r6, { objId: 3, defaultHp: 1, cost: 8, playerId: a.id, now: NOW });
+    await store.hit(r6, { objId: 4, defaultHp: 3, cost: 25, playerId: a.id, now: NOW });
+    const snap = await store.read(r6, { now: NOW, ttlMs: 5000 });
+    assert.strictEqual(snap.total, 8);
+    assert.deepStrictEqual(snap.players.map((p) => [p.id, p.name, p.score, p.breaks]), [[a.id, 'Snap', 8, 1]]);
+    assert.strictEqual(snap.objects[3].hp, 0);
+    assert.ok(snap.objects[3].brokenAt > 0);
+    assert.deepStrictEqual(snap.objects[4], { hp: 2, brokenAt: 0 });
+  });
+
   await step(label + ': pub/sub delivers to subscribers', async () => {
     const got = [];
     await store.subscribe(room + '-ps', (m) => got.push(m));
@@ -194,6 +233,11 @@ async function twoInstances(url) {
   const p1 = await app1.start(0);
   const p2 = await app2.start(0);
   const room = 'shared-' + Date.now();
+  const mon = new Redis(url);
+  const publishCalls = async () => {
+    const t = await mon.info('commandstats');
+    return Number((t.match(/cmdstat_publish:calls=(\d+)/) || [])[1] || 0);
+  };
   const closeAll = (...cs) => cs.forEach((c) => c.ws.readyState < 2 && c.ws.close());
 
   await step('redis: two servers show the same office to players on different instances', async () => {
@@ -228,6 +272,42 @@ async function twoInstances(url) {
     assert.ok(C.welcome.objects.find((o) => o.id === target.id).broken);
     assert.strictEqual(C.welcome.players.find((p) => p.id === A.id).score, server.TYPES.chair.cost);
     closeAll(A, B, C);
+    await sleep(300);
+  });
+
+  await step('redis: a room served by one instance sends no position traffic through Redis', async () => {
+    const r = room + '-solo';
+    const A = await h.client(p1, 'An', r);
+    const B = await h.client(p1, 'Binh', r);
+    await sleep(2600); // housekeeping learns that nobody else is in the room
+    const before = await publishCalls();
+    for (let i = 0; i < 40; i++) {
+      send(A, { t: 'move', x: A.x + (i % 2 ? 3 : -3), y: A.y, d: 1 });
+      await sleep(50); // 2 seconds of walking, 20 moves a second
+    }
+    await sleep(300);
+    const used = (await publishCalls()) - before;
+    assert.ok(used <= 3, 'expected ~0 PUBLISH while moving in a single-instance room, saw ' + used);
+    // ... yet the other player still sees every step
+    const ps = B.msgs.filter((m) => m.t === 'ps' && m.l.some((e) => e[0] === A.id));
+    assert.ok(ps.length >= 10, 'B received position batches for A: ' + ps.length);
+    closeAll(A, B);
+    await sleep(300);
+  });
+
+  await step('redis: positions still cross instances when a room is split across them', async () => {
+    const r = room + '-split';
+    const A = await h.client(p1, 'An', r);
+    const B = await h.client(p2, 'Binh', r);
+    await sleep(2600);
+    for (let i = 0; i < 20; i++) {
+      send(A, { t: 'move', x: A.x + (i % 2 ? 3 : -3), y: A.y, d: 1 });
+      await sleep(50);
+    }
+    await sleep(300);
+    const ps = B.msgs.filter((m) => m.t === 'ps' && m.l.some((e) => e[0] === A.id));
+    assert.ok(ps.length >= 5, 'B (other instance) saw A move: ' + ps.length);
+    closeAll(A, B);
     await sleep(300);
   });
 
@@ -323,6 +403,7 @@ async function twoInstances(url) {
 
   await app1.stop().catch(() => {});
   await app2.stop();
+  mon.disconnect();
 }
 
 async function main() {
