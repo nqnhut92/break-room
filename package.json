@@ -5,12 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/smoke.js"
+    "test": "node test/smoke.js && node test/shared.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "ioredis": "^5.11.1",
     "ws": "^8.18.0"
   },
   "license": "MIT"

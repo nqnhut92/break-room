@@ -5,79 +5,23 @@
 
 process.env.RESPAWN_MS = '1500';
 
+// The shared-state behaviour across several instances is covered in test/shared.js.
+
+delete process.env.REDIS_URL; // this file always runs against the in-memory store
+delete process.env.KV_URL;
+delete process.env.VERCEL;
+
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
-const WebSocket = require('ws');
 const server = require('../server.js');
+const h = require('./helpers.js');
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const { sleep, send, take, none, walkTo, dist, WebSocket } = h;
 let port;
-
-function client(name, room) {
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket('ws://127.0.0.1:' + port + '/ws');
-    const c = { ws, name, msgs: [], welcome: null, id: null };
-    ws.on('message', (d) => {
-      const m = JSON.parse(d.toString());
-      c.msgs.push(m);
-      if (m.t === 'welcome') {
-        c.welcome = m;
-        c.id = m.you;
-        const me = m.players.find((p) => p.id === m.you);
-        c.x = me.x;
-        c.y = me.y;
-        resolve(c);
-      }
-    });
-    ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, room })));
-    ws.on('error', reject);
-    setTimeout(() => reject(new Error('join timeout for ' + name)), 3000);
-  });
-}
-
-const send = (c, o) => c.ws.send(JSON.stringify(o));
-
-function take(c, pred, ms = 1500) {
-  return new Promise((resolve, reject) => {
-    const t0 = Date.now();
-    const iv = setInterval(() => {
-      const m = c.msgs.find((x) => !x._used && pred(x));
-      if (m) {
-        m._used = true;
-        clearInterval(iv);
-        resolve(m);
-      } else if (Date.now() - t0 > ms) {
-        clearInterval(iv);
-        reject(new Error('timeout waiting for message on ' + c.name));
-      }
-    }, 10);
-  });
-}
-
-async function none(c, pred, ms = 300) {
-  await sleep(ms);
-  const m = c.msgs.find((x) => !x._used && pred(x));
-  assert.ok(!m, 'unexpected message ' + JSON.stringify(m));
-}
-
-async function walkTo(c, target, stop) {
-  let { x, y } = c;
-  while (Math.hypot(target.x - x, target.y - y) > stop) {
-    const d = Math.hypot(target.x - x, target.y - y);
-    x += ((target.x - x) / d) * 14;
-    y += ((target.y - y) / d) * 14;
-    send(c, { t: 'move', x: Math.round(x), y: Math.round(y), d: 1 });
-    await sleep(50);
-  }
-  c.x = x;
-  c.y = y;
-}
-
-function dist(c, o) {
-  return Math.hypot(o.x - c.x, o.y - c.y);
-}
+let fullPort;
+const client = (name, room, token) => h.client(port, name, room, token);
 
 function httpGet(p) {
   return new Promise((resolve, reject) => {
@@ -100,6 +44,9 @@ async function step(name, fn) {
 
 async function main() {
   port = await server.start(0);
+  // a second app with a high per-IP cap, for the full-room check
+  const bigIp = server.createApp({ maxConnPerIp: 100 });
+  fullPort = await bigIp.start(0);
 
   await step('client script only uses element ids that exist in index.html', async () => {
     const js = fs.readFileSync(path.join(__dirname, '../public/game.js'), 'utf8');
@@ -147,6 +94,13 @@ async function main() {
     await sleep(100);
     send(A, { t: 'hit', id: near.id });
     await none(A, (m) => m.t === 'hit' && m.id === near.id);
+    // The clamp left the server's copy of A part-way to `near`. Walk back to where the
+    // client thinks it is so later steps start in sync (the old test skipped this and
+    // failed about 1 run in 6 depending on the random spawn).
+    for (let i = 0; i < 8; i++) {
+      send(A, { t: 'move', x: Math.round(A.x), y: Math.round(A.y), d: 1 });
+      await sleep(120);
+    }
   });
 
   const target = A.welcome.objects
@@ -267,17 +221,88 @@ async function main() {
     await sleep(400);
     const socks = [];
     for (let i = 0; i < 10; i++) {
-      const ws = new WebSocket('ws://127.0.0.1:' + port + '/ws');
+      const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
       socks.push(ws);
       await new Promise((r) => ws.on('open', r));
     }
-    const extra = new WebSocket('ws://127.0.0.1:' + port + '/ws');
+    const extra = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
     const code = await new Promise((r) => extra.on('close', (c) => r(c)));
     assert.strictEqual(code, 1013);
     socks.forEach((s) => s.close());
+    await sleep(400); // let the server release the leases
+  });
+
+  await step('rejoining with the same token keeps id, score and position', async () => {
+    const room = 'rejoinroom';
+    const O = await client('Obs', room);
+    const X = await client('Xuan', room);
+    await h.smashPlant(X, server.TYPES);
+    const board = await take(O, (m) => m.t === 'board' && m.board.some((e) => e.name === 'Xuan'));
+    assert.strictEqual(board.board[0].score, server.TYPES.plant.cost);
+    const spot = { x: X.x, y: X.y };
+    X.ws.terminate(); // like the platform cutting the connection
+    const pl = await take(O, (m) => m.t === 'pl' && m.id === X.id, 3000);
+    assert.strictEqual(pl.id, X.id);
+    const X2 = await client('Xuan', room, X.token);
+    assert.strictEqual(X2.id, X.id, 'same player id after reconnect');
+    const me = X2.welcome.players.find((p) => p.id === X2.id);
+    assert.strictEqual(me.score, server.TYPES.plant.cost, 'score survives the reconnect');
+    assert.ok(Math.hypot(me.x - spot.x, me.y - spot.y) < 30, 'position survives the reconnect');
+    assert.ok(X2.welcome.objects.some((o) => o.broken), 'broken objects stay broken');
+    const pj = await take(O, (m) => m.t === 'pj' && m.p.id === X.id);
+    assert.strictEqual(pj.p.id, X.id);
+    O.ws.close();
+    X2.ws.close();
+  });
+
+  await step('a new connection with the same token takes over silently (planned renewal)', async () => {
+    const room = 'handover';
+    const O = await client('Obs', room);
+    const X = await client('Xuan', room);
+    await take(O, (m) => m.t === 'pj' && m.p.id === X.id);
+    const X2 = await client('Xuan', room, X.token);
+    assert.strictEqual(X2.id, X.id);
+    await sleep(300);
+    assert.strictEqual(X.closeCode, 4001, 'old socket is told it was replaced');
+    await none(O, (m) => (m.t === 'pl' || m.t === 'pj') && (m.id === X.id || (m.p && m.p.id === X.id)), 400);
+    assert.strictEqual(O.msgs.filter((m) => m.t === 'board').pop().online, 2);
+    // the new socket is fully functional, the old one's late close did not evict it
+    send(X2, { t: 'emote', e: 2 });
+    await take(O, (m) => m.t === 'emote' && m.id === X.id);
+    O.ws.close();
+    X2.ws.close();
+  });
+
+  await step('server asks clients to renew before the max duration', async () => {
+    const short = server.createApp({ renewAfterMs: 1200 });
+    const p2 = await short.start(0);
+    const c = await h.client(p2, 'Ren', 'renewroom');
+    const t0 = Date.now();
+    await take(c, (m) => m.t === 'renew', 4000);
+    assert.ok(Date.now() - t0 > 500);
+    c.ws.close();
+    await short.stop();
+  });
+
+  await step('a full room rejects new players', async () => {
+    const socks = [];
+    for (let i = 0; i < 40; i++) {
+      socks.push(await h.client(fullPort, 'F' + i, 'fullroom'));
+    }
+    const extra = await new Promise((resolve) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + fullPort + '/api/ws');
+      ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name: 'late', room: 'fullroom', token: h.newToken() })));
+      ws.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        if (m.t === 'err') resolve(m);
+      });
+    });
+    assert.ok(/đầy/.test(extra.m));
+    socks.forEach((c) => c.ws.close());
   });
 
   console.log('\nAll ' + passed + ' checks passed');
+  await bigIp.stop();
   await server.stop();
   process.exit(0);
 }

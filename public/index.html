@@ -14,16 +14,20 @@
 
   <div id="hud" hidden>
     <div id="topbar">
-      <span class="pill">Phòng <b id="roomName">lobby</b></span>
-      <span class="pill"><b id="online">1</b> online</span>
-      <button id="copyLink" class="pill btn" type="button">Copy link phòng</button>
-      <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh">🔊</button>
-    </div>
+      <div id="topLeft">
+        <span class="pill">Phòng <b id="roomName">lobby</b></span>
+        <span class="pill"><b id="online">1</b> online</span>
+        <button id="copyLink" class="pill btn" type="button">Copy link phòng</button>
+        <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh">🔊</button>
+      </div>
 
-    <div id="board">
-      <div class="board-title">Tổng thiệt hại</div>
-      <div id="total" class="board-total">0 triệu</div>
-      <ol id="boardList"></ol>
+      <div id="board">
+        <div class="board-head">
+          <span class="board-title">Tổng thiệt hại</span>
+          <span id="total" class="board-total">0 triệu</span>
+        </div>
+        <ol id="boardList"></ol>
+      </div>
     </div>
 
     <div id="bottombar">

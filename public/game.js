@@ -30,6 +30,9 @@
 
   const S = {
     ws: null,
+    pendingWs: null,
+    top: 0,
+    welcomed: false,
     started: false,
     joined: false,
     fatal: false,
@@ -300,13 +303,41 @@
   }
 
   // ------------------------------------------------------------- network ----
-  function connect() {
+  // A random id kept per tab. The server uses it to recognise us after a
+  // reconnect, so we keep our player id, score and position instead of
+  // joining as a stranger with zero points.
+  let memToken = '';
+  function getToken() {
+    const ok = (t) => /^[A-Za-z0-9_-]{16,64}$/.test(t || '');
+    try {
+      let t = sessionStorage.getItem('br-token');
+      if (!ok(t)) {
+        t = makeToken();
+        sessionStorage.setItem('br-token', t);
+      }
+      return t;
+    } catch (e) {
+      if (!memToken) memToken = makeToken();
+      return memToken;
+    }
+  }
+  function makeToken() {
+    const a = new Uint8Array(16);
+    crypto.getRandomValues(a);
+    return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Connections are cut by the platform after a fixed time (5 min on the Vercel
+  // Hobby plan) and may drop at any time, so every close is treated as normal.
+  // handover = true opens the new socket while the old one is still working;
+  // we only switch once the new one has joined, so nothing visibly blinks.
+  function connect(handover) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(proto + '://' + location.host + '/ws');
-    S.ws = ws;
+    const ws = new WebSocket(proto + '://' + location.host + '/api/ws');
+    if (handover) S.pendingWs = ws;
+    else S.ws = ws;
     ws.onopen = () => {
-      S.retry = 0;
-      ws.send(JSON.stringify({ t: 'join', name: S.name, room: S.room }));
+      ws.send(JSON.stringify({ t: 'join', name: S.name, room: S.room, token: getToken() }));
     };
     ws.onmessage = (ev) => {
       let m;
@@ -315,17 +346,50 @@
       } catch (e) {
         return;
       }
+      if (S.pendingWs === ws) {
+        if (m.t !== 'welcome') return;
+        const old = S.ws;
+        S.pendingWs = null;
+        S.ws = ws;
+        if (old && old !== ws) old.close(1000);
+      } else if (S.ws !== ws) {
+        return;
+      }
+      if (m.t === 'welcome') S.retry = 0;
+      if (m.t === 'renew') {
+        if (!S.pendingWs && !S.fatal) connect(true);
+        return;
+      }
       onMsg(m);
     };
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
+      if (S.pendingWs === ws) {
+        // the replacement never made it; fall back to the normal path if the old one is gone too
+        S.pendingWs = null;
+        if (S.ws && S.ws.readyState > 1 && !S.fatal) scheduleReconnect(S.ws);
+        return;
+      }
       if (S.ws !== ws || S.fatal) return;
-      S.joined = false;
-      $('conn').hidden = false;
-      const wait = Math.min(8000, 1000 * Math.pow(2, S.retry++));
-      setTimeout(() => {
-        if (S.ws === ws && !S.fatal) connect();
-      }, wait);
+      if (S.pendingWs) return; // a replacement is already joining; it takes over
+      if (ev && ev.code === 4001) {
+        S.fatal = true;
+        S.joined = false;
+        $('conn').textContent = 'Phòng này đang mở ở tab khác. Đóng tab kia hoặc tải lại trang.';
+        $('conn').hidden = false;
+        return;
+      }
+      scheduleReconnect(ws);
     };
+  }
+
+  function scheduleReconnect(ws) {
+    S.joined = false;
+    $('conn').hidden = false;
+    const base = Math.min(10000, 1000 * Math.pow(2, S.retry++));
+    const wait = base * (0.5 + Math.random() * 0.5); // jitter so a deploy does not stampede
+    setTimeout(() => {
+      if (S.ws === ws && !S.fatal) connect(false);
+    }, wait);
   }
 
   function onMsg(m) {
@@ -348,14 +412,18 @@
         S.joined = true;
         $('overlay').classList.add('gone');
         $('hud').hidden = false;
+        measureHud();
         $('conn').hidden = true;
         $('roomName').textContent = S.room;
         try {
           history.replaceState(null, '', '?room=' + encodeURIComponent(S.room));
         } catch (e) { /* ignore */ }
-        const hint = $('hint');
-        hint.classList.remove('fade');
-        setTimeout(() => hint.classList.add('fade'), 15000);
+        if (!S.welcomed) {
+          S.welcomed = true;
+          const hint = $('hint');
+          hint.classList.remove('fade');
+          setTimeout(() => hint.classList.add('fade'), 15000);
+        }
         break;
       }
       case 'pj':
@@ -508,7 +576,7 @@
   function toWorld(cx, cy) {
     const cam = S.cam;
     if (!cam) return { x: 0, y: 0 };
-    return { x: cx / cam.zoom + cam.x, y: cy / cam.zoom + cam.y };
+    return { x: cx / cam.zoom + cam.x, y: (cy - cam.top) / cam.zoom + cam.y };
   }
 
   function objectAt(x, y) {
@@ -775,8 +843,16 @@
     canvas.height = Math.floor(h * S.dpr);
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
+    measureHud();
+  }
+
+  // The game view starts below the top bar, so the HUD never hides part of the office.
+  function measureHud() {
+    const hud = $('hud');
+    S.top = hud.hidden ? 0 : Math.ceil($('topbar').getBoundingClientRect().bottom + 8);
   }
   window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(measureHud).observe($('topbar'));
   resize();
 
   function camAxis(p, view, size) {
@@ -791,14 +867,16 @@
     ctx.fillRect(0, 0, W, H);
     if (!S.joined || !S.bg) return;
 
-    const fit = Math.min(W / S.world.w, H / S.world.h);
+    const top = S.top;
+    const areaH = Math.max(100, H - top);
+    const fit = Math.min(W / S.world.w, areaH / S.world.h);
     const zoom = Math.max(fit, 0.6);
     const viewW = W / zoom;
-    const viewH = H / zoom;
+    const viewH = areaH / zoom;
     const me = S.players.get(S.me);
     const cx = camAxis(me ? me.x : S.world.w / 2, viewW, S.world.w);
     const cy = camAxis(me ? me.y : S.world.h / 2, viewH, S.world.h);
-    S.cam = { x: cx, y: cy, zoom };
+    S.cam = { x: cx, y: cy, zoom, top };
 
     let sx = 0;
     let sy = 0;
@@ -806,7 +884,11 @@
       sx = (Math.random() - 0.5) * S.shake * 10;
       sy = (Math.random() - 0.5) * S.shake * 10;
     }
-    ctx.setTransform(S.dpr * zoom, 0, 0, S.dpr * zoom, -(cx + sx) * zoom * S.dpr, -(cy + sy) * zoom * S.dpr);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, top, W, areaH);
+    ctx.clip();
+    ctx.setTransform(S.dpr * zoom, 0, 0, S.dpr * zoom, -(cx + sx) * zoom * S.dpr, (top - (cy + sy) * zoom) * S.dpr);
     ctx.drawImage(S.bg, 0, 0);
 
     const items = [];
@@ -820,6 +902,7 @@
 
     drawParticles();
     drawTexts();
+    ctx.restore();
   }
 
   function drawObject(o) {
