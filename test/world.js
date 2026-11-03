@@ -20,6 +20,16 @@ function step(name, fn) {
   console.log('ok - ' + name);
 }
 
+step('rooms: unique url-safe ids, readable names, at least one', () => {
+  const { cleanRoomName } = require('../lib/realtime.js');
+  assert.ok(W.ROOMS.length >= 1);
+  assert.strictEqual(new Set(W.ROOMS.map((r) => r.id)).size, W.ROOMS.length);
+  for (const r of W.ROOMS) {
+    assert.strictEqual(cleanRoomName(r.id), r.id, r.id + ' survives the server\'s room-name cleaning');
+    assert.ok(r.name && r.name.length <= 20 && !/[<>]/.test(r.name));
+  }
+});
+
 step('object ids are dense and every type is known', () => {
   W.OBJECTS.forEach((o, i) => {
     assert.strictEqual(o.id, i);

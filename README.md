@@ -15,7 +15,7 @@ Chạy local không cần Redis: toàn bộ state nằm trong RAM của tiến t
 
 ## Chơi chung với đồng nghiệp
 
-Mỗi phòng có một tên, nằm trong link: `/?room=ten-phong`. Bấm "Copy link phòng" rồi gửi cho mọi người. Ai vào cùng link là vào cùng phòng, mỗi phòng tối đa 40 người.
+Game có **hai phòng cố định**, như hai "server": **Phòng Máy In** và **Phòng Tủ Server**, mỗi phòng tối đa 40 người. Màn hình vào hiển thị số người đang online ở từng phòng và tự chọn sẵn phòng đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một phòng; nút "Copy link phòng" tạo link `/?room=may-in` hoặc `/?room=tu-server` để chọn sẵn phòng đó. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
 
 ## Điều khiển
 
@@ -73,7 +73,8 @@ Giới hạn kết nối theo IP (10 kết nối mỗi IP) được chuyển san
 | `RESPAWN_MS` | Thời gian đồ vật tự thay mới, mặc định 25000 |
 | `AFK_MS` | Người chơi đứng yên (không đi, đập, emoji) quá từng này mili giây thì bị ngắt với mã 4002, mặc định 180000 (3 phút). Client không tự kết nối lại, hiện nút vào lại, điểm vẫn còn. Chặn tab bỏ quên giữ instance Vercel sống (bộ nhớ tính theo thời gian instance còn sống) |
 | `MAX_CONNECTIONS` | Số kết nối tối đa mỗi instance. Mặc định 200 trên Vercel, không giới hạn khi chạy local |
-| `MAX_ROOMS` | Số phòng tối đa mỗi instance. Mặc định 40 trên Vercel, không giới hạn khi chạy local |
+| `MAX_ROOMS` | Số phòng tối đa mỗi instance. Mặc định 40 trên Vercel, không giới hạn khi chạy local. Với danh sách phòng cố định thì gần như không còn tác dụng |
+| `FIXED_ROOMS=0` | Cho phép vào phòng có tên bất kỳ thay vì chỉ các phòng trong `ROOMS` (dùng khi thử nghiệm hoặc chạy test) |
 | `GAME_DISABLED=1` | Công tắc tắt khẩn cấp: mọi người vào đều nhận "Game đang tạm đóng" và server không mở kết nối Redis nào. Đặt biến rồi redeploy |
 | `REDIS_TLS_CA` | Chứng chỉ CA (nội dung PEM) cho nhà cung cấp Redis dùng chứng chỉ tự ký, ví dụ gói trả phí của Redis Cloud. Có thể viết `\n` thay cho xuống dòng |
 | `HEALTH_KEY` | Nếu đặt, `/api/health?deep=<HEALTH_KEY>` mới được kiểm tra sâu (xem dưới) |
@@ -124,7 +125,10 @@ Script kiểm tra: kết nối, độ trễ, `SET`/`GET`, Lua (`EVAL`), pub/sub,
 
 ```
 api/ws.js            hàm Vercel nhận WebSocket (export http server có gắn WebSocketServer)
-api/health.js        báo đã cấu hình Redis chưa
+api/health.js        báo đã cấu hình Redis chưa; ?deep=KEY ping Redis thật
+api/rooms.js         danh sách phòng + số người online cho màn hình vào (CDN cache 10 giây)
+lib/room-list.js     đếm người mỗi phòng bằng 1 lệnh store, cache ngắn trong tiến trình
+scripts/check-store.js  kiểm tra một Redis có chạy được game không
 lib/realtime.js      logic game và nối WebSocket, không biết đang chạy ở đâu
 lib/world.js         bố cục văn phòng, loại đồ vật, vật cản và hàm va chạm (cố định)
 lib/store-redis.js   state dùng chung + pub/sub trong Redis (script Lua nguyên tử)

@@ -327,7 +327,7 @@ import { createScene3D } from './scene3d.js';
         $('overlay').classList.add('gone');
         $('hud').hidden = false;
         $('conn').hidden = true;
-        $('roomName').textContent = S.room;
+        $('roomName').textContent = m.roomLabel || S.room;
         try {
           history.replaceState(null, '', '?room=' + encodeURIComponent(S.room));
         } catch (e) { /* ignore */ }
@@ -624,6 +624,13 @@ import { createScene3D } from './scene3d.js';
   });
 
   // ----------------------------------------------------------------- join ----
+  // The two rooms that exist (keep in sync with ROOMS in lib/world.js; the server sends
+  // the live list with player counts, this is only the fallback if that request fails).
+  const FALLBACK_ROOMS = [
+    { id: 'may-in', name: 'Máy In' },
+    { id: 'tu-server', name: 'Tủ Server' },
+  ];
+
   (function setupJoin() {
     const params = new URLSearchParams(location.search);
     const roomParam = (params.get('room') || '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 24);
@@ -632,12 +639,67 @@ import { createScene3D } from './scene3d.js';
       savedName = localStorage.getItem('br-name') || '';
     } catch (e) { /* ignore */ }
     $('nameInput').value = savedName;
-    $('roomInput').value = roomParam;
+
+    let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 40 }));
+    let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
+    let chosenByUser = picked !== null;
+
+    function render() {
+      const box = $('roomList');
+      box.textContent = '';
+      for (const r of rooms) {
+        const full = r.online !== null && r.online >= r.max;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'roomcard' + (r.id === picked ? ' on' : '');
+        b.setAttribute('aria-pressed', String(r.id === picked));
+        b.disabled = full;
+        const n = document.createElement('span');
+        n.className = 'rn';
+        n.textContent = 'Phòng ' + r.name;
+        const c = document.createElement('span');
+        c.className = 'rc';
+        c.textContent = full ? 'Đầy' : r.online === null ? '' : r.online + '/' + r.max + ' online';
+        b.append(n, c);
+        b.addEventListener('click', () => {
+          picked = r.id;
+          chosenByUser = true;
+          render();
+        });
+        box.appendChild(b);
+      }
+    }
+
+    // Until the player chooses, preselect the liveliest room that still has space.
+    function preselect() {
+      if (chosenByUser && rooms.some((r) => r.id === picked)) return;
+      let best = null;
+      for (const r of rooms) {
+        if (r.online !== null && r.online >= r.max) continue;
+        if (!best || (r.online || 0) > (best.online || 0)) best = r;
+      }
+      picked = (best || rooms[0]).id;
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/rooms', { cache: 'no-store' });
+        const data = await res.json();
+        if (data && Array.isArray(data.rooms) && data.rooms.length) rooms = data.rooms;
+      } catch (e) { /* keep what we have */ }
+      preselect();
+      render();
+    }
+    preselect();
+    render();
+    refresh();
+    setInterval(() => {
+      if (!$('overlay').classList.contains('gone')) refresh();
+    }, 15000);
 
     $('joinForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = $('nameInput').value.trim();
-      const room = $('roomInput').value.trim().replace(/[^A-Za-z0-9-]/g, '');
       if (!name) return;
       if (!scene) {
         $('joinErr').textContent = 'Thiết bị hoặc trình duyệt này không bật được WebGL nên chưa chơi được bản 3D.';
@@ -647,7 +709,7 @@ import { createScene3D } from './scene3d.js';
         localStorage.setItem('br-name', name);
       } catch (err) { /* ignore */ }
       S.name = name;
-      S.room = room || 'lobby';
+      S.room = picked || rooms[0].id;
       S.fatal = false;
       S.started = true;
       $('joinErr').textContent = '';

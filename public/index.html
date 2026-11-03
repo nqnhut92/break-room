@@ -16,7 +16,7 @@
   <div id="hud" hidden>
     <div id="topbar">
       <div id="topLeft">
-        <span class="pill">Phòng <b id="roomName">lobby</b></span>
+        <span class="pill">Phòng <b id="roomName">…</b></span>
         <span class="pill"><b id="online">1</b> online</span>
         <button id="copyLink" class="pill btn" type="button">Copy link phòng</button>
         <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh">🔇</button>
@@ -47,9 +47,10 @@
       <label>Tên của bạn
         <input id="nameInput" maxlength="14" placeholder="Ví dụ: Nick" required>
       </label>
-      <label>Phòng (gửi link cho đồng nghiệp để vào cùng)
-        <input id="roomInput" maxlength="24" placeholder="lobby" pattern="[A-Za-z0-9\-]*">
-      </label>
+      <div class="roompick">
+        <span class="lbl">Chọn phòng</span>
+        <div id="roomList" class="roomlist" role="group" aria-label="Chọn phòng"></div>
+      </div>
       <button id="joinBtn" class="btn smash" type="submit">Vào văn phòng</button>
       <p id="joinErr" class="err" role="alert"></p>
     </form>

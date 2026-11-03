@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS } = require('./lib/realtime');
 const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv } = require('./lib/config');
-const { TYPES } = require('./lib/world');
+const { TYPES, ROOMS } = require('./lib/world');
+const { createRoomList } = require('./lib/room-list');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -26,7 +27,7 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
-function staticHandler(req, res) {
+function staticHandler(req, res, roomList) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
 
@@ -38,6 +39,13 @@ function staticHandler(req, res) {
     return;
   }
 
+  if (urlPath === '/api/rooms' && roomList) {
+    roomList().then((rooms) => {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ rooms, disabled: false }));
+    });
+    return;
+  }
   if (urlPath === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok');
     return;
@@ -71,7 +79,8 @@ function staticHandler(req, res) {
 // Builds one self-contained server. Tests build several on one shared store to
 // act like several Vercel instances.
 function createApp({ store = createStoreFromEnv(), env = process.env, ...overrides } = {}) {
-  const server = http.createServer(staticHandler);
+  const roomList = createRoomList(store, ROOMS);
+  const server = http.createServer((req, res) => staticHandler(req, res, roomList));
   const rt = createRealtime({
     store,
     respawnMs: respawnMsFromEnv(env),

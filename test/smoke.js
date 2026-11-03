@@ -10,6 +10,7 @@ process.env.RESPAWN_MS = '1500';
 delete process.env.REDIS_URL; // this file always runs against the in-memory store
 delete process.env.KV_URL;
 delete process.env.VERCEL;
+process.env.FIXED_ROOMS = '0'; // most checks below use throw-away room names; the fixed-room rules have their own step
 
 const assert = require('assert');
 const fs = require('fs');
@@ -352,6 +353,42 @@ async function main() {
     assert.strictEqual(faker.closeCode, 4002, 'standing still while spamming moves still counts as AFK');
     busy.ws.close();
     await app.stop();
+  });
+
+  await step('only the fixed rooms exist; unknown names land in the first; /api/rooms lists them with counts', async () => {
+    const app = server.createApp({ rooms: world.ROOMS });
+    const p = await app.start(0);
+    const stray = await h.client(p, 'Stray', 'some-private-room');
+    assert.strictEqual(stray.welcome.room, world.ROOMS[0].id, 'an unknown room falls back to the first room');
+    assert.strictEqual(stray.welcome.roomLabel, world.ROOMS[0].name);
+    const other = await h.client(p, 'Other', world.ROOMS[1].id);
+    assert.strictEqual(other.welcome.room, world.ROOMS[1].id);
+    assert.strictEqual(other.welcome.roomLabel, world.ROOMS[1].name);
+    // the two players are in different rooms, so they must not see each other
+    assert.strictEqual(other.welcome.players.length, 1);
+    const list = await new Promise((resolve, reject) => {
+      http.get({ host: '127.0.0.1', port: p, path: '/api/rooms' }, (res) => {
+        let body = '';
+        res.on('data', (d) => (body += d));
+        res.on('end', () => resolve(JSON.parse(body)));
+      }).on('error', reject);
+    });
+    assert.deepStrictEqual(list.rooms.map((r) => [r.id, r.name]), world.ROOMS.map((r) => [r.id, r.name]));
+    assert.ok(list.rooms.every((r) => r.max === 40 && Number.isInteger(r.online)));
+    const total = list.rooms.reduce((n, r) => n + r.online, 0);
+    assert.ok(total >= 0 && total <= 2);
+    stray.ws.close();
+    other.ws.close();
+    await app.stop();
+  });
+
+  await step('the join screen offers exactly the server\'s rooms', async () => {
+    const js = fs.readFileSync(path.join(__dirname, '../public/game.js'), 'utf8');
+    for (const r of world.ROOMS) {
+      assert.ok(js.includes("id: '" + r.id + "'") && js.includes("name: '" + r.name + "'"), 'FALLBACK_ROOMS has ' + r.id);
+    }
+    const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+    assert.ok(html.includes('id="roomList"') && !html.includes('id="roomInput"'), 'rooms are picked, not typed');
   });
 
   await step('connection and room caps, and the kill switch', async () => {

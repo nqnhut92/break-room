@@ -11,6 +11,7 @@ process.env.RESPAWN_MS = '1500';
 delete process.env.REDIS_URL;
 delete process.env.KV_URL;
 delete process.env.VERCEL;
+process.env.FIXED_ROOMS = '0';
 
 const assert = require('assert');
 const net = require('net');
@@ -203,6 +204,20 @@ async function contract(label, makeStore) {
     assert.strictEqual(snap.objects[3].hp, 0);
     assert.ok(snap.objects[3].brokenAt > 0);
     assert.deepStrictEqual(snap.objects[4], { hp: 2, brokenAt: 0 });
+  });
+
+  await step(label + ': online counts for the room list come from one call', async () => {
+    const rA = room + '-cnt-a';
+    const rB = room + '-cnt-b';
+    const a = await store.join(rA, { ...base, token: T(41), connId: 'o1', now: NOW });
+    await store.join(rA, { ...base, token: T(42), connId: 'o2', now: NOW });
+    await store.join(rB, { ...base, token: T(43), connId: 'o3', now: NOW });
+    const o = { now: NOW + 100, ttlMs: 5000 };
+    assert.deepStrictEqual(await store.online([rA, rB, room + '-none'], o), [2, 1, 0]);
+    await store.leave(rA, a.id, 'o1', null, NOW);
+    assert.deepStrictEqual(await store.online([rA, rB], o), [1, 1]);
+    // players whose heartbeat stopped do not count
+    assert.deepStrictEqual(await store.online([rA, rB], { now: NOW + 9000, ttlMs: 5000 }), [0, 0]);
   });
 
   await step(label + ': pub/sub delivers to subscribers', async () => {
