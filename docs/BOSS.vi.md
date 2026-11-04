@@ -101,3 +101,15 @@ Test: `test/boss.js` (luật, cân bằng), `test/boss-net.js` (cả một trậ
 - Ai đứng yên trong phòng server là mục tiêu dễ: bị gục và chờ 15 giây.
 - Chưa có đẩy lùi: cú đấm chỉ gây sát thương và rung màn hình. Thêm thì server phải dời người chơi và báo client.
 - Chưa có bảng riêng cho số lần hạ sếp; tiền thưởng vào bảng thiệt hại chung.
+
+## New Process (Quy trình mới)
+
+Sau mỗi 12 giây giao tranh, boss đánh dấu vị trí một người chơi bằng vòng tím bán kính 220. Sau 1,2 giây, giấy quy trình rơi xuống, gây 20 sát thương cho người còn trong vòng và trong khu boss. Vị trí đánh dấu không di chuyển; chạy khỏi vòng để né.
+
+Người chơi đánh nhau chỉ tạo hiệu ứng, không mất máu hoặc mana.
+
+## Rắn và đồng nghiệp mời nước
+
+Boss triệu hồi rắn tại 70%, 40%, 10% máu, mỗi mốc một lần mỗi lượt. Số rắn mỗi đợt bằng số người đang online trong server. Rắn xanh lá đuổi người sống gần nhất khắp bản đồ qua các cửa, có 4 máu, mỗi cú búa trừ 1, tốc độ 200 và cắn 5 sát thương mỗi 1,2 giây. Rắn còn lại được dọn khi boss hồi sinh. Redis đồng bộ mốc triệu hồi và máu rắn; một instance điều khiển di chuyển, lưu vị trí mỗi giây; trình duyệt dựng hiệu ứng.
+
+Mỗi 5 phút, nút “Đồng nghiệp mời nước” hiện trong 5 giây. Một người bấm sẽ hồi đầy máu và mana cho người đang kết nối trong server; người bị hạ hồi sinh ở sảnh. Lịch và lượt nhận dùng chung giữa các instance.

@@ -88,6 +88,24 @@ async function main() {
     assert.strictEqual(C.welcome.players.length, 1);
   });
 
+  await step('player hits relay all skills without damaging players, and reject self/cross-room targets', async () => {
+    for (const skill of ['hammer', 'milkTea', 'electric']) {
+      send(A, { t: 'phit', id: B.id, skill });
+      await take(A, m => m.t === 'phit' && m.id === B.id && m.skill === skill);
+      await take(B, m => m.t === 'phit' && m.id === B.id && m.skill === skill);
+      await sleep(220);
+    }
+    assert.ok(!B.msgs.some(m => m.t === 'hp' || m.t === 'down'));
+    const observer = await client('Observer', 'testroom');
+    assert.strictEqual(observer.welcome.players.find(p => p.id === B.id).hp, 100);
+    assert.strictEqual(observer.welcome.players.find(p => p.id === B.id).score, 0);
+    observer.ws.close();
+    for (const id of [A.id, 999999]) send(A, { t: 'phit', id });
+    // C's room has its own player ids; using B's id there cannot reach B.
+    send(C, { t: 'phit', id: B.id });
+    await none(B, m => m.t === 'phit');
+  });
+
   await step('hitting an object out of reach is rejected', async () => {
     const far = A.welcome.objects.reduce((best, o) => (dist(A, o) > dist(A, best) ? o : best));
     assert.ok(dist(A, far) > server.HIT_RANGE * 2);

@@ -169,7 +169,7 @@ async function loadFloorTextures() {
   }));
 }
 
-function buildModel(type, types, largeScreen = false) {
+function buildModel(type, types, largeScreen = false, arm = false, itDesk = false) {
   const body = [];
   const glow = [];
   let pick = null;
@@ -178,7 +178,7 @@ function buildModel(type, types, largeScreen = false) {
     for (const g of furnitureFallback(type, t.w, t.h)) body.push(g);
     pick = [t.w + 10, 90, t.h + 10];
   } else if (type === 'desk') {
-    for (const g of deskGeometry()) body.push(g);
+    for (const g of deskGeometry(itDesk)) body.push(g);
     // a mug and a stack of paper so the desks do not look empty
     body.push(cyl(6, 5.5, 11, '#f2f2ee', -60, DESK_TOP + 5.5, 24, 14));
     body.push(cyl(4.6, 4.6, 1, '#4b2e1d', -60, DESK_TOP + 10.6, 24, 14));
@@ -187,8 +187,19 @@ function buildModel(type, types, largeScreen = false) {
     pick = [170, 80, 120];
   } else switch (type) {
     case 'monitor':
-      body.push(cyl(11, 13, 3, '#2b3240', 0, 1.5, 0));
-      body.push(box(6, 20, 4, '#2b3240', 0, 13, -2));
+      if (arm) {
+        // Desk clamp, vertical pole and two jointed links to the screen's VESA mount.
+        body.push(box(12, 5, 14, '#354052', 0, 1.5, -22));
+        body.push(cyl(2.2, 2.2, 34, '#7c8da2', 0, 18, -22));
+        body.push(cyl(4, 4, 5, '#354052', 0, 30, -22));
+        body.push(box(5, 5, 16, '#7c8da2', 0, 30, -14));
+        body.push(cyl(3.5, 3.5, 7, '#354052', 0, 30, -7));
+        body.push(box(5, 12, 5, '#7c8da2', 0, 35, -5));
+        body.push(box(14, 14, 2, '#354052', 0, 39, -3));
+      } else {
+        body.push(cyl(11, 13, 3, '#2b3240', 0, 1.5, 0));
+        body.push(box(6, 20, 4, '#2b3240', 0, 13, -2));
+      }
       body.push(box(46, 32, 4, '#161a22', 0, 39, 0));
       glow.push(box(41, 26, 0.8, '#4aa8ff', 0, 39, 2.3));
       glow.push(box(36, 3, 0.9, '#bfe3ff', 0, 47, 2.5));
@@ -364,14 +375,14 @@ function buildModel(type, types, largeScreen = false) {
 }
 
 // ------------------------------------------------------- static scenery ----
-function deskGeometry() {
+function deskGeometry(it = false) {
   const DT = DESK_TOP;
   const TOP = '#dcbc92';
   const BODY = '#c29d72';
   return [
-    box(158, 6, 76, TOP, 0, DT - 3, 0),
-    box(6, DT - 6, 70, BODY, -72, (DT - 6) / 2, 0),
-    box(6, DT - 6, 70, BODY, 72, (DT - 6) / 2, 0),
+    box(158, 6, it ? 114 : 76, TOP, 0, DT - 3, 0),
+    box(6, DT - 6, it ? 108 : 70, BODY, -72, (DT - 6) / 2, 0),
+    box(6, DT - 6, it ? 108 : 70, BODY, 72, (DT - 6) / 2, 0),
     box(142, 30, 4, '#a98156', 0, DT - 24, -32),
     box(38, 44, 64, BODY, 52, 28, 2),
     pill(1.5, 14, '#8a8f99', 52, 38, 35, 0, 0, Math.PI / 2),
@@ -908,6 +919,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       scene.add(windMesh);
     }
     const t = Math.max(0, Math.min(1, (performance.now() - w.t0) / w.ms));
+    for (const mesh of windMesh.children) mesh.material.color.setHex(w.skill === 'newProcess' ? 0xa86dff : 0xff3b2a);
     windMesh.visible = true;
     windMesh.position.x = w.x;
     windMesh.position.z = w.y;
@@ -1019,8 +1031,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // Meeting-room screens face the end of a conference table on the same axis.
     const largeScreen = o.type === 'tv' && all.some(d =>
       d.type === 'conference' && Math.abs(d.y - o.y) < 1 && Math.abs(d.x - o.x) < 650);
-    const modelKey = largeScreen ? 'meetingTv' : o.type;
-    if (!models[modelKey]) models[modelKey] = buildModel(o.type, types, largeScreen);
+    const modelKey = largeScreen ? 'meetingTv' : o.arm ? 'armMonitor' : o.itDesk ? 'itDesk' : o.type;
+    if (!models[modelKey]) models[modelKey] = buildModel(o.type, types, largeScreen, o.arm, o.itDesk);
     const mod = models[modelKey];
     const group = new THREE.Group();
     group.position.set(o.x, lift(o.type), o.y);
@@ -1062,8 +1074,55 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return rig;
   }
 
+  const snakeRigs = new Map();
+  let snakeGeometry = null;
+  const snakeProxyGeo = new THREE.BoxGeometry(42, 38, 64);
+  const snakeBarGeo = new THREE.BoxGeometry(28, 3, 2);
+  const snakeBarMat = new THREE.MeshBasicMaterial({ color: 0x8af28a });
+  const snakeBarBackMat = new THREE.MeshBasicMaterial({ color: 0x294834 });
+  function makeSnake(s) {
+    if (!snakeGeometry) snakeGeometry = merge([
+      ell(12, 8, 13, '#61c96f', 0, 9, -17),
+      ell(11, 10, 13, '#7cde7a', 0, 14, -3),
+      ell(16, 13, 16, '#91eb83', 0, 24, 14),
+      ell(11, 5, 10, '#d3ffb3', 0, 16, 20),
+      ell(5.5, 6.5, 3, '#ffffff', -8, 29, 27), ell(5.5, 6.5, 3, '#ffffff', 8, 29, 27),
+      ell(2.8, 4, 1.5, '#253c32', -7, 29, 29.5), ell(2.8, 4, 1.5, '#253c32', 7, 29, 29.5),
+      ell(3, 2, 1, '#f4a6b3', -12, 21, 26), ell(3, 2, 1, '#f4a6b3', 12, 21, 26),
+      pill(3.5, 12, '#55b963', 0, 5, -32, Math.PI / 2),
+    ]);
+    const group = new THREE.Group(), body = new THREE.Mesh(snakeGeometry, bodyMat);
+    body.castShadow = true; body.receiveShadow = true; group.add(body);
+    const proxy = new THREE.Mesh(snakeProxyGeo, pickMat);
+    proxy.position.y = 19; proxy.userData.snakeId = s.id; group.add(proxy);
+    const back = new THREE.Mesh(snakeBarGeo, snakeBarBackMat), fill = new THREE.Mesh(snakeBarGeo, snakeBarMat);
+    back.position.set(0, 47, 0); fill.position.set(0, 47, 1.5); group.add(back, fill);
+    scene.add(group);
+    return { group, body, proxy, fill };
+  }
+  function updateSnakes(dt, S) {
+    for (const [id, s] of S.snakes) {
+      let rig = snakeRigs.get(id);
+      if (!rig) { rig = makeSnake(s); snakeRigs.set(id, rig); }
+      const k = Math.min(1, dt * 14);
+      s.x += (s.tx - s.x) * k; s.y += (s.ty - s.y) * k;
+      rig.group.position.set(s.x, 0, s.y);
+      const diff = Math.atan2(Math.sin((s.d || 0) - rig.group.rotation.y), Math.cos((s.d || 0) - rig.group.rotation.y));
+      rig.group.rotation.y += diff * k;
+      rig.body.rotation.z = Math.sin(time * 11 + id) * 0.08;
+      rig.fill.scale.x = Math.max(0, s.hp / 4);
+      updateElectricTarget(rig, rig.group, snakeGeometry, s.electricUntil);
+    }
+    for (const [id, rig] of snakeRigs) if (!S.snakes.has(id)) {
+      scene.remove(rig.group);
+      if (rig.electricFx) for (const mesh of [rig.electricFx.outline, rig.electricFx.arcs]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+      snakeRigs.delete(id);
+    }
+  }
+
   // ---- players ------------------------------------------------------------
   const players = new Map();
+  let localPlayerId = null;
   const SKIN = ['#f1c9a5', '#e0ac82', '#c68a5f', '#8d5a3b', '#f6d6b8'];
   const HAIR = ['#1b1b22', '#3a2a1c', '#6b4a2a', '#c9a227', '#7a2e2e'];
 
@@ -1354,7 +1413,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
-    rig.g.position.set(p.x, 0, p.y);
+    const reacting = (p.hitUntil || 0) > performance.now();
+    rig.g.position.set(p.x + (reacting ? (Math.random() - 0.5) * 6 : 0), 0, p.y + (reacting ? (Math.random() - 0.5) * 6 : 0));
     // face the heading smoothly
     let diff = p.heading - rig.g.rotation.y;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -1567,6 +1627,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   function disposePlayer(rig) {
+    if (rig.pickProxy) rig.pickProxy.geometry.dispose();
+    if (rig.electricFx) {
+      for (const mesh of [rig.electricFx.outline, rig.electricFx.arcs]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+    }
     scene.remove(rig.g);
     rig.label.remove();
   }
@@ -1621,7 +1685,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const a = Math.random() * Math.PI * 2;
       const sp = rand(90, 340);
       Object.assign(d, {
-        life: rand(1.0, 1.9), max: 1.9, x: x + rand(-10, 10), y: y + rand(4, 24), z: z + rand(-10, 10),
+        paper: false, life: rand(1.0, 1.9), max: 1.9, x: x + rand(-10, 10), y: y + rand(4, 24), z: z + rand(-10, 10),
         vx: Math.cos(a) * sp, vy: rand(180, 460), vz: Math.sin(a) * sp,
         rx: Math.random() * 6, ry: Math.random() * 6, rz: Math.random() * 6, vr: rand(-10, 10), s: rand(4, 11),
       });
@@ -1653,6 +1717,19 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       sp.visible = true;
       sp.position.set(x + Math.cos(a) * 8, 5, z + Math.sin(a) * 8);
       Object.assign(sp.userData, { life: rand(0.45, 0.8), max: 0.8, vx: Math.cos(a) * v, vy: rand(14, 42), vz: Math.sin(a) * v, s: rand(14, 24) });
+    }
+  }
+  function fxProcess(x, z, radius) {
+    for (let i = 0; i < 36; i++) {
+      const index = dNext;
+      fxDebris(x + rand(-radius * 0.65, radius * 0.65), rand(120, 220), z + rand(-radius * 0.65, radius * 0.65), 1, ['#ffffff', '#ddc9ff', '#a86dff']);
+      const paper = D[index];
+      paper.paper = true;
+      paper.vy = rand(-100, -30);
+      paper.vx *= 0.15;
+      paper.vz *= 0.15;
+      paper.life = paper.max = 1.4;
+      paper.s = rand(12, 20);
     }
   }
   function fxSmoke(x, y, z) {
@@ -1758,7 +1835,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         dirty = true;
         continue;
       }
-      d.vy -= 950 * dt;
+      d.vy -= (d.paper ? 180 : 950) * dt;
       d.x += d.vx * dt;
       d.y += d.vy * dt;
       d.z += d.vz * dt;
@@ -1775,7 +1852,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       eul.set(d.rx, d.ry, d.rz);
       quat.setFromEuler(eul);
       pos.set(d.x, d.y, d.z);
-      scl.set(k, k * 0.7, k);
+      scl.set(k, k * (d.paper ? 0.06 : 0.7), d.paper ? k * 0.72 : k);
       mtx.compose(pos, quat, scl);
       debrisMesh.setMatrixAt(i, mtx);
       dirty = true;
@@ -1914,6 +1991,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     if (!loaded || !built) return; // models still loading
     time += dt;
     const me = S.players.get(S.me);
+    localPlayerId = S.me;
 
     for (const door of stallDoors) {
       const nearby = [...S.players.values()].some(p => !p.dead && Math.hypot(p.x - door.x, p.y - door.y) < 160);
@@ -2005,7 +2083,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig = makePlayer(p);
         players.set(id, rig);
       }
+      rig.g.userData.down = p.dead;
       updatePlayer(rig, p, dt, id === S.me, S);
+      updateElectricTarget(rig, rig.torsoM, rig.torsoM.geometry, p.electricUntil);
     }
     for (const [id, rig] of players) {
       if (!S.players.has(id)) {
@@ -2014,6 +2094,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       }
     }
     updateBoss(dt, S);
+    updateSnakes(dt, S);
 
     updateParticles(dt);
     renderer.render(scene, camera);
@@ -2060,8 +2141,24 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     ndc.set((clientX / W) * 2 - 1, -(clientY / H) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const live = proxies.filter((p) => !p.userData.broken);
+    for (const rig of snakeRigs.values()) { rig.proxy.updateWorldMatrix(true, false); live.push(rig.proxy); }
+    for (const [id, rig] of players) {
+      if (id === localPlayerId || rig.g.userData.down) continue;
+      if (!rig.pickProxy) {
+        rig.pickProxy = new THREE.Mesh(new THREE.BoxGeometry(44, 105, 44), pickMat);
+        rig.pickProxy.position.y = 52;
+        rig.pickProxy.userData.playerId = id;
+        rig.g.add(rig.pickProxy);
+      }
+      rig.pickProxy.updateWorldMatrix(true, false);
+      live.push(rig.pickProxy);
+    }
     const hits = ray.intersectObjects(live, false);
-    if (hits.length) return { objectId: hits[0].object.userData.objId };
+    if (hits.length) {
+      const data = hits[0].object.userData;
+      if (data.snakeId !== undefined) return { snakeId: data.snakeId };
+      return data.playerId !== undefined ? { playerId: data.playerId } : { objectId: data.objId };
+    }
     if (ray.ray.intersectPlane(ground, hitPt)) return { x: hitPt.x, y: hitPt.z };
     return null;
   }
@@ -2116,7 +2213,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   return {
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
-    fx: { electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
+    fx: { process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
   };

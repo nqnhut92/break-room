@@ -112,6 +112,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     hitRange: 110,
     milkTeaRangeMultiplier: 2,
     players: new Map(),
+    snakes: new Map(),
     objects: [],
     boss: null, // VKL of this server (see the boss section)
     hpCfg: null,
@@ -279,7 +280,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function makeObject(o) {
     const max = S.types[o.type].hp;
     return {
-      id: o.id, type: o.type, x: o.x, y: o.y, rot: o.rot || 0,
+      id: o.id, type: o.type, x: o.x, y: o.y, rot: o.rot || 0, arm: !!o.arm, itDesk: !!o.itDesk,
       hp: o.hp, hpMax: max, broken: o.broken,
       shake: 0, flash: 0, pop: 0, smokeT: rand(0, 0.5),
     };
@@ -353,6 +354,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         return;
       }
       if (S.ws !== ws || S.fatal) return;
+      $('drinkBtn').hidden = true;
+      clearTimeout(drinkTimer);
       if (S.pendingWs) return; // a replacement is already joining; it takes over
       if (ev && ev.code === 4002) {
         // kicked for inactivity: do not reconnect on our own, that would defeat the purpose
@@ -402,6 +405,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     switch (m.t) {
       case 'welcome': {
         if (m.newer || (m.build && m.build !== 'dev' && MY_BUILD && m.build !== MY_BUILD)) showUpdate(false);
+        $('drinkBtn').hidden = true;
+        clearTimeout(drinkTimer);
+        drinkId = 0; drinkClaimed = 0; drinkExpires = 0;
+        if (m.drink && m.drink.available) showDrinkOffer(m.drink);
         S.me = m.you;
         S.room = m.room;
         S.world = m.world;
@@ -416,6 +423,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.players = new Map();
         m.players.forEach(addPlayer);
         S.objects = m.objects.map(makeObject);
+        S.snakes = new Map((m.snakes || []).map(s => [s.id, { ...s, tx: s.x, ty: s.y }]));
         initBoss(m.boss);
         const meNow = S.players.get(S.me);
         $('downOverlay').hidden = !(meNow && meNow.dead); // refreshing while knocked out keeps the countdown
@@ -518,6 +526,57 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
             p.heading = m.h;
           }
         }
+        break;
+      }
+      case 'snakeSpawn':
+        for (const s of m.snakes) S.snakes.set(s.id, { ...s, tx: s.x, ty: s.y });
+        toast('🐍 Chiêu ẩn của VKL! Rắn xuất hiện ở mốc ' + m.waves.join('%, ') + '% máu.');
+        break;
+      case 'snakePs':
+        for (const p of m.list) { const s = S.snakes.get(p.id); if (s) { s.tx = p.x; s.ty = p.y; s.d = p.d; } }
+        break;
+      case 'snakeHit': {
+        const s = S.snakes.get(m.id), attacker = S.players.get(m.by);
+        if (!s) break;
+        if (attacker) { attacker.swing = 1; attacker.heading = Math.atan2(s.x - attacker.x, s.y - attacker.y); showSkill(attacker, m.skill, s); }
+        s.hp = m.hp;
+        s.hitUntil = performance.now() + 250;
+        if (scene) scene.fx.sparks(s.x, 20, s.y, 5);
+        if (m.hp <= 0) {
+          if (scene) scene.fx.debris(s.x, 15, s.y, 10, ['#86e66e', '#c8ffae', '#40a957']);
+          S.snakes.delete(m.id);
+        }
+        break;
+      }
+      case 'drinkOffer':
+        showDrinkOffer(m);
+        break;
+      case 'drink':
+        drinkClaimed = Math.max(drinkClaimed, m.id);
+        clearTimeout(drinkTimer);
+        $('drinkBtn').hidden = true;
+        toast('🧃 ' + m.name + ' mời nước! Cả phòng được hồi đầy máu và mana.');
+        break;
+      case 'heal': {
+        const p = S.players.get(m.id);
+        if (p) {
+          p.hp = m.hp;
+          p.hpT = performance.now();
+          if (scene) scene.fx.floatText(p.x, 150, p.y, '♥ + MANA', '#7df3ba', 18);
+        }
+        break;
+      }
+      case 'phit': {
+        const victim = S.players.get(m.id);
+        const attacker = S.players.get(m.by);
+        if (!victim || !attacker) break;
+        attacker.swing = 1;
+        attacker.heading = Math.atan2(victim.x - attacker.x, victim.y - attacker.y);
+        showSkill(attacker, m.skill, victim);
+        victim.hitUntil = performance.now() + 300;
+        if (scene && m.skill !== 'milkTea') scene.fx.sparks(victim.x, 65, victim.y, 8);
+        if (scene) scene.fx.floatText(victim.x, 130, victim.y, m.skill === 'electric' ? '⚡ TÊ TÊ!' : m.skill === 'milkTea' ? 'TRÀ SỮA!' : 'BỐP!', '#b8efff', 16);
+        sfxHit(volumeAt(victim.x, victim.y));
         break;
       }
       case 'hit': {
@@ -754,7 +813,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function bossWind(m) {
     const b = S.boss;
     if (!b || b.dead) return;
-    b.wind = { x: m.x, y: m.y, r: m.r, ms: m.ms, t0: performance.now() };
+    b.wind = { skill: m.skill, x: m.x, y: m.y, r: m.r, ms: m.ms, t0: performance.now() };
+    if (m.skill === 'newProcess') {
+      toast('📋 VKL: NEW PROCESS · Quy trình mới! Chạy khỏi vùng tím!');
+      if (scene) scene.fx.floatText(m.x, 180, m.y, 'NEW PROCESS', '#ceadff', 24);
+    }
     sfxWind(volumeAt(b.x, b.y));
   }
   function bossStrike(m) {
@@ -763,6 +826,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       b.wind = null;
       b.pl.swing = 1;
     }
+    if (m.skill === 'newProcess' && scene) scene.fx.process(m.x, m.y, m.r);
     const v = volumeAt(m.x, m.y);
     sfxPunch(v);
     S.shake = Math.min(1.4, S.shake + 0.55 * v);
@@ -815,6 +879,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const b = S.boss;
     if (!b) return;
     b.dead = false;
+    S.snakes.clear();
     b.x = b.tx = b.pl.x = m.x;
     b.y = b.ty = b.pl.y = m.y;
     b.hp = b.cfg.maxHp;
@@ -1244,6 +1309,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
       'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
+      'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Rắn đuổi khắp bản đồ, cắn nhẹ và chịu 4 cú búa. Rắn còn lại biến mất khi boss hồi sinh.',
+      'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
+      'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
+      'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> (phím <b>I</b>) để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
@@ -1262,6 +1331,26 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !helpEl.hidden) helpClose();
+  });
+
+  let drinkTimer = null;
+  let drinkId = 0;
+  let drinkClaimed = 0;
+  let drinkExpires = 0;
+  function showDrinkOffer(m) {
+    if (!m || m.id <= drinkClaimed || m.ms <= 0) return;
+    const expiry = performance.now() + Math.min(m.ms, 5000);
+    drinkExpires = drinkId === m.id && drinkExpires ? Math.min(drinkExpires, expiry) : expiry;
+    drinkId = m.id;
+    clearTimeout(drinkTimer);
+    $('drinkBtn').hidden = false;
+    $('drinkBtn').disabled = false;
+    drinkTimer = setTimeout(() => { $('drinkBtn').hidden = true; }, Math.max(0, drinkExpires - performance.now()));
+  }
+  $('drinkBtn').addEventListener('click', () => {
+    if (performance.now() >= drinkExpires) return;
+    $('drinkBtn').disabled = true;
+    send({ t: 'drink', id: drinkId });
   });
 
   // ---------------------------------------------------------------- input ----
@@ -1285,6 +1374,15 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     return (base - margin) * (S.skill === 'milkTea' ? S.milkTeaRangeMultiplier : 1);
   }
 
+  function snakeObj(id) {
+    const s = S.snakes.get(id);
+    return s && s.hp > 0 ? { snake: true, id, x: s.x, y: s.y } : null;
+  }
+  function playerObj(id) {
+    const p = S.players.get(id);
+    return p && id !== S.me && !p.dead ? { player: true, id, x: p.x, y: p.y } : null;
+  }
+
   function nearest() {
     const me = S.players.get(S.me);
     if (!me) return null;
@@ -1301,7 +1399,19 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const bo = bossObj();
     if (bo && S.boss) {
       const center = Math.hypot(bo.x - me.x, bo.y - me.y);
-      if (center <= attackRange(true, 10) && center - S.boss.cfg.radius <= bestD) best = bo;
+      if (center <= attackRange(true, 10) && center - S.boss.cfg.radius <= bestD) {
+        best = bo;
+        bestD = center - S.boss.cfg.radius;
+      }
+    }
+    for (const s of S.snakes.values()) {
+      const d = Math.hypot(s.x - me.x, s.y - me.y);
+      if (d < bestD) { best = snakeObj(s.id); bestD = d; }
+    }
+    for (const p of S.players.values()) {
+      if (p.id === S.me || p.dead) continue;
+      const d = Math.hypot(p.x - me.x, p.y - me.y);
+      if (d < bestD) { best = playerObj(p.id); bestD = d; }
     }
     return best;
   }
@@ -1321,7 +1431,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!me || !o || o.broken || me.dead) return false;
     const now = performance.now();
     if (now - S.lastHit < 190) return false;
-    if (S.manaCfg && manaNow() < S.manaCfg.cost) {
+    if (!o.player && S.manaCfg && manaNow() < S.manaCfg.cost) {
       S.manaEmptyT = 1; // flash the bar
       if (now - S.manaToastAt > 2500) {
         S.manaToastAt = now;
@@ -1331,7 +1441,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     if (Math.hypot(o.x - me.x, o.y - me.y) > attackRange(o.boss, o.boss ? 10 : 5)) return false;
     S.lastHit = now;
-    send(o.boss ? { t: 'bhit', skill: S.skill } : { t: 'hit', id: o.id, skill: S.skill });
+    send({ t: o.snake ? 'snakeHit' : o.player ? 'phit' : o.boss ? 'bhit' : 'hit', id: o.id, skill: S.skill });
     me.skill = S.skill;
     me.heading = Math.atan2(o.x - me.x, o.y - me.y);
     me.swing = 1;
@@ -1453,7 +1563,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
     const hit = scene.pick(e.clientX, e.clientY);
     if (!hit) return;
-    if (hit.objectId !== undefined) {
+    if (hit.snakeId !== undefined) {
+      S.attackId = 's:' + hit.snakeId;
+      S.target = null;
+    } else if (hit.playerId !== undefined) {
+      S.attackId = 'p:' + hit.playerId;
+      S.target = null;
+    } else if (hit.objectId !== undefined) {
       S.attackId = hit.objectId;
       S.target = null;
     } else if (S.boss && !S.boss.dead && Math.hypot(hit.x - S.boss.x, hit.y - S.boss.y) < 110) {
@@ -1770,7 +1886,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       S.target = null;
       S.attackId = null;
     } else if (S.attackId !== null) {
-      const o = S.attackId === BOSS_TARGET ? bossObj() : S.objects[S.attackId];
+      const o = typeof S.attackId === 'string' ? (S.attackId.startsWith('s:') ? snakeObj(Number(S.attackId.slice(2))) : playerObj(Number(S.attackId.slice(2)))) : S.attackId === BOSS_TARGET ? bossObj() : S.objects[S.attackId];
       if (!o || o.broken) {
         S.attackId = null;
       } else {

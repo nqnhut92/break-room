@@ -253,6 +253,39 @@ async function contract(label, makeStore) {
     assert.ok(again.id);
   });
 
+  await step(label + ': drink offers are shared, expire and can only be claimed once', async () => {
+    const r = room + '-drinks';
+    const offer = opts => store.drinkOffer(r, { intervalMs: 300000, windowMs: 5000, ...opts });
+    const state = await offer({ now: NOW });
+    assert.strictEqual(state.id, NOW + 300000);
+    assert.ok(!state.available);
+    assert.ok((await offer({ now: state.id })).available);
+    const claims = await Promise.all(Array.from({ length: 12 }, () => offer({ now: state.id + 10, claim: true, offerId: state.id })));
+    assert.strictEqual(claims.filter(r => r.claimed).length, 1);
+    assert.ok(!(await offer({ now: state.id + 5000, claim: true, offerId: state.id })).claimed);
+    assert.ok((await offer({ now: state.id + 300000 })).available);
+  });
+
+  await step(label + ': snake thresholds are atomic and four hits kill without resurrection', async () => {
+    const r = room + '-snake-waves';
+    const cfg = { maxHp: 100, baseRegenPerSec: 0, regenPerSec: 0, regenDelayMs: 0 };
+    const hit = dmg => store.bossHit(r, { playerId: 1, dmg, now: NOW, cfg, respawnAt: NOW + 1000, bounty: 500 });
+    const summon = () => store.summonSnakes(r, { maxHp: 100, count: 2, x: 3360, y: 1700, now: NOW });
+    for (const percent of [70, 40, 10]) {
+      await hit(30);
+      const attempts = await Promise.all([summon(), summon()]);
+      assert.strictEqual(attempts.reduce((n, r) => n + r.snakes.length, 0), 2);
+      assert.deepStrictEqual(attempts.flatMap(r => r.waves), [percent]);
+    }
+    const snakes = await store.snakeList(r, { now: NOW });
+    assert.strictEqual(snakes.length, 6);
+    for (let i = 0; i < 4; i++) assert.strictEqual((await store.snakeHit(r, snakes[0].id, NOW)).hp, 3 - i);
+    await store.snakeMove(r, [{ ...snakes[0], x: 4000 }], NOW);
+    assert.strictEqual((await store.snakeList(r, { now: NOW })).length, 5);
+    await hit(10); await store.bossRespawn(r, { now: NOW + 1000, maxHp: 100 });
+    assert.strictEqual((await store.snakeList(r, { now: NOW + 1000 })).length, 0);
+  });
+
   await step(label + ': concurrent hits break an object exactly once and score it once', async () => {
     const r2 = room + '-hits';
     const results = await Promise.all(
@@ -467,6 +500,11 @@ async function twoInstances(url) {
     assert.ok(B.id !== A.id);
     const board = await take(A, (m) => m.t === 'board' && m.online === 2);
     assert.strictEqual(board.online, 2);
+
+    send(A, { t: 'phit', id: B.id, skill: 'electric' });
+    await take(B, m => m.t === 'phit' && m.id === B.id && m.by === A.id && m.skill === 'electric');
+    assert.ok(!B.msgs.some(m => m.t === 'hp' || m.t === 'down'));
+    await sleep(220);
 
     // A hits on instance 1, B (instance 2) sees it, and breaking it updates everyone's board
     const target = A.welcome.objects

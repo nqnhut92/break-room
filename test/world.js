@@ -39,6 +39,21 @@ step('object ids are dense and every type is known', () => {
   assert.ok(W.OBJECTS.length > 100);
 });
 
+step('IT wing has two facing rows and two arm-mounted monitors per desk', () => {
+  const desks = W.OBJECTS.filter(o => o.itDesk);
+  assert.strictEqual(desks.length, 16);
+  assert.deepStrictEqual([...new Set(desks.map(d => d.y))].sort((a,b) => a-b), [600, 716]);
+  for (const d of desks) {
+    const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30 && Math.abs(o.y - d.y) <= 5);
+    assert.strictEqual(monitors.length, 2);
+    assert.ok(monitors.every(o => (o.rot || 0) === (d.rot || 0)));
+    const chair = W.OBJECTS[d.id + 3];
+    assert.strictEqual(chair.type, 'chair');
+    assert.ok(d.y === 600 ? chair.y < d.y : chair.y > d.y);
+    assert.strictEqual(d.rot || 0, d.y === 600 ? Math.PI : 0);
+  }
+});
+
 step('spawn area is open floor', () => {
   const s = W.WORLD.spawn;
   for (const [dx, dy] of [[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {

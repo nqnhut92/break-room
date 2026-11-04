@@ -7,6 +7,8 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. It
 ## How it plays
 
 - The boss walks a loop inside the server room. When a player is **inside the room** (or standing in the doorway apron) it runs at the nearest one, raises its fist (0.7 s, a **red circle** on the floor shows where it will land) and punches. Anyone inside the circle when the fist lands takes 30 damage. Running out of the circle in time dodges it.
+- **New Process (Quy trình mới):** every 12 seconds of combat, the boss marks a player's position with a purple circle (radius 220). After 1.2 seconds, paperwork falls and deals 20 damage to players still inside the circle and the boss zone. The marked position stays fixed, so moving away dodges it.
+- Player-to-player attacks only show hit feedback and never remove health or mana.
 - Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **15 seconds**, can still chat, and then come back at the **lobby**, never where they fell.
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.
 - The boss has 6,000 health, a hammer hit does 10 (that is 600 hits) and it **does not heal**: damage sticks, so hit and run works. **A lone player can wear it down in the end but the punches make that very hard; about five players take it down in around a minute, and a crowd is not a walkover.**
@@ -101,3 +103,9 @@ Tests: `test/boss.js` (rules, balance), `test/boss-net.js` (a whole fight over W
 - Someone idle in the server room is an easy target: they are knocked out and wait 15 seconds.
 - No knockback: the punch is damage and screen shake only. Adding it needs the server to move the player and tell the client.
 - A damage board of boss kills is not kept; bounties go into the normal damage board.
+
+## Hidden snake waves and drinks
+
+At 70%, 40% and 10% health, once per threshold per boss life, VKL summons one small green snake per online player in the server. Snakes follow the nearest living player through doorways across the entire office. Each has 4 health, takes one damage per hammer hit, moves at 200 units/second and bites for 5 damage with a 1.2-second cooldown. Remaining snakes are cleared when the boss respawns. Wave claims and snake health are atomic in Redis; one leader moves them, clients draw and interpolate them. Positions are saved once per second.
+
+Every five minutes the room offers “Đồng nghiệp mời nước” for five seconds. One accepted click restores all connected players to full health and mana; downed players revive in the lobby. The schedule and claim are shared across instances.

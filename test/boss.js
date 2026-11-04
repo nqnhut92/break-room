@@ -131,6 +131,26 @@ step('punch: the red circle appears first, the strike lands after the windup, an
   assert.strictEqual(b.mode, 'recover');
 });
 
+step('New Process warns before impact, keeps the marked position, and has a cooldown', () => {
+  const b = B.createBossState();
+  b.mode = 'chase';
+  b.processCooldown = 0;
+  const target = { id: 9, x: b.x + 180, y: b.y };
+  const wind = B.stepBoss(b, 0.05, [target]).find(e => e.skill === 'newProcess');
+  assert.ok(wind);
+  assert.strictEqual(wind.ms, 1200);
+  assert.strictEqual(wind.r, 220);
+  assert.strictEqual(b.mode, 'windup');
+  assert.ok(!B.stepBoss(b, 0.5, []).some(e => e.type === 'strike'));
+  const strike = B.stepBoss(b, 0.71, [{ ...target, x: target.x + 400 }]).find(e => e.type === 'strike');
+  assert.strictEqual(strike.skill, 'newProcess');
+  assert.strictEqual(strike.dmg, 20);
+  assert.strictEqual(strike.x, wind.x);
+  assert.ok(b.processCooldown > 10);
+  b.mode = 'dead';
+  assert.deepStrictEqual(B.stepBoss(b, 1, [target]), []);
+});
+
 step('players outside the zone are ignored: no chase, the boss keeps patrolling', () => {
   const b = B.createBossState();
   for (let i = 0; i < 100; i++) B.stepBoss(b, 0.1, []); // nobody passed in: the caller already filtered by zone

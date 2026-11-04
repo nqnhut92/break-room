@@ -664,3 +664,5 @@ canvas {
 #hurt.on { animation: hurtflash 0.5s ease-out; }
 @keyframes hurtflash { 0% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { #hurt.on { animation: none; opacity: 0.35; } }
+
+.btn.drink { background: #1a7354; border-color: #7df3ba; color: #fff; font-weight: 800; box-shadow: 0 0 20px #7df3ba55; }
