@@ -636,6 +636,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // a position stream, a red circle during the windup, strikes, hit points and the bounty. Health works like
   // mana: the server sends the stored value plus how long ago it was stored, and each client adds the same
   // regeneration, so nothing needs to be sent while a bar refills.
+  const narrowMQ = window.matchMedia('(max-width: 640px)');
   const BOSS_TARGET = -2; // value of S.attackId while tapping on the boss walks over and swings at it
   const hurtEl = $('hurt');
 
@@ -823,6 +824,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       $('hpNum').textContent = String(Math.round(pct * (S.hpCfg ? S.hpCfg.max : 100)));
       if (me.dead) $('downSecs').textContent = String(Math.max(0, Math.ceil((me.deadAt - performance.now()) / 1000)));
     }
+    if (me) me.alwaysHp = narrowMQ.matches; // on a phone the health bar lives over the character instead of the top row
     const b = S.boss;
     if (!b || !me) {
       return;

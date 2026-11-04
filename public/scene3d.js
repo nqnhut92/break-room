@@ -1230,7 +1230,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
     const armed = rig.hammer.visible;
-    const CARRY = -2.3;
+    const CARRY = -0.45; // relaxed: the hammer hangs low in front, head just above the floor
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
     let lean = 0.1 * mv;
     if (p.swing > 0) {
@@ -1255,6 +1255,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         lean += ph > 0.35 && ph < 0.6 ? 0.28 : ph <= 0.35 ? -0.12 * (ph / 0.35) : 0;
       }
     }
+    // the hammer lands: dust on the floor in front, and a small shake for our own screen
+    if (armed && (rig.prevSwing || 0) > 0.55 && p.swing <= 0.55) {
+      fxDust(p.x + Math.sin(p.heading) * 64, p.y + Math.cos(p.heading) * 64);
+      if (isMe) S.shake = Math.min(1.4, S.shake + 0.2);
+    }
+    rig.prevSwing = p.swing;
     rig.root.rotation.x = lean;
     rig.armR.rotation.x = a;
     rig.armR.rotation.z = -0.1 - Math.abs(sw) * 0.1;
@@ -1383,6 +1389,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         life: rand(0.3, 0.65), max: 0.65, x, y, z,
         vx: Math.cos(a) * sp, vy: rand(80, 320), vz: Math.sin(a) * sp, c: cols[i % 3],
       });
+    }
+  }
+  // a ring of dust where the hammer lands
+  function fxDust(x, z, n = 9) {
+    for (let i = 0; i < n; i++) {
+      const sp = puffs[pNext];
+      pNext = (pNext + 1) % MAXP;
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+      const v = rand(50, 130);
+      sp.visible = true;
+      sp.position.set(x + Math.cos(a) * 8, 5, z + Math.sin(a) * 8);
+      Object.assign(sp.userData, { life: rand(0.45, 0.8), max: 0.8, vx: Math.cos(a) * v, vy: rand(14, 42), vz: Math.sin(a) * v, s: rand(14, 24) });
     }
   }
   function fxSmoke(x, y, z) {
@@ -1755,7 +1773,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   return {
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
-    fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, floatText },
+    fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
   };

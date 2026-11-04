@@ -610,7 +610,13 @@ canvas {
   z-index: 20;
 }
 
+/* on a phone the top row is compact: [BR-1] [dot + number] [copy] [sound]; health moves onto the character */
+.narrow-only { display: none; }
 @media (max-width: 640px) {
+  .wide-only { display: none; }
+  .narrow-only { display: inline; }
+  #topLeft { flex-wrap: nowrap; }
+  #topLeft .pill { white-space: nowrap; }
   #hint { display: none; }
   #board { width: 100%; font-size: 12px; }
   .board-total { font-size: 15px; }
@@ -624,6 +630,7 @@ canvas {
 
 /* health: the pill in the top bar, the boss's bar, the knocked-out card and the red flash when a punch lands */
 .pill.hp { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 640px) { .pill.hp { display: none; } } /* the phone shows health over the character instead */
 .hp-track { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.16); overflow: hidden; }
 .hp-track i { display: block; height: 100%; background: #46d17a; transform-origin: left center; transition: background 0.2s; }
 .hp-track i.mid { background: #ffb02e; }
