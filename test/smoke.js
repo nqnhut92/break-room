@@ -194,6 +194,18 @@ async function main() {
     await none(A, (m) => m.t === 'emote' && m.e === 99);
   });
 
+  await step('a swing at thin air is relayed to the room, with a cooldown', async () => {
+    send(B, { t: 'swing', h: 1.5 });
+    const s1 = await take(A, (m) => m.t === 'swing' && m.id === B.id);
+    assert.strictEqual(s1.h, 1.5);
+    send(B, { t: 'swing', h: 2 });
+    send(B, { t: 'swing', h: 2 }); // inside the cooldown: dropped
+    await sleep(400);
+    send(B, { t: 'swing', h: 'not a number' });
+    const s2 = await take(A, (m) => m.t === 'swing' && m.id === B.id && m.h === 0);
+    assert.strictEqual(s2.h, 0);
+  });
+
   await step('garbage input does not break the server', async () => {
     A.ws.send('not json at all');
     send(A, { t: 5 });

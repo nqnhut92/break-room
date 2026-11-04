@@ -26,7 +26,7 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | Hành động | Cách làm |
 | --- | --- |
 | Di chuyển | WASD / phím mũi tên, hoặc chạm vào nền |
-| Đập | Space (giữ để đập liên tục), nút ĐẬP!, hoặc chạm vào đồ vật (màn hình cảm ứng) |
+| Đập | Space (giữ để đập liên tục; không có gì trong tầm vẫn vung búa, miễn phí), nút ĐẬP!, hoặc chạm vào đồ vật (màn hình cảm ứng) |
 | Thả emoji | Phím 1 đến 8 hoặc bấm các nút emoji |
 | Chat | Enter hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game |
 | Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |

@@ -89,6 +89,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     target: null,
     attackId: null,
     smashHeld: false,
+    lastAir: 0,
     lastSend: 0,
     lastSentX: 0,
     lastSentY: 0,
@@ -452,6 +453,16 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'mana':
         if (S.manaCfg) S.mana = { v: m.v, t: performance.now() - m.ago };
         break;
+      case 'swing': {
+        if (m.id !== S.me) {
+          const p = S.players.get(m.id);
+          if (p) {
+            p.swing = 1;
+            p.heading = m.h;
+          }
+        }
+        break;
+      }
       case 'hit': {
         const o = S.objects[m.id];
         if (!o) break;
@@ -1551,7 +1562,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         p.moving = Math.hypot(p.x - ox, p.y - oy) > 0.15;
         if (p.moving && p.swing <= 0) p.heading = Math.atan2(p.tx - p.x, p.ty - p.y);
       }
-      p.swing = Math.max(0, p.swing - dt * 4);
+      p.swing = Math.max(0, p.swing - dt * 3);
       if (p.emoteT > 0) p.emoteT -= dt;
       if (p.chatT > 0) p.chatT -= dt;
     }
@@ -1564,6 +1575,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   function updateMe(me, dt) {
+    const now0 = performance.now();
     if (me.dead) {
       me.moving = false;
       return; // knocked out: no walking, no swinging until the server revives us
@@ -1634,7 +1646,16 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       S.stuck = 0;
     }
 
-    if (S.keys.has('space') || S.smashHeld) tryHit(nearest());
+    if (S.keys.has('space') || S.smashHeld) {
+      const target = nearest();
+      if (target) tryHit(target);
+      else if (me.swing <= 0 && now0 - S.lastAir >= 230) {
+        // nothing in reach: swing anyway, so Space always feels like a hit (free, only the animation)
+        S.lastAir = now0;
+        me.swing = 1;
+        send({ t: 'swing', h: Math.round(me.heading * 100) / 100 });
+      }
+    }
 
     const now = performance.now();
     if (

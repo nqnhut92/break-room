@@ -1141,7 +1141,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       box(0.6, 5, 5, STEEL, -18.9, 40, 0),
       box(0.6, 5, 5, STEEL, 18.9, 40, 0),
     ])));
-    hammer.rotation.set(0.4, 0, 0.55); // carried up and slightly outward so the head reads from the front
+    // The handle continues the arm and the head sits at the far end, with its long side along the swing, so raising the
+    // arm lifts the hammer and swinging it down brings the head onto whatever is in front.
+    hammer.position.set(0, -30, 0);
+    hammer.rotation.set(Math.PI, Math.PI / 2, 0);
+    hammer.scale.setScalar(0.82);
     armR.add(hammer);
     root.add(armL, armR);
 
@@ -1220,15 +1224,36 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.armL.rotation.x = -sw * 0.95 + breathe * 0.05;
     rig.armL.rotation.z = 0.14 + Math.sin(rig.t * 1.7) * 0.03 * idle + Math.abs(sw) * 0.12;
 
-    // right arm + hammer: idle carry, or the swing
-    let a = -0.35 + sw * 0.55 + breathe * 0.04;
+    // right arm + hammer: carried raised over the shoulder, wound up, slammed down in front, then lifted again.
+    // (The boss has no hammer: it keeps the old low guard and the punch.)
+    const eo = (t) => 1 - (1 - t) * (1 - t);
+    const ei = (t) => t * t;
+    const lerp = (x, y, t) => x + (y - x) * t;
+    const armed = rig.hammer.visible;
+    const CARRY = -2.3;
+    let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
     let lean = 0.1 * mv;
     if (p.swing > 0) {
       const ph = 1 - p.swing; // 0..1 over the swing
-      if (ph < 0.35) a = -0.35 - (ph / 0.35) * 2.0; // wind up
-      else if (ph < 0.6) a = -2.35 + ((ph - 0.35) / 0.25) * 3.1; // smash
-      else a = 0.75 - ((ph - 0.6) / 0.4) * 1.1; // recover
-      lean += ph > 0.35 && ph < 0.6 ? 0.28 : ph <= 0.35 ? -0.12 * (ph / 0.35) : 0; // lean back on the wind-up, forward on the smash
+      if (armed) {
+        if (ph < 0.25) {
+          a = lerp(CARRY, -3.1, eo(ph / 0.25)); // wind up: the hammer goes high and back
+          lean += -0.25 * (ph / 0.25);
+        } else if (ph < 0.45) {
+          const t = ei((ph - 0.25) / 0.2);
+          a = lerp(-3.1, -1.05, t); // slam
+          lean += lerp(-0.25, 0.32, t);
+        } else {
+          const t = eo((ph - 0.45) / 0.55);
+          a = lerp(-1.05, CARRY, t); // lift it back up
+          lean += 0.32 * (1 - t);
+        }
+      } else {
+        if (ph < 0.35) a = -0.35 - (ph / 0.35) * 2.0;
+        else if (ph < 0.6) a = -2.35 + ((ph - 0.35) / 0.25) * 3.1;
+        else a = 0.75 - ((ph - 0.6) / 0.4) * 1.1;
+        lean += ph > 0.35 && ph < 0.6 ? 0.28 : ph <= 0.35 ? -0.12 * (ph / 0.35) : 0;
+      }
     }
     rig.root.rotation.x = lean;
     rig.armR.rotation.x = a;
