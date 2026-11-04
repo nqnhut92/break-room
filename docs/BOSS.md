@@ -10,7 +10,7 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. It
 - Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **15 seconds**, can still chat, and then come back at the **lobby**, never where they fell.
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.
 - The boss has 6,000 health, a hammer hit does 10 (that is 600 hits) and it **does not heal**: damage sticks, so hit and run works. **A lone player can wear it down in the end but the punches make that very hard; about five players take it down in around a minute, and a crowd is not a walkover.**
-- When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back 3 to 5 minutes later (random), at its starting spot, with full health.
+- When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back one minute later, at its starting spot, with full health.
 - It never leaves the server room: leave and it goes back to patrolling and healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
 
 ## The numbers
@@ -26,7 +26,7 @@ All of them live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); noth
 | Regeneration | none | Players found a boss that heals too hard. See "Why it does not heal". |
 | Player regeneration | 5 per second after 4 s | Moderate: not "never", not "instantly". |
 | Player respawn | 15 s, at the lobby | Was 60 s; players found a minute too long. |
-| Boss respawn | random 3 to 5 min | As asked. |
+| Boss respawn | 1 min | Was a random 3 to 5 min; players found that too long. |
 | Bounty | 500 million, split by damage | See "Why the bounty is split by damage". |
 | Hammer reach | 150 from the boss's centre, and a clear line | The boss is big; walls and racks block the swing. |
 

@@ -38,7 +38,7 @@ Trên màn hình cảm ứng (và bút), chạm vào nền thì đi tới đó, 
 
 ## VKL, boss của server
 
-Mỗi server có một boss trong phòng server. Bước vào là sếp chạy lại đấm; vòng đỏ dưới sàn báo chỗ nắm đấm sẽ rơi nên né được. Bốn cú đấm (30 mỗi cú) là gục 15 giây, rồi hồi sinh ở sảnh; máu tự hồi chậm khi bạn yên ổn. Sếp không hồi máu nên đánh rồi chạy cũng được; một hay hai người rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó, khoảng năm người hạ trong chừng một phút, sếp ngã thì 500 triệu tiền thưởng vào bảng thiệt hại, chia theo sát thương. 3 đến 5 phút sau sếp quay lại. Luật, các con số và lý do chọn chúng nằm ở [docs/BOSS.vi.md](docs/BOSS.vi.md).
+Mỗi server có một boss trong phòng server. Bước vào là sếp chạy lại đấm; vòng đỏ dưới sàn báo chỗ nắm đấm sẽ rơi nên né được. Bốn cú đấm (30 mỗi cú) là gục 15 giây, rồi hồi sinh ở sảnh; máu tự hồi chậm khi bạn yên ổn. Sếp không hồi máu nên đánh rồi chạy cũng được; một hay hai người rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó, khoảng năm người hạ trong chừng một phút, sếp ngã thì 500 triệu tiền thưởng vào bảng thiệt hại, chia theo sát thương. 1 phút sau sếp quay lại. Luật, các con số và lý do chọn chúng nằm ở [docs/BOSS.vi.md](docs/BOSS.vi.md).
 
 ## Văn phòng
 

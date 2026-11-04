@@ -10,7 +10,7 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong p
 - Người chơi có 100 máu (thanh máu trên đầu khi bị thương, và một ô ở thanh trên cùng). Bốn cú đấm là gục. Nằm **15 giây**, vẫn chat được, rồi hồi sinh ở **sảnh**, không bao giờ hồi sinh ngay chỗ ngã.
 - Máu hồi chậm: 4 giây đầu sau cú đấm không hồi gì, sau đó 5 máu mỗi giây (đầy lại khoảng 24 giây sau cú cuối). Ra khỏi phòng chờ một chút là lựa chọn thật sự.
 - Sếp có 6.000 máu, một cú búa gây 10 (tức 600 cú) và sếp **không hồi máu**: sát thương được giữ lại, nên đánh rồi chạy cũng được. **Một người đánh một mình rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó; khoảng năm người hạ trong chừng một phút, đông người cũng không dễ.**
-- Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 3 đến 5 phút sau (ngẫu nhiên) sếp quay lại chỗ cũ với đầy máu.
+- Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 1 phút sau sếp quay lại chỗ cũ với đầy máu.
 - Sếp không bao giờ rời phòng server: bạn đi ra thì sếp quay lại tuần tra và hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
 
 ## Các con số
@@ -26,7 +26,7 @@ Tất cả nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js), 
 | Hồi máu sếp | không | Người chơi thấy sếp hồi máu quá khó. Xem "Vì sao sếp không hồi máu". |
 | Hồi máu người chơi | 5/giây sau 4 giây | Vừa phải: không "không bao giờ", không "ngay lập tức". |
 | Người chơi hồi sinh | 15 giây, ở sảnh | Trước là 60 giây; người chơi thấy một phút là quá lâu. |
-| Sếp hồi sinh | ngẫu nhiên 3 đến 5 phút | Theo yêu cầu. |
+| Sếp hồi sinh | 1 phút | Trước là ngẫu nhiên 3 đến 5 phút; người chơi thấy quá lâu. |
 | Tiền thưởng | 500 triệu, chia theo sát thương | Xem "Vì sao chia theo sát thương". |
 | Tầm búa | 150 tính từ giữa người sếp, và không bị vật cản | Sếp to; tường và tủ chắn được cú đập. |
 
