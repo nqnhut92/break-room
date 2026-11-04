@@ -800,9 +800,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (me.dead) $('downSecs').textContent = String(Math.max(0, Math.ceil((me.deadAt - performance.now()) / 1000)));
     }
     const b = S.boss;
-    const bar = $('bossHud');
     if (!b || !me) {
-      bar.hidden = true;
       return;
     }
     const k = Math.min(1, dt * 12);
@@ -816,19 +814,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     b.pl.swing = Math.max(0, b.pl.swing - dt * 3);
     b.pl.dead = false;
     b.pl.hpFrac = bossHpNow() / b.cfg.maxHp;
-    // the HUD bar shows while we are anywhere near the server room
-    const near = Math.hypot(b.x - me.x, b.y - me.y) < 1400;
-    bar.hidden = !near;
-    if (near) {
-      if (b.dead) {
-        const left = Math.max(0, Math.ceil((b.respawnAt - performance.now()) / 1000));
-        $('bossSub').textContent = 'đang nghỉ phép · quay lại sau ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
-        $('bossFill').style.transform = 'scaleX(0)';
-      } else {
-        $('bossSub').textContent = b.eng ? b.eng + ' người trong phòng' : '';
-        $('bossFill').style.transform = 'scaleX(' + clamp(b.pl.hpFrac, 0, 1).toFixed(3) + ')';
-      }
-    }
   }
 
   // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
@@ -1004,7 +989,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.fillRect(z.x0 * mm.k, z.y0 * mm.k, (z.x1 - z.x0) * mm.k, (z.y1 - z.y0) * mm.k);
     }
     for (const p of props) {
-      if (p.k === 'rug') continue;
+      if (p.k === 'rug' || p.k === 'deco') continue;
       c.fillStyle = p.k === 'wall' ? (p.opaque ? '#aab4c4' : '#9fd4ff') : p.k === 'sofa' ? '#3d5a80' : '#d9d2c5';
       const w = Math.max(1.5, p.w * mm.k);
       const h = Math.max(1.5, p.h * mm.k);
@@ -1071,8 +1056,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!board) return;
     const top = Math.max(56, Math.round(board.getBoundingClientRect().bottom) + 8);
     $('sideBtns').style.top = top + 'px';
-    const narrow = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
-    $('bossHud').style.top = narrow ? top + 'px' : '';
   }
   setInterval(() => {
     mmPlace();

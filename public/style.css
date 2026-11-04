@@ -592,21 +592,6 @@ canvas {
 .hp-track i { display: block; height: 100%; background: #46d17a; transform-origin: left center; transition: background 0.2s; }
 .hp-track i.mid { background: #ffb02e; }
 .hp-track i.low { background: #ff4d3a; }
-#bossHud {
-  position: fixed;
-  top: 58px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(420px, calc(100vw - 32px));
-  z-index: 6;
-  pointer-events: none;
-  text-align: center;
-}
-#bossHud[hidden] { display: none; }
-.boss-name { font-weight: 800; font-size: 14px; color: #fff; text-shadow: 0 1px 3px #000; margin-bottom: 3px; }
-.boss-name small { font-weight: 600; font-size: 12px; color: #d3dae6; margin-left: 6px; }
-.boss-track { height: 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.35); overflow: hidden; }
-.boss-track i { display: block; height: 100%; background: linear-gradient(180deg, #ff6b5a, #d82c1a); transform-origin: left center; }
 #downOverlay {
   position: fixed;
   inset: 0;
@@ -626,5 +611,4 @@ canvas {
 #hurt { position: fixed; inset: 0; z-index: 19; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(255, 40, 30, 0) 40%, rgba(255, 40, 30, 0.6) 100%); }
 #hurt.on { animation: hurtflash 0.5s ease-out; }
 @keyframes hurtflash { 0% { opacity: 1; } 100% { opacity: 0; } }
-@media (max-width: 640px) { #bossHud { left: 150px; right: 60px; transform: none; width: auto; } }
 @media (prefers-reduced-motion: reduce) { #hurt.on { animation: none; opacity: 0.35; } }
