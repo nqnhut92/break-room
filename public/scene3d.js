@@ -76,6 +76,14 @@ const merge = (list) => {
 // The hammer's handle continues the forearm, with the head at the far end and its long side along the swing: it hangs
 // down from a relaxed hand at rest, and swinging the arm swings the hammer.
 const _hammerAlongArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI / 2, 0));
+// At rest the hammer is held beside the body: handle straight up, head side-on.
+// (spin the head a quarter turn about the handle, then tilt)
+const _hammerHeld = new THREE.Quaternion()
+  .setFromEuler(new THREE.Euler(0.04, 0, 0.06))
+  .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2));
+const _qa = new THREE.Quaternion();
+const _qb = new THREE.Quaternion();
+const _qc = new THREE.Quaternion();
 function bakeAO(geo) {
   if (!geo) return geo;
   const pos = geo.attributes.position;
@@ -1161,7 +1169,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // The handle continues the arm and the head sits at the far end, with its long side along the swing, so raising the
     // arm lifts the hammer and swinging it down brings the head onto whatever is in front.
     hammer.position.set(0, -17, 0); // in the fist, at the end of the forearm
-    hammer.quaternion.copy(_hammerAlongArm);
+    hammer.quaternion.copy(_hammerHeld);
     hammer.scale.setScalar(0.82);
     foreR.add(hammer);
     root.add(armL, armR);
@@ -1283,9 +1291,16 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.prevSwing = p.swing;
     rig.root.rotation.x = lean;
     rig.armR.rotation.x = a;
-    rig.armR.rotation.z = -0.12 - Math.abs(sw) * 0.1;
-    // Elbow: a relaxed bend at rest (the hammer hangs low in front of the hand), straight for the swing.
-    rig.foreR.rotation.x = armed ? lerp(-0.9, -0.2, hk) : -0.2;
+    rig.armR.rotation.z = -0.58 - Math.abs(sw) * 0.1; // the fist held out a little, so the hammer stays clear of the head
+    // Elbow: a relaxed bend at rest, straight for the swing. The hammer's own rotation cancels the arm's, so it stays
+    // "held up" in the body's frame whatever the arm does, and blends to "along the arm" for the swing.
+    rig.foreR.rotation.x = armed ? lerp(-0.8, -0.2, hk) : -0.2;
+    if (armed) {
+      _qa.copy(rig.armR.quaternion).multiply(rig.foreR.quaternion);
+      _qb.copy(_qa).multiply(_hammerAlongArm);
+      _qc.slerpQuaternions(_hammerHeld, _qb, hk);
+      rig.hammer.quaternion.copy(_qa.invert()).multiply(_qc);
+    }
 
     // knocked out: lie flat on one side. Sideways rather than backwards, because the camera looks from the south and
     // a body lying north-south would just look like it is still standing.
