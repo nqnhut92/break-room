@@ -99,7 +99,8 @@ canvas {
 .plabel .hpb i { display: block; height: 100%; background: #46d17a; transform-origin: left center; }
 .plabel .hpb i.mid { background: #ffb02e; }
 .plabel .hpb i.low { background: #ff4d3a; }
-.plabel .hpb.boss { width: 120px; height: 9px; border: 1px solid rgba(255, 255, 255, 0.35); }
+.plabel .hpb.boss { position: relative; width: 150px; height: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.35); }
+.plabel .hpb .hpt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000; letter-spacing: 0.2px; pointer-events: none; }
 .plabel .hpb.boss i { background: #ff4d3a; }
 .plabel.down { opacity: 0.55; }
 .plabel.gone { display: none !important; }
@@ -327,7 +328,7 @@ canvas {
 #sideBtns .btn.dim { opacity: 0.3; cursor: default; }
 #zoomBtns { display: none; flex-direction: column; gap: 8px; }
 @media (pointer: coarse) { #zoomBtns { display: flex; } }
-#help, #ranking, #exitDlg {
+#help, #ranking, #exitDlg, #updateDlg {
   position: fixed;
   inset: 0;
   display: flex;
@@ -336,8 +337,13 @@ canvas {
   overflow-y: auto;
   padding: 16px;
 }
-#help[hidden], #ranking[hidden], #exitDlg[hidden] { display: none; }
-#help .card, #ranking .card, #exitDlg .card { margin: auto; width: min(460px, 100%); }
+#help[hidden], #ranking[hidden], #exitDlg[hidden], #updateDlg[hidden] { display: none; }
+#help .card, #ranking .card, #exitDlg .card, #updateDlg .card { margin: auto; width: min(460px, 100%); }
+#updateDlg { z-index: 40; }
+#updateDlg h2 { margin: 0; font-size: 20px; }
+#updateDlg .exit-note { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); }
+#updateDlg .exit-actions { display: flex; }
+#updateDlg .exit-actions .btn { flex: 1; }
 #exitDlg h2 { margin: 0; font-size: 20px; }
 #exitDlg .exit-note { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); }
 #exitDlg .exit-actions { display: flex; gap: 10px; }

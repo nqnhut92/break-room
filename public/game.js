@@ -336,6 +336,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         $('joinErr').textContent = 'Bạn đứng yên lâu quá nên bị ngắt kết nối để tiết kiệm tài nguyên. Bấm "Vào văn phòng" để quay lại, điểm của bạn vẫn còn.';
         return;
       }
+      if (ev && ev.code === 4003) {
+        // disconnected because a newer deploy is live: reconnecting would only land on the new server with an old page
+        S.fatal = true;
+        S.joined = false;
+        $('conn').hidden = true;
+        showUpdate(true);
+        return;
+      }
       if (ev && ev.code === 4001) {
         S.fatal = true;
         S.joined = false;
@@ -360,6 +368,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function onMsg(m) {
     switch (m.t) {
       case 'welcome': {
+        if (m.newer || (m.build && m.build !== 'dev' && MY_BUILD && m.build !== MY_BUILD)) showUpdate(false);
         S.me = m.you;
         S.room = m.room;
         S.world = m.world;
@@ -452,6 +461,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         break;
       case 'mana':
         if (S.manaCfg) S.mana = { v: m.v, t: performance.now() - m.ago };
+        break;
+      case 'update':
+        showUpdate(false);
         break;
       case 'swing': {
         if (m.id !== S.me) {
@@ -840,6 +852,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     b.pl.swing = Math.max(0, b.pl.swing - dt * 3);
     b.pl.dead = false;
     b.pl.hpFrac = bossHpNow() / b.cfg.maxHp;
+    b.pl.hpLabel = Math.ceil(Math.max(0, bossHpNow())).toLocaleString('vi-VN') + ' / ' + b.cfg.maxHp.toLocaleString('vi-VN');
   }
 
   // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
@@ -908,6 +921,27 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // Exit door (west wall of the lobby): walking into the zone asks to leave the office. Leaving closes our
   // socket like any disconnect, so the others get the usual "left the server" toast and the score is kept.
+  // A newer deploy exists: the page that is open is out of date. We find out three ways: the server we joined says so
+  // (it belongs to a newer deploy than this page, or it already knows of one), an 'update' message while we play, or
+  // being disconnected with code 4003. In every case the player gets a button that reloads the page.
+  const MY_BUILD = (() => {
+    try {
+      return new URL(import.meta.url).searchParams.get('v') || '';
+    } catch (e) {
+      return '';
+    }
+  })();
+  const updateEl = $('updateDlg');
+  function showUpdate(kicked) {
+    S.keys.clear();
+    S.smashHeld = false;
+    $('updateNote').textContent = kicked
+      ? 'Game vừa được cập nhật nên bạn đã bị ngắt kết nối. Tải lại trang để vào bản mới, điểm của bạn vẫn được giữ.'
+      : 'Game vừa được cập nhật. Tải lại trang để chơi bản mới, điểm của bạn vẫn được giữ. Bạn sẽ bị ngắt kết nối sau ít giây nữa.';
+    updateEl.hidden = false;
+  }
+  $('updateReload').addEventListener('click', () => location.reload());
+
   const exitEl = $('exitDlg');
   let exitArmed = true; // false after "Ở lại", until we have walked away from the door
   function inExit(me) {
@@ -1231,7 +1265,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   window.addEventListener('keydown', (e) => {
-    if (!S.joined || typing() || !exitEl.hidden) return;
+    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden) return;
     const k = e.key.toLowerCase();
     if (MOVE_KEYS[k]) {
       e.preventDefault();

@@ -106,6 +106,15 @@ Nếu một instance chết mà không kịp dọn, các instance còn lại t�
 
 Web Analytics: `public/index.html` nạp `/_vercel/insights/script.js` của Vercel (không dùng cookie, bỏ qua trên localhost). Chỉ cần bật một lần ở tab **Analytics** của project trên Vercel, không cần làm gì thêm.
 
+### Người chơi thấy gì khi bạn deploy
+
+Mỗi lần build trên Vercel ghi ra `lib/build-info.json` (`scripts/stamp-assets.js`): cùng phiên bản với con số gắn vào URL các module của trang, kèm giờ build. Trang tự biết phiên bản của mình qua URL `game.js?v=...`.
+
+- **Vào server mới bằng trang cũ**: thông điệp `welcome` mang `build` của server. Nếu khác phiên bản của trang thì người chơi thấy hộp thoại "có bản mới" với nút tải lại.
+- **Đang chơi mà có deploy mới**: instance đầu tiên của bản mới phát `{ v, t }` lên kênh chung `__build`. Các instance bản cũ (còn chạy một lúc, tối đa `maxDuration`) nghe thấy, gửi cho mọi người chơi của mình thông điệp `update` (cùng hộp thoại đó) rồi ngắt kết nối bằng mã **4003** sau 20 giây (`updateGraceMs`). Client không tự kết nối lại khi gặp 4003; nút sẽ tải lại trang.
+- **Chỉ phản ứng với bản mới hơn**: instance bỏ qua thông báo của bản cũ hơn hoặc cùng giờ build, nên một instance bản cũ khởi động muộn không đá ai ra. Chạy local (`npm start`) thì phiên bản là `dev` và không có gì trong số này chạy.
+- Bản mới chỉ tự thông báo khi function của nó khởi động, tức là khi có người chơi đầu tiên vào được. Nếu chưa ai vào thì người chơi cũ biết chậm nhất khi kết nối của họ kết thúc và kết nối lại (xem mục trên).
+
 ### Giới hạn của bản beta
 
 - WebSocket trên Vercel đang **public beta** (từ 22/06/2026), docs ghi rõ hành vi và API có thể đổi. Theo dõi changelog trước khi dùng cho thứ quan trọng.

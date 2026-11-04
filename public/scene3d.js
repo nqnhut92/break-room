@@ -1210,11 +1210,17 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     hpb.className = 'hpb';
     const hpf = document.createElement('i');
     hpb.appendChild(hpf);
+    let hpt = null; // the boss's bar also shows the number
+    if (p.gender === 'boss') {
+      hpt = document.createElement('span');
+      hpt.className = 'hpt';
+      hpb.appendChild(hpt);
+    }
     label.append(bub, emo, nm, rl, hpb, bar);
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, ring, label, bub, emo, nm, rl, hpb, hpf, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1313,6 +1319,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.lastHp = hf;
       rig.hpf.style.transform = 'scaleX(' + Math.max(0, Math.min(1, hf)).toFixed(3) + ')';
       rig.hpf.className = hf < 0.25 ? 'low' : hf < 0.55 ? 'mid' : '';
+    }
+    if (rig.hpt && p.hpLabel !== rig.lastHpLabel) {
+      rig.lastHpLabel = p.hpLabel;
+      rig.hpt.textContent = p.hpLabel || '';
     }
     rig.hpb.style.display = p.alwaysHp || (!p.dead && hf < 0.999) ? '' : 'none';
     rig.label.classList.toggle('down', !!p.dead);

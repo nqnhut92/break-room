@@ -28,4 +28,9 @@ edit('index.html', (s) =>
 for (const file of ['game.js', 'scene3d.js']) {
   edit(file, (s) => s.replace(/from '\.\/(scene3d|roles)\.js(?:\?v=[^']*)?'/g, "from './$1.js?v=" + version + "'"));
 }
+// The server learns its own build from the same version (only for the real build, not when a test stamps a temp folder),
+// so it can tell the players of an older deploy to reload.
+if (!process.argv[2]) {
+  fs.writeFileSync(path.join(__dirname, '..', 'lib', 'build-info.json'), JSON.stringify({ version, builtAt: Date.now() }) + '\n');
+}
 console.log('stamped ' + dir + ' with ' + version);

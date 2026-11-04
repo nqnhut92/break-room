@@ -377,6 +377,50 @@ async function contract(label, makeStore) {
   await store.close();
 }
 
+// --------------------------------------------------------- a new deploy ----
+// An instance of a newer build announces itself on a shared channel. Players of the older instance get an 'update' notice,
+// are disconnected with code 4003 after the grace, and anyone who joins the older instance afterwards is told it is outdated.
+async function newDeploy(url) {
+  const quiet = () => {};
+  const mk = (build, extra = {}) => server.createApp({ store: createRedisStore(url, { log: quiet }), log: quiet, build, ...extra });
+  const old = mk({ version: 'old1', builtAt: 1000 }, { updateGraceMs: 500 });
+  const po = await old.start(0);
+  const room = 'deploy-' + Date.now();
+  await sleep(300); // let the older instance subscribe to the build channel
+
+  await step('redis: a newer deploy makes the older one tell its players to reload and then disconnect them', async () => {
+    const A = await h.client(po, 'An', room);
+    assert.strictEqual(A.welcome.build, 'old1');
+    assert.strictEqual(A.welcome.newer, undefined);
+    const closed = new Promise((resolve, reject) => {
+      A.ws.on('close', (code) => resolve(code));
+      setTimeout(() => reject(new Error('not disconnected')), 5000);
+    });
+    const fresh = mk({ version: 'new2', builtAt: 2000 });
+    await fresh.start(0);
+    const upd = await take(A, (m) => m.t === 'update', 4000);
+    assert.strictEqual(upd.v, 'new2');
+    assert.strictEqual(await closed, 4003);
+    // someone who still lands on the older instance is told straight away
+    const B = await h.client(po, 'Binh', room);
+    assert.strictEqual(B.welcome.build, 'old1');
+    assert.strictEqual(B.welcome.newer, 'new2');
+    B.ws.close();
+    await fresh.stop();
+  });
+
+  await step('redis: an older or the same build does not trigger the notice', async () => {
+    const A = await h.client(po, 'Chi', room + '-b');
+    const same = mk({ version: 'other', builtAt: 500 }); // older than the running one
+    await same.start(0);
+    await none(A, (m) => m.t === 'update');
+    A.ws.close();
+    await same.stop();
+  });
+
+  await old.stop();
+}
+
 // ------------------------------------------------------- two instances ----
 async function twoInstances(url) {
   const quiet = () => {};
@@ -671,6 +715,7 @@ async function main() {
     });
 
     await twoInstances(redis.url);
+    await newDeploy(redis.url);
   } finally {
     await redis.stop();
   }

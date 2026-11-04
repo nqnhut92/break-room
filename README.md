@@ -108,6 +108,15 @@ If an instance dies without cleaning up, the others remove its players after 20 
 
 Web Analytics: `public/index.html` loads Vercel's cookie-free `/_vercel/insights/script.js` (skipped on localhost). Switch it on once under the project's **Analytics** tab in Vercel; nothing else is needed.
 
+### What players see when you deploy
+
+Every Vercel build writes `lib/build-info.json` (`scripts/stamp-assets.js`): the same version it stamps into the page's module URLs, plus the build time. The page knows its own version from its `game.js?v=...` URL.
+
+- **Joining a newer server with an old page**: the `welcome` message carries the server's `build`. If it differs from the page's version, the player gets an "update available" dialog with a reload button.
+- **Playing while a newer deploy goes live**: the first instance of the new build publishes `{ v, t }` on the shared `__build` channel. Instances of an older build (they keep running for a while, up to `maxDuration`) hear it, send every local player an `update` message (the same dialog) and disconnect them with code **4003** after 20 seconds (`updateGraceMs`). The client does not reconnect on 4003; the button reloads the page.
+- **Only newer is acted on**: an instance ignores announcements with an older or equal build time, so a late cold start of an old deploy does not kick anyone. Locally (`npm start`) the version is `dev` and nothing of this runs.
+- The new build only announces itself once its function starts, that is, when the first player reaches it. If nobody does, the older players learn it at the latest when their connection ends and they reconnect (see the section above).
+
 ### Beta limitations
 
 - WebSockets on Vercel are in **public beta** (since 2026-06-22); the docs say behaviour and API may change. Follow the changelog before relying on it for anything important.
