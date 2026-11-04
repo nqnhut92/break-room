@@ -107,11 +107,12 @@ async function main() {
     await sleep(1500); // let the boss notice them
     let dead = null;
     for (let i = 0; i < 40 && !dead; i++) {
-      for (const c of [a, b]) send(c, { t: 'bhit' });
+      for (const c of [a, b]) send(c, { t: 'bhit', skill: 'milkTea' });
       await sleep(200);
       dead = a.msgs.find((m) => m.t === 'bdead');
     }
     assert.ok(a.msgs.some((m) => m.t === 'bhp' && m.hp > 0), 'it took damage before falling');
+    assert.ok(a.msgs.filter((m) => m.t === 'bhp').every((m) => m.skill === 'milkTea'));
     dead = dead || (await take(a, (m) => m.t === 'bdead', 4000));
     assert.strictEqual(dead.bounty, B.BOSS.bounty);
     assert.ok(dead.shares.length >= 1 && dead.shares.every((s) => s.dmg > 0 && s.bounty > 0));

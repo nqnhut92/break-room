@@ -89,6 +89,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     target: null,
     attackId: null,
     smashHeld: false,
+    skill: 'hammer',
     lastAir: 0,
     lastSend: 0,
     lastSentX: 0,
@@ -466,6 +467,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         showUpdate(false);
         break;
       case 'swing': {
+        const swinger = S.players.get(m.id);
+        if (swinger && m.id !== S.me) showSkill(swinger, m.skill);
         if (m.id !== S.me) {
           const p = S.players.get(m.id);
           if (p) {
@@ -483,6 +486,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         o.flash = 1;
         sparks(o, 8);
         const hitter = S.players.get(m.by);
+        if (hitter) showSkill(hitter, m.skill, o);
         const roleWords = hitter && ROLE_BY_ID[hitter.role] ? ROLE_BY_ID[hitter.role].hit : null;
         floatText(o, 22, roleWords && Math.random() < 0.4 ? pick(roleWords) : pick(HIT_WORDS), '#ffffff', 16);
         const v = volumeAt(o.x, o.y);
@@ -724,6 +728,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function bossHit(m) {
     const b = S.boss;
     if (!b) return;
+    const hitter = S.players.get(m.by);
+    if (hitter) showSkill(hitter, m.skill, b);
     b.hp = m.hp;
     b.hpT = performance.now();
     const v = volumeAt(b.x, b.y);
@@ -1154,6 +1160,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
       'Một mình hay hai người không hạ nổi sếp (sếp tự hồi máu). <b>Từ 5 người</b> đánh cùng nhau thì được, sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 3 đến 5 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
+      'Bấm nút <b>Skill</b> cạnh Gọi IT để đổi giữa <b>Đập búa</b> và <b>Ném ly trà sữa</b>. Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
@@ -1175,6 +1182,15 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   });
 
   // ---------------------------------------------------------------- input ----
+  function showSkill(p, skill, target) {
+    p.skill = skill === 'milkTea' ? 'milkTea' : 'hammer';
+    if (p.skill === 'milkTea' && scene) {
+      const x = target ? target.x : p.x + Math.sin(p.heading) * 100;
+      const y = target ? target.y : p.y + Math.cos(p.heading) * 100;
+      scene.fx.milkTea(p.x, p.y, x, y);
+    }
+  }
+
   function nearest() {
     const me = S.players.get(S.me);
     if (!me) return null;
@@ -1221,7 +1237,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     if (Math.hypot(o.x - me.x, o.y - me.y) > (o.boss ? S.boss.cfg.reach - 10 : S.hitRange - 5)) return false;
     S.lastHit = now;
-    send(o.boss ? { t: 'bhit' } : { t: 'hit', id: o.id });
+    send(o.boss ? { t: 'bhit', skill: S.skill } : { t: 'hit', id: o.id, skill: S.skill });
+    me.skill = S.skill;
+    me.heading = Math.atan2(o.x - me.x, o.y - me.y);
     me.swing = 1;
     me.d = o.x >= me.x ? 1 : -1;
     return true;
@@ -1366,6 +1384,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       S.smashHeld = false;
     })
   );
+
+  $('skillBtn').addEventListener('click', () => {
+    S.skill = S.skill === 'hammer' ? 'milkTea' : 'hammer';
+    const tea = S.skill === 'milkTea';
+    $('skillBtn').textContent = tea ? '🧋 Skill: Ném ly trà sữa' : '🔨 Skill: Đập búa';
+    $('smashBtn').textContent = tea ? 'NÉM!' : 'ĐẬP!';
+    toast(tea ? 'Đã chọn Ném ly trà sữa · Space hoặc nút NÉM! để dùng' : 'Đã chọn Đập búa');
+  });
 
   $('resetBtn').addEventListener('click', () => send({ t: 'reset' }));
 
@@ -1689,7 +1715,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         // nothing in reach: swing anyway, so Space always feels like a hit (free, only the animation)
         S.lastAir = now0;
         me.swing = 1;
-        send({ t: 'swing', h: Math.round(me.heading * 100) / 100 });
+        showSkill(me, S.skill);
+        send({ t: 'swing', skill: S.skill, h: Math.round(me.heading * 100) / 100 });
       }
     }
 

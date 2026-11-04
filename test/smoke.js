@@ -116,12 +116,14 @@ async function main() {
 
   await step('walking in range then hitting damages the object for everyone', async () => {
     await walkTo(A, target, 60);
-    send(A, { t: 'hit', id: target.id });
+    send(A, { t: 'hit', id: target.id, skill: 'milkTea' });
     const hitA = await take(A, (m) => m.t === 'hit' && m.id === target.id);
     const hitB = await take(B, (m) => m.t === 'hit' && m.id === target.id);
     assert.strictEqual(hitA.hp, info.hp - 1);
     assert.strictEqual(hitB.hp, info.hp - 1);
     assert.strictEqual(hitB.by, A.id);
+    assert.strictEqual(hitA.skill, 'milkTea');
+    assert.strictEqual(hitB.skill, 'milkTea');
   });
 
   await step('hit cooldown drops rapid duplicate hits', async () => {
@@ -195,15 +197,17 @@ async function main() {
   });
 
   await step('a swing at thin air is relayed to the room, with a cooldown', async () => {
-    send(B, { t: 'swing', h: 1.5 });
+    send(B, { t: 'swing', h: 1.5, skill: 'milkTea' });
     const s1 = await take(A, (m) => m.t === 'swing' && m.id === B.id);
     assert.strictEqual(s1.h, 1.5);
+    assert.strictEqual(s1.skill, 'milkTea');
     send(B, { t: 'swing', h: 2 });
     send(B, { t: 'swing', h: 2 }); // inside the cooldown: dropped
     await sleep(400);
-    send(B, { t: 'swing', h: 'not a number' });
+    send(B, { t: 'swing', h: 'not a number', skill: 'unknown' });
     const s2 = await take(A, (m) => m.t === 'swing' && m.id === B.id && m.h === 0);
     assert.strictEqual(s2.h, 0);
+    assert.strictEqual(s2.skill, 'hammer');
   });
 
   await step('garbage input does not break the server', async () => {

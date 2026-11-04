@@ -1261,6 +1261,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const eo = (t) => 1 - (1 - t) * (1 - t);
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
+    if (S.players.has(p.id)) rig.hammer.visible = (isMe ? S.skill : p.skill) !== 'milkTea';
     const armed = rig.hammer.visible;
     const CARRY = -0.12; // at rest: the arm hangs naturally at the side
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
@@ -1463,7 +1464,41 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const mtx = new THREE.Matrix4();
   const pos = new THREE.Vector3();
   const scl = new THREE.Vector3();
+  // Reuse a bounded pool of code-built cups, even while everyone holds Space.
+  const teaGeo = merge([
+    cyl(9, 6, 23, 0xc58d62), cyl(10, 10, 3, 0xffe6d0, 0, 13),
+    cyl(1.5, 1.5, 20, 0xf57ca2, 3, 24),
+    ...[-4, 0, 4].map(x => sph(2, 0x352321, x, -6, 5)),
+  ]);
+  const teaCups = Array.from({ length: 32 }, () => {
+    const mesh = new THREE.Mesh(teaGeo, bodyMat);
+    mesh.visible = false;
+    scene.add(mesh);
+    return { mesh, life: 0, x: 0, z: 0, tx: 0, tz: 0 };
+  });
+  let teaNext = 0;
+  function fxMilkTea(x, z, tx, tz) {
+    const cup = teaCups[teaNext];
+    teaNext = (teaNext + 1) % teaCups.length;
+    Object.assign(cup, { life: 0.3, x, z, tx, tz });
+    cup.mesh.position.set(x, 65, z);
+    cup.mesh.rotation.set(0, 0, 0);
+    cup.mesh.visible = true;
+  }
+
   function updateParticles(dt) {
+    for (const cup of teaCups) {
+      if (cup.life <= 0) continue;
+      cup.life = Math.max(0, cup.life - dt);
+      const t = 1 - cup.life / 0.3;
+      cup.mesh.position.set(cup.x + (cup.tx - cup.x) * t, 65 - 30 * t + Math.sin(t * Math.PI) * 45, cup.z + (cup.tz - cup.z) * t);
+      cup.mesh.rotation.z = t * Math.PI * 2;
+      if (cup.life === 0) {
+        cup.mesh.visible = false;
+        fxDebris(cup.tx, 35, cup.tz, 12, ['#c58d62', '#ffe6d0', '#352321']);
+      }
+    }
+
     let dirty = false;
     for (let i = 0; i < MAXD; i++) {
       const d = D[i];
@@ -1824,7 +1859,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   return {
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
-    fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
+    fx: { milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
   };
