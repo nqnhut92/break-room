@@ -1228,7 +1228,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
           '<b>Enter</b> hoặc bấm vào ô chat để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
-          '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, <b>1 đến 8</b> để thả emoji.',
+          '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, <b>Shift + 1 đến 8</b> để thả emoji.',
         ];
     items.push(
       '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
@@ -1236,7 +1236,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
-      'Bấm nút <b>Skill</b> cạnh Gọi IT để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
+      'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc <b>Q / E</b> để lướt qua, hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
@@ -1381,10 +1381,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if ((k === 'enter' || k === '/') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault(); // so the / is not typed into the box that is about to get focus
       chatOpen();
+    } else if ((k === 'q' || k === 'e') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      setSkill(skillIndex() + (k === 'e' ? 1 : -1));
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
-    } else if (k >= '1' && k <= '8' && !e.repeat) {
-      send({ t: 'emote', e: Number(k) - 1 });
+    } else if (/^(Digit|Numpad)[1-9]$/.test(e.code) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // 1, 2, 3 choose a skill (hammer, milk tea, electric); Shift + 1 to 8 throw the emoji. Read from the physical key
+      // (e.code), because Shift turns the character into a symbol.
+      const n = Number(e.code.slice(-1));
+      if (e.shiftKey) {
+        if (n <= 8) send({ t: 'emote', e: n - 1 });
+      } else if (n <= SKILLS.length) setSkill(n - 1);
     }
   });
 
@@ -1472,13 +1479,16 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     })
   );
 
-  $('skillBtn').addEventListener('click', () => {
-    const next = SKILLS[(SKILLS.findIndex(s => s.id === S.skill) + 1) % SKILLS.length];
+  // skills: the button cycles forward; on a keyboard Q goes to the previous skill and E to the next one
+  const skillIndex = () => SKILLS.findIndex((s) => s.id === S.skill);
+  function setSkill(i) {
+    const next = SKILLS[(i + SKILLS.length) % SKILLS.length];
     S.skill = next.id;
     $('skillBtn').textContent = next.label;
     $('smashBtn').textContent = next.action;
-    toast(next.label + ' · Space hoặc nút ' + next.action + ' để dùng');
-  });
+    toast(next.label + ' · Space để dùng · phím 1-3 đổi skill');
+  }
+  $('skillBtn').addEventListener('click', () => setSkill(skillIndex() + 1));
 
   $('resetBtn').addEventListener('click', () => send({ t: 'reset' }));
 
@@ -1659,14 +1669,19 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     preselect();
     render();
-    refresh(true).then(() => {
-      // back into the office straight away after a reload (see autoJoin); the form stays hidden meanwhile
-      if (autoJoin.on() && $('nameInput').value.trim() && scene && !S.started) {
-        document.documentElement.classList.add('autojoin');
-        setTimeout(() => document.documentElement.classList.remove('autojoin'), 8000); // never leave the form hidden
-        $('joinForm').dispatchEvent(new Event('submit', { cancelable: true }));
+    // back into the office straight away after a reload (see autoJoin); the form stays hidden meanwhile
+    const resume = () => {
+      if (!autoJoin.on() || S.started) return;
+      if (!$('nameInput').value.trim() || !scene) {
+        document.documentElement.classList.remove('autojoin');
+        return;
       }
-    });
+      document.documentElement.classList.add('autojoin');
+      setTimeout(() => document.documentElement.classList.remove('autojoin'), 8000); // never leave the form hidden
+      $('joinForm').dispatchEvent(new Event('submit', { cancelable: true }));
+    };
+    if (picked !== null) resume(); // the room is in the URL: no need to wait for the server list
+    refresh(true).then(resume);
     setInterval(() => {
       if (!$('overlay').classList.contains('gone')) refresh();
     }, 15000);

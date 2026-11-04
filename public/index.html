@@ -27,6 +27,16 @@
     }
   </script>
   <script>
+    // Reloading while in a game puts you straight back in (see autoJoin in game.js): hide the join form from the very first
+    // paint, so it never flashes. game.js removes the class once the game is joined or the join fails; this is the safety net.
+    try {
+      if (sessionStorage.getItem('br-auto') === '1' && localStorage.getItem('br-name')) {
+        document.documentElement.classList.add('autojoin');
+        setTimeout(function () { document.documentElement.classList.remove('autojoin'); }, 8000);
+      }
+    } catch (e) { /* storage unavailable: show the form */ }
+  </script>
+  <script>
     // Ask for the server list right away; game.js picks the answer up once it has loaded.
     window.__rooms = fetch('/api/rooms', { cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return null; });
   </script>
@@ -121,7 +131,7 @@
       </div>
     </div>
 
-    <div id="hint">WASD / mũi tên để di chuyển · Space để đập · Enter hoặc / để chat (Esc thoát) · phím 1-8 để thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
+    <div id="hint">WASD / mũi tên để di chuyển · Space để đập · 1-3 đổi skill · Enter hoặc / để chat (Esc thoát) · Shift+1-8 thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
   </div>
 
   <div id="overlay">
