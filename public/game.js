@@ -357,6 +357,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.colliders = m.colliders;
         S.hitRange = m.hitRange;
         S.manaCfg = m.mana;
+        S.maxPlayers = m.maxPlayers || 20;
         S.hpCfg = m.player || { max: 100, regenDelayMs: 4000, regenPerSec: 5 };
         S.mana = { v: m.mana.v, t: performance.now() - m.mana.ago };
         S.players = new Map();
@@ -546,6 +547,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function renderBoard(m) {
     $('total').textContent = fmtMoney(m.total);
     $('online').textContent = String(m.online);
+    // same colours as the server picker: green below half full, orange from half, red from 80%
+    const load = m.online / (S.maxPlayers || 20);
+    $('onlinePill').className = 'pill online ' + (load >= 0.8 ? 'hot' : load >= 0.5 ? 'warm' : 'cool');
     S.board = m.board;
     const list = $('boardList');
     list.textContent = '';
