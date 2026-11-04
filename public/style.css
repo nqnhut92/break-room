@@ -767,8 +767,10 @@ canvas {
   #duelBanner { top: 56px; max-width: 42vw; padding: 5px 10px; font-size: 12px; }
 }
 
-#duelApologyBtn { pointer-events: auto; display: block; margin: 8px auto 0; min-height: 40px; }
-#duelApologyBtn[hidden] { display: none; }
+#duelApologyHint { display: block; margin-top: 8px; font-size: 12px; line-height: 1.4; }
+#duelApologyBtn { pointer-events: auto; display: block; margin: 4px auto 0; min-height: 40px; background: #c62828; border-color: #ef5350; color: #fff; font-weight: 700; }
+#duelApologyBtn:hover { background: #b71c1c; }
+#duelApologyHint[hidden], #duelApologyBtn[hidden] { display: none; }
 
 /* Desktop keeps its toolbar; touch devices open the same controls in a popup. */
 #settingsBtn { display: none; }

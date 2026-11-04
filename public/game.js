@@ -2163,6 +2163,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const duelOn = duelActive();
     $('duelBanner').hidden = !duelOn;
     $('duelApologyBtn').hidden = !(duelOn && S.duel.target === S.me && !S.players.get(S.me)?.dead && performance.now() >= S.duel.apologyAt);
+    $('duelApologyHint').hidden = $('duelApologyBtn').hidden;
     if (duelOn) {
       const name = S.players.get(S.duel.target)?.name || 'Đồng nghiệp';
       $('duelText').textContent = (S.duel.target === S.me ? '🪢 Bạn đang đấu 1:1 với VKL' : '🔒 VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';
