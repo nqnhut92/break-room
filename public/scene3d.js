@@ -1717,15 +1717,17 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const MAXD = 520;
   const debrisMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.9 }), MAXD);
   debrisMesh.frustumCulled = false;
-  debrisMesh.castShadow = true;
-  debrisMesh.count = MAXD;
+  debrisMesh.castShadow = !coarse; // tiny airborne fragments do not need a second draw pass on phones
+  debrisMesh.count = 0;
+  debrisMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   const dZero = new THREE.Matrix4().makeScale(0, 0, 0);
   for (let i = 0; i < MAXD; i++) {
     debrisMesh.setMatrixAt(i, dZero);
     debrisMesh.setColorAt(i, new THREE.Color(0xffffff));
   }
+  debrisMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
   scene.add(debrisMesh);
-  const D = Array.from({ length: MAXD }, () => ({ life: 0, max: 1, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rx: 0, ry: 0, rz: 0, vr: 0, s: 1 }));
+  const D = Array.from({ length: MAXD }, () => ({ life: 0, max: 1, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rx: 0, ry: 0, rz: 0, vr: 0, s: 1, color: new THREE.Color(0xffffff) }));
   let dNext = 0;
 
   const MAXS = 300;
@@ -1754,7 +1756,6 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   let pNext = 0;
 
   const rand = (a, b) => a + Math.random() * (b - a);
-  const tmpC = new THREE.Color();
 
   function fxDebris(x, y, z, n, colors) {
     for (let i = 0; i < n; i++) {
@@ -1767,10 +1768,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         vx: Math.cos(a) * sp, vy: rand(180, 460), vz: Math.sin(a) * sp,
         rx: Math.random() * 6, ry: Math.random() * 6, rz: Math.random() * 6, vr: rand(-10, 10), s: rand(4, 11),
       });
-      tmpC.set(colors[Math.floor(Math.random() * colors.length)]);
-      debrisMesh.setColorAt(dNext === 0 ? MAXD - 1 : dNext - 1, tmpC);
+      d.color.set(colors[Math.floor(Math.random() * colors.length)]);
     }
-    debrisMesh.instanceColor.needsUpdate = true;
   }
   function fxSparks(x, y, z, n) {
     const cols = [[1, 0.83, 0.3], [1, 0.62, 0.18], [1, 0.95, 0.7]];
@@ -1993,16 +1992,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       }
     }
 
-    let dirty = false;
+    let liveDebris = 0;
     for (let i = 0; i < MAXD; i++) {
       const d = D[i];
       if (d.life <= 0) continue;
       d.life -= dt;
-      if (d.life <= 0) {
-        debrisMesh.setMatrixAt(i, dZero);
-        dirty = true;
-        continue;
-      }
+      if (d.life <= 0) continue;
       d.vy -= (d.paper ? 180 : 950) * dt;
       d.x += d.vx * dt;
       d.y += d.vy * dt;
@@ -2022,10 +2017,20 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       pos.set(d.x, d.y, d.z);
       scl.set(k, k * (d.paper ? 0.06 : 0.7), d.paper ? k * 0.72 : k);
       mtx.compose(pos, quat, scl);
-      debrisMesh.setMatrixAt(i, mtx);
-      dirty = true;
+      debrisMesh.setMatrixAt(liveDebris, mtx);
+      debrisMesh.setColorAt(liveDebris, d.color);
+      liveDebris++;
     }
-    if (dirty) debrisMesh.instanceMatrix.needsUpdate = true;
+    debrisMesh.count = liveDebris;
+    debrisMesh.visible = liveDebris > 0;
+    if (liveDebris) {
+      debrisMesh.instanceMatrix.clearUpdateRanges();
+      debrisMesh.instanceMatrix.addUpdateRange(0, liveDebris * 16);
+      debrisMesh.instanceColor.clearUpdateRanges();
+      debrisMesh.instanceColor.addUpdateRange(0, liveDebris * 3);
+      debrisMesh.instanceMatrix.needsUpdate = true;
+      debrisMesh.instanceColor.needsUpdate = true;
+    }
 
     let sd = false;
     for (let i = 0; i < MAXS; i++) {
@@ -2085,6 +2090,30 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     texts.push({ el, x, y, z, life: 1.2, max: 1.2 });
     while (texts.length > 40) texts.shift().el.remove();
   }
+
+  // Hidden effects otherwise compile their programs on the first hammer impact.
+  // compileAsync uses parallel shader compilation where the driver supports it.
+  const effectPrograms = new THREE.Group();
+  const warmPuff = puffs[0].clone();
+  warmPuff.visible = true;
+  warmPuff.frustumCulled = false;
+  warmPuff.material = puffs[0].material.clone(); // opacity stays zero, so the warmup never paints a puff
+  effectPrograms.add(debrisMesh.clone(), sparks.clone(), warmPuff);
+  effectPrograms.visible = false;
+  let warmedQuality = null;
+  function warmEffects() {
+    if (warmedQuality === quality) return;
+    warmedQuality = quality;
+    renderer.compileAsync(effectPrograms, camera, scene).then(() => {
+      // A transparent first draw also initializes uniforms/textures; compile alone leaves
+      // driver queries deferred until the first real hit on some WebGL implementations.
+      effectPrograms.visible = true;
+      scene.add(effectPrograms);
+    }).catch(() => {
+      warmedQuality = null; // rendering still works; a later quality change can retry
+    });
+  }
+  ready.then(warmEffects);
 
   // ---- projection ---------------------------------------------------------
   const v3 = new THREE.Vector3();
@@ -2186,8 +2215,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     scene.fog.near = d * 1.8;
     scene.fog.far = d * 4.5;
     const sh = S.shake;
-    const jx = sh > 0 ? (Math.random() - 0.5) * sh * 14 : 0;
-    const jy = sh > 0 ? (Math.random() - 0.5) * sh * 10 : 0;
+    // Continuous, lighter impact feedback on phones; random jumps at every display frame
+    // looked like dropped frames even when the renderer kept up (especially at 120 Hz).
+    const jx = sh > 0 ? (coarse ? Math.sin(time * 44) * sh * 2.5 : (Math.random() - 0.5) * sh * 14) : 0;
+    const jy = sh > 0 ? (coarse ? Math.sin(time * 51) * sh * 1.5 : (Math.random() - 0.5) * sh * 10) : 0;
     camera.position.set(cam.x + jx, Math.sin(cam.pitch) * d + 40 + jy, cam.z + Math.cos(cam.pitch) * d);
     camera.lookAt(cam.x, 30, cam.z);
 
@@ -2267,6 +2298,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     updateSpells(dt, S);
     updateParticles(dt);
     renderer.render(scene, camera);
+    if (effectPrograms.visible) {
+      scene.remove(effectPrograms);
+      effectPrograms.visible = false;
+    }
 
     // DOM overlays (after render so the camera matrices are current)
     updateHealthBars(S);
@@ -2351,6 +2386,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     scene.environment = quality === 'high' ? envTex : null;
     haloOn = quality === 'high';
+    ready.then(warmEffects);
     if (W) resize(W, H);
   }
 

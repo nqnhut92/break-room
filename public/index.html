@@ -56,9 +56,9 @@
       <div id="topLeft">
         <span class="pill"><span class="wide-only">Server </span><b id="roomName">…</b></span>
         <span class="pill online cool" id="onlinePill"><b id="online">1</b><span class="wide-only"> online</span></span>
+      <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh"><span data-icon="volume-x"></span></button>
         <button id="copyLink" class="pill btn" type="button" aria-label="Copy link server"><span class="wide-only">Copy link server</span><span data-icon="link"></span></button>
-        <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh"><span data-icon="volume-x"></span></button>
-        <span class="pill hp" title="Máu của bạn"><span data-icon="heart"></span><span class="hp-track"><i id="hpFill"></i></span><b id="hpNum">100</b></span>
+          <span class="pill hp" title="Máu của bạn"><span data-icon="heart"></span><span class="hp-track"><i id="hpFill"></i></span><b id="hpNum">100</b></span>
         <span class="pill rage" id="ragePill" title="Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì bấm R để tung ulti"><span data-icon="zap"></span><span class="hp-track"><i id="rageFill"></i></span></span>
       </div>
 
@@ -85,7 +85,8 @@
       <button id="ultBtn" class="btn ult" type="button" title="Phím R" hidden><span data-icon="zap"></span> ULTI! (R)</button>
       <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
     </div>
-    <div id="mobileBottomControls" role="group" aria-label="Đổi skill và nhắn tin"></div>
+    <div id="mobileBottomControls" role="group" aria-label="Đổi skill, nhắn tin và biểu cảm"><button id="emoteBtn" class="btn" type="button" aria-label="Thả biểu cảm" aria-expanded="false" aria-controls="emoteTray">😤</button></div>
+    <div id="emoteTray" hidden role="group" aria-label="Chọn biểu cảm"></div>
     <canvas id="minimap" width="200" height="125" role="img" aria-label="Bản đồ văn phòng (phím M để ẩn hoặc hiện)" title="Bản đồ (M)"></canvas>
     <div id="sideBtns">
       <button id="settingsBtn" class="btn" type="button" aria-label="Cài đặt và tiện ích" aria-haspopup="dialog" aria-controls="settingsDlg" aria-expanded="false"><span data-icon="settings"></span></button>
@@ -95,8 +96,8 @@
         <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true"><span data-icon="map"></span></button>
         <button id="gfxBtn" class="btn" type="button" aria-label="Đồ họa cao" aria-pressed="true" title="Đồ họa cao (bật) / an toàn (tắt)"><span data-icon="sparkles"></span></button>
         <div id="zoomBtns" role="group" aria-label="Thu phóng">
-          <button id="zoomIn" class="btn" type="button" aria-label="Phóng to"><span data-icon="zoom-in"></span></button>
-          <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ"><span data-icon="zoom-out"></span></button>
+          <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
+          <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ">−</button>
         </div>
       </div>
     </div>
@@ -166,9 +167,12 @@
 
   <div id="overlay">
     <form id="joinForm" class="card" autocomplete="off">
+      <div class="joinIntro">
       <img class="logo" src="/favicon.svg" width="64" height="64" alt="">
       <h1>Office Rage Room</h1>
       <p class="sub">Vào văn phòng, xả stress cùng đồng nghiệp. Đập laptop, màn hình, máy in thoải mái, IT sẽ thay đồ mới sau.</p>
+      </div>
+      <div class="joinFields">
       <label>Tên của bạn
         <input id="nameInput" maxlength="14" placeholder="Ví dụ: Nick" required>
       </label>
@@ -186,13 +190,25 @@
           <label><input type="radio" name="gender" value="f"><span>Nữ</span></label>
         </div>
       </div>
+      </div>
+      <div class="joinRooms">
       <div class="roompick">
         <span class="lbl">Chọn server</span>
         <div id="roomList" class="roomlist" role="group" aria-label="Chọn server" aria-busy="true"><div class="roomskel" aria-hidden="true"></div><div class="roomskel" aria-hidden="true"></div></div>
       </div>
       <button id="joinBtn" class="btn smash" type="submit" disabled>Vào văn phòng</button>
       <p id="joinErr" class="err" role="alert"></p>
+      </div>
     </form>
+  </div>
+
+  <div id="rotateOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rotateTitle">
+    <div class="card"><span class="rotate-icon" data-icon="rotate-ccw"></span>
+      <h2 id="rotateTitle">Xoay ngang điện thoại</h2>
+      <p>Cầm máy ngang để di chuyển bằng núm trái và ra đòn bằng tay phải.</p>
+      <button id="landscapeBtn" class="btn smash" type="button">Chơi toàn màn hình</button>
+      <p>Nếu màn hình chưa xoay, hãy tắt khóa xoay rồi xoay ngang điện thoại.</p>
+    </div>
   </div>
 
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>

@@ -386,6 +386,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         autoJoin.clear();
         S.fatal = true;
         S.joined = false;
+        syncOrientation();
         S.keys.clear();
         resetJoystick();
         S.smashHeld = false;
@@ -400,6 +401,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         // disconnected because a newer deploy is live: reconnecting would only land on the new server with an old page
         S.fatal = true;
         S.joined = false;
+        syncOrientation();
         $('conn').hidden = true;
         showUpdate(true);
         return;
@@ -408,6 +410,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         autoJoin.clear();
         S.fatal = true;
         S.joined = false;
+        syncOrientation();
         $('conn').textContent = 'Server này đang mở ở tab khác. Đóng tab kia hoặc tải lại trang.';
         $('conn').hidden = false;
         return;
@@ -418,6 +421,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   function scheduleReconnect(ws) {
     S.joined = false;
+    syncOrientation();
     $('conn').hidden = false;
     const base = Math.min(10000, 1000 * Math.pow(2, S.retry++));
     const wait = base * (0.5 + Math.random() * 0.5); // jitter so a deploy does not stampede
@@ -461,6 +465,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         if (scene) scene.build(m.world, m.props, m.zones);
         mmBuild(m.world, m.props, m.zones);
         S.joined = true;
+        syncOrientation();
         autoJoin.set();
         document.documentElement.classList.remove('autojoin');
         $('overlay').classList.add('gone');
@@ -767,6 +772,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           // name missing or taken (also if someone took it while we were reconnecting): back to the join form
           S.fatal = true;
           S.joined = false;
+          syncOrientation();
           S.keys.clear();
           resetJoystick();
           S.smashHeld = false;
@@ -1269,6 +1275,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (left-- <= 0) {
         S.fatal = true; // no reconnecting into an old page
         S.joined = false;
+        syncOrientation();
         for (const w of [S.pendingWs, S.ws]) if (w) w.close(1000);
         $('conn').hidden = true;
         showUpdate(true);
@@ -1319,6 +1326,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     exitEl.hidden = true;
     S.fatal = true; // no auto-reconnect
     S.joined = false;
+    syncOrientation();
     S.keys.clear();
     resetJoystick();
     S.smashHeld = false;
@@ -1496,7 +1504,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
           '<b>Bấm 💬</b> để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
-          'Có thể giữ khóa xoay và cầm máy ngang để chơi. Trong Safari, chọn <b>Chia sẻ → Thêm vào Màn hình chính</b> (bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt.',
+          'Tắt khóa xoay và cầm máy ngang để chơi. Trong Safari, chọn <b>Chia sẻ → Thêm vào Màn hình chính</b> (bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
@@ -1509,13 +1517,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
-      'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
+      touch ? 'Bấm <b>Skill</b> để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Giữ nút ra đòn bên phải để dùng skill.' : 'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> hoặc nút <b>Skill</b>. Giữ <b>Space</b> để dùng.',
       'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b> để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Đợt 70% và 40% có số rắn nguyên ngẫu nhiên từ 1,3 đến 2 lần số người online (làm tròn lên ở mức tối thiểu); đợt cuối ở 10% thả rắn đỏ, tăng lên 2–3 lần. Rắn xanh cắn 5 máu, rắn đỏ cắn 7 máu mỗi 1,2 giây; cả hai chịu 4 cú búa và đuổi khắp bản đồ. Rắn còn lại biến mất khi boss hồi sinh.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
-      'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> (phím <b>I</b>) để thay hết đồ mới ngay.',
+      'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. ' + (touch ? 'Mở cài đặt và bấm <b>Gọi IT</b>' : 'Bấm <b>Gọi IT</b> (phím <b>I</b>)') + ' để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
     $('helpList').innerHTML = items.map((t) => '<li>' + t + '</li>').join('');
@@ -1535,10 +1543,23 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (e.key === 'Escape' && !helpEl.hidden) helpClose();
   });
 
+  function closeEmotes() {
+    $('emoteTray').hidden = true;
+    $('emoteBtn').setAttribute('aria-expanded', 'false');
+  }
+  $('emoteBtn').addEventListener('click', () => {
+    const open = $('emoteTray').hidden;
+    $('emoteTray').hidden = !open;
+    $('emoteBtn').setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('pointerdown', e => {
+    if (!e.target.closest('#emoteTray, #emoteBtn')) closeEmotes();
+  });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') closeEmotes(); });
   const settingsEl = $('settingsDlg');
   const settingsMQ = window.matchMedia('(pointer: coarse)');
   // Move the existing controls so state, cooldowns and listeners stay shared.
-  const settingsMoves = ['sideTools', 'copyLink', 'mute', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn'].map(id => {
+  const settingsMoves = ['sideTools', 'copyLink', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn', 'zoomBtns'].map(id => {
     const el = $(id), slot = document.createComment(id);
     el.before(slot);
     return { el, slot };
@@ -1550,9 +1571,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   function settingsLayout() {
     settingsClose(false);
+    closeEmotes();
+    setButtonIcon($('ultBtn'), 'zap', settingsMQ.matches ? 'ULTI!' : 'ULTI! (R)');
+    $('ultBtn').title = settingsMQ.matches ? 'Dùng chiêu cuối' : 'Phím R';
+    $('ragePill').title = settingsMQ.matches ? 'Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì chạm ULTI!' : 'Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì bấm R để tung ulti';
     for (const { el, slot } of settingsMoves) {
       if (settingsMQ.matches) {
-        const target = el.id === 'skillBtn' || el.id === 'chatBtn' ? 'mobileBottomControls'
+        const target = el.id === 'zoomBtns' ? 'sideBtns' : el.id === 'emotes' ? 'emoteTray'
+          : el.id === 'skillBtn' || el.id === 'chatBtn' ? 'mobileBottomControls'
           : el.id === 'sideTools' ? 'settingsTools' : 'settingsExtras';
         $(target).append(el);
       } else slot.after(el);
@@ -1738,7 +1764,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   window.addEventListener('keydown', (e) => {
-    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
     const k = e.key.toLowerCase();
     if (MOVE_KEYS[k]) {
       e.preventDefault();
@@ -1788,15 +1814,24 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   async function requestLandscape() {
     if (!coarseUi) return;
-    // Native fullscreen is optional: CSS landscape also works when either API is denied.
+    // Ask the browser for native fullscreen/orientation support; never rotate the DOM.
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
     } catch (err) { /* continue with the browser viewport */ }
     try {
       await screen.orientation?.lock?.('landscape');
-    } catch (err) { /* the game rotates its own view instead */ }
+    } catch (err) { /* show the rotate prompt if a physical turn is needed */ }
   }
+  function mobilePortrait() {
+    return coarseUi && viewport.height > viewport.width;
+  }
+  function syncOrientation() {
+    $('rotateOverlay').hidden = !S.joined || !mobilePortrait();
+  }
+  $('landscapeBtn').addEventListener('click', requestLandscape);
+  window.addEventListener('gameviewportchange', syncOrientation);
   function resetControls() {
+    closeEmotes();
     resetJoystick();
     S.keys.clear();
     S.smashHeld = false;
@@ -1809,6 +1844,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) resetControls();
   });
+  // Safari versions with smart-zoom quirks need native touch cancellation as well as CSS.
+  // Keep this on game controls only, so forms and scrolling dialogs retain normal touch behavior.
+  for (const el of [canvas, $('joystick'), $('smashBtn')]) {
+    el.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+    el.addEventListener('dblclick', e => e.preventDefault());
+  }
   const joystick = $('joystick');
   function moveJoystick(e) {
     if (e.pointerId !== S.joystick.pointerId) return;
@@ -1828,7 +1869,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   joystick.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden || S.joystick.pointerId !== null) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || S.joystick.pointerId !== null) return;
     S.joystick.pointerId = e.pointerId;
     joystick.setPointerCapture(e.pointerId);
     joystick.classList.add('active');
@@ -1890,7 +1931,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const smashBtn = $('smashBtn');
   smashBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
     smashBtn.setPointerCapture(e.pointerId);
     S.smashHeld = true;
     tryHit(nearest());
@@ -1909,7 +1950,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     setButtonIcon($('skillBtn'), next.icon, next.label);
     $('smashBtn').textContent = next.action;
     send({ t: 'skill', skill: next.id }); // so the others see what is in your hand
-    toast(next.label + ' · Space để dùng · phím 1-3 đổi skill');
+    toast(next.label + (coarseUi ? ' · Giữ nút ' + next.action + ' để dùng · chạm Skill để đổi' : ' · Space để dùng · phím 1-3 đổi skill'));
   }
   $('skillBtn').addEventListener('click', () => setSkill(skillIndex() + 1));
 
@@ -1921,8 +1962,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = em;
-    b.title = 'Phím ' + (i + 1);
-    b.addEventListener('click', () => send({ t: 'emote', e: i }));
+    b.title = coarseUi ? 'Thả ' + em : 'Shift + ' + (i + 1);
+    b.addEventListener('click', () => { send({ t: 'emote', e: i }); closeEmotes(); });
     emoteBox.appendChild(b);
   });
 
@@ -2195,7 +2236,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       me.moving = false;
       return; // knocked out: no walking, no swinging until the server revives us
     }
-    if (typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) {
+    if (mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) {
       resetJoystick();
       me.moving = false;
       return;

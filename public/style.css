@@ -8,22 +8,6 @@
   --safe-left: env(safe-area-inset-left, 0px);
 }
 #app { position: fixed; inset: 0; }
-.mobile-landscape #app {
-  inset: auto;
-  left: 0;
-  top: 0;
-  width: var(--game-width);
-  height: var(--game-height);
-  transform-origin: 0 0;
-  transform: translate(var(--game-left), var(--game-top)) rotate(var(--game-rotation));
-  touch-action: pan-y;
-}
-.game-rotated {
-  --safe-top: env(safe-area-inset-right, 0px);
-  --safe-right: env(safe-area-inset-bottom, 0px);
-  --safe-bottom: env(safe-area-inset-left, 0px);
-  --safe-left: env(safe-area-inset-top, 0px);
-}
 /* Only game gestures zoom the camera. Dialogs can still scroll normally. */
 @media (pointer: coarse) {
   #app :is(button, input, select, textarea) { touch-action: pan-y; }
@@ -61,6 +45,8 @@ html, body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 [hidden] { display: none !important; }
@@ -523,7 +509,7 @@ canvas {
   /* on touch screens the box only appears when 💬 is tapped, over the bottom bar while the keyboard is up */
   #chatForm { display: none; }
   #bottombar #chatForm:not(.open) { display: none; }
-  #chatForm.open { display: flex; position: fixed; left: 10px; right: 10px; bottom: max(10px, var(--safe-bottom)); z-index: 25; }
+  #chatForm.open { display: flex; position: fixed; left: 10px; right: 10px; bottom: max(10px, var(--safe-bottom), var(--keyboard-bottom, 0px)); z-index: 25; }
   #chatForm.open #chatInput { flex: 1; width: auto; font-size: 16px; }
 }
 .toast {
@@ -731,7 +717,7 @@ canvas {
 .btn.drink { background: #1a7354; border-color: #7df3ba; color: #fff; font-weight: 800; box-shadow: 0 0 20px #7df3ba55; }
 
 #joystick { display: none; }
-@media (pointer: coarse) {
+@media (pointer: coarse) and (orientation: landscape) {
   #joystick {
     display: grid;
     place-items: center;
@@ -786,6 +772,7 @@ canvas {
 #help { overflow: hidden; }
 #help .card { max-height: calc(calc(100 * var(--game-vh)) - 32px); min-height: 0; overflow: hidden; }
 #helpTitle { flex: 0 0 auto; margin: 0; }
+#help #helpList { overflow: visible; overscroll-behavior: auto; }
 #helpContent { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-right: 8px; }
 #helpClose { flex: 0 0 auto; }
 #duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: min(440px, calc(65 * var(--game-vw))); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: auto; }
@@ -843,3 +830,64 @@ canvas {
 .btn.ult { font-weight: 800; color: #1a1205; background: linear-gradient(180deg, #ffd24a, #ff8a3d); border-color: #ffd24a; animation: ultPulse 0.9s ease-in-out infinite; }
 @keyframes ultPulse { 50% { box-shadow: 0 0 16px rgba(255, 190, 60, 0.9); transform: scale(1.04); } }
 @media (max-width: 640px) { .pill.rage .hp-track { width: 44px; } } /* the phone keeps the bar, only shorter */
+
+/* Native orientation: a short landscape entry form, with the primary action always visible. */
+.joinIntro, .joinFields, .joinRooms { display: contents; }
+#emoteBtn, #emoteTray { display: none; }
+#rotateOverlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: var(--bg); }
+#rotateOverlay .card { text-align: center; max-height: 100%; overflow-y: auto; }
+#rotateOverlay p { color: var(--muted); line-height: 1.5; }
+.rotate-icon { font-size: 56px; color: var(--accent-2); }
+@media (pointer: coarse) {
+  #app { touch-action: pan-y; }
+  #app #joystick, #app #smashBtn, #app #c { touch-action: none; }
+  #topLeft #mute { width: 36px; min-width: 36px; padding: 0; justify-content: center; }
+  #topLeft .pill.hp { display: none; }
+  #topLeft .pill { white-space: nowrap; flex-shrink: 0; }
+  #board { display: block; }
+  #sideBtns { flex-direction: column; align-items: stretch; }
+  #sideBtns #zoomBtns { display: flex; flex-direction: column; gap: 6px; }
+  #sideBtns #zoomBtns .btn { width: 44px; height: 44px; font-size: 24px; }
+  #emoteBtn { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 48px; font-size: 22px; }
+  #emoteTray { position: fixed; z-index: 28; left: 50%; bottom: max(76px, calc(var(--safe-bottom) + 66px)); transform: translateX(-50%); display: block; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: #151a25; box-shadow: 0 8px 30px #0008; }
+  #emoteTray #emotes { display: grid; grid-template-columns: repeat(8, 44px); gap: 4px; width: auto; overflow: visible; }
+  #emoteTray #emotes button { width: 44px; height: 44px; padding: 0; font-size: 24px; }
+  #mobileBottomControls #skillBtn { order: 1; }
+  #mobileBottomControls #chatBtn { order: 2; }
+  #mobileBottomControls #emoteBtn { order: 3; font-size: 22px; }
+  #mobileBottomControls { gap: 6px; max-width: calc(100% - 300px); }
+  #mobileBottomControls #skillBtn { padding: 8px; }
+}
+@media (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
+  #overlay { padding: 12px; }
+  #joinForm { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px 20px; width: min(820px, 100%); max-height: calc(100dvh - 24px); padding: 16px 20px; overflow-y: auto; }
+  .joinIntro { display: grid; grid-column: 1 / -1; grid-template-columns: 40px 1fr; align-items: center; gap: 0 12px; }
+  #joinForm .logo { width: 40px; height: 40px; grid-row: span 2; margin: 0; }
+  #joinForm h1 { font-size: 22px; text-align: left; }
+  #joinForm .sub { font-size: 12px; line-height: 1.4; }
+  .joinFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 10px; }
+  #joinForm label, #joinForm .lbl { font-size: 12px; }
+  #joinForm input, #joinForm select { min-width: 0; width: 100%; padding: 8px 10px; }
+  #joinForm .gender input { width: auto; }
+  #joinForm .gender span { padding: 8px; font-size: 14px; }
+  .joinRooms { display: flex; flex-direction: column; min-height: 0; gap: 8px; }
+  .joinRooms > .roompick { flex: 1; min-height: 0; }
+  #roomList { overflow-y: auto; max-height: 128px; overscroll-behavior: contain; }
+  #joinForm .roomcard { min-height: 40px; padding: 8px 12px; }
+  #joinBtn { min-height: 44px; flex-shrink: 0; }
+  #joinErr:empty { display: none; }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #toasts { position: fixed; top: max(58px, var(--safe-top)); left: 50%; transform: translateX(-50%); width: min(360px, calc(100% - 300px)); pointer-events: none; }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #bottombar #ultBtn { order: 2; width: 90px; min-height: 48px; }
+  #bottombar #smashBtn { order: 3; }
+  #bottombar #drinkBtn { order: 1; }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 360px) {
+  #sideBtns { align-items: flex-end; }
+  #sideBtns #zoomBtns { flex-direction: row; }
+}

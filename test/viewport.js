@@ -1,4 +1,4 @@
-// Regression checks for portrait-lock fallback and keyboard resize/orientation transitions.
+// Page zoom and the native keyboard must not resize the game or change HUD scale.
 'use strict';
 const assert = require('assert/strict');
 const fs = require('fs');
@@ -6,59 +6,41 @@ const vm = require('vm');
 const path = require('path');
 function surface() {
   const listeners = {};
-  return {
-    addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
-    dispatchEvent(event) { for (const fn of listeners[event.type] || []) fn(event); },
-  };
+  return { addEventListener(t, fn) { (listeners[t] ||= []).push(fn); },
+    dispatchEvent(e) { for (const fn of listeners[e.type] || []) fn(e); } };
 }
-const classes = new Set(), styles = {};
-const root = { classList: { toggle(name, on) { on ? classes.add(name) : classes.delete(name); } },
-  style: { setProperty(name, value) { styles[name] = value; } } };
-const touch = Object.assign(surface(), { matches: true });
-const visual = Object.assign(surface(), { width: 390, height: 844, offsetLeft: 0, offsetTop: 0 });
-const win = Object.assign(surface(), { innerWidth: 390, innerHeight: 844, visualViewport: visual, matchMedia: () => touch });
-const app = { getBoundingClientRect() { return { left: visual.offsetLeft, right: visual.offsetLeft + visual.width, top: visual.offsetTop }; } };
-const doc = Object.assign(surface(), { documentElement: root, activeElement: null, getElementById: () => app });
+const styles = {}, root = { clientWidth: 844, clientHeight: 390,
+  style: { setProperty(k, v) { styles[k] = v; } } };
+const visual = Object.assign(surface(), { width: 844, height: 390, scale: 1, offsetTop: 0 });
+const win = Object.assign(surface(), { innerWidth: 844, innerHeight: 390, visualViewport: visual });
+const doc = Object.assign(surface(), { documentElement: root, activeElement: null });
+let resizes = 0;
+win.addEventListener('gameviewportchange', () => resizes++);
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/viewport.js'), 'utf8'), {
   window: win, document: doc, Event: class { constructor(type) { this.type = type; } }, setTimeout: fn => fn(),
 });
 const view = win.GameViewport;
-function size(w, h) {
-  win.innerWidth = visual.width = w; win.innerHeight = visual.height = h;
-  win.dispatchEvent({ type: 'resize' });
-}
-const pair = p => [p.x, p.y];
-assert(classes.has('game-rotated'));
 assert.deepEqual([view.width, view.height], [844, 390]);
-assert.deepEqual(pair(view.point(390, 0)), [0, 0]);
-assert.deepEqual(pair(view.point(0, 844)), [844, 390]);
-// A screen-space downward drag must move the thumb to the game's right.
-const start = view.point(300, 60), end = view.point(300, 100);
-assert.deepEqual([end.x - start.x, end.y - start.y], [40, 0]);
-const rect = view.rect({ getBoundingClientRect: () => ({ left: 250, right: 350, top: 20, bottom: 120 }) });
-assert.deepEqual([rect.left, rect.top, rect.right, rect.bottom], [20, 40, 120, 140]);
-console.log('ok - portrait lock: logical dimensions, corners, joystick direction and HUD rectangles');
+assert.deepEqual(Object.values(view.point(120, 80)), [120, 80]);
+console.log('ok - native landscape preserves dimensions and input coordinates');
+visual.scale = 2; visual.width = 422; visual.height = 195;
+visual.dispatchEvent({ type: 'resize' }); visual.dispatchEvent({ type: 'scroll' });
+assert.deepEqual([view.width, view.height], [844, 390]); assert.equal(resizes, 1);
+assert.equal(styles['--game-vw'], '8.44px');
+console.log('ok - browser zoom does not shrink the game viewport or reset controls');
+visual.scale = 1; visual.height = 180;
 doc.activeElement = { tagName: 'INPUT' }; doc.dispatchEvent({ type: 'focusin' });
-size(390, 300); assert(classes.has('game-rotated'));
-doc.activeElement = null; doc.dispatchEvent({ type: 'focusout' });
-assert(classes.has('game-rotated'), 'keyboard closing must not flip orientation');
-size(390, 844); assert(classes.has('game-rotated'));
-console.log('ok - keyboard opening and closing preserve the game orientation');
-size(844, 390); assert(!classes.has('game-rotated'));
+assert.equal(styles['--keyboard-bottom'], '210px');
 assert.deepEqual([view.width, view.height], [844, 390]);
-assert.deepEqual(pair(view.point(120, 80)), [120, 80]);
-doc.activeElement = { tagName: 'INPUT' }; doc.dispatchEvent({ type: 'focusin' });
-size(390, 844); assert(classes.has('game-rotated'), 'real rotation still works while typing');
 doc.activeElement = null; doc.dispatchEvent({ type: 'focusout' });
-console.log('ok - real landscape removes CSS rotation; rotating back while typing works');
-visual.offsetLeft = 5; visual.offsetTop = 23; visual.dispatchEvent({ type: 'scroll' });
-assert.deepEqual(pair(view.point(395, 23)), [0, 0]);
-assert.equal(styles['--game-left'], '395px');
-assert.equal(styles['--game-top'], '23px');
-console.log('ok - keyboard viewport offsets are included in rendering and input');
-touch.matches = false; size(1280, 800);
-assert(!classes.has('mobile-landscape')); assert(!classes.has('game-rotated'));
-assert.deepEqual([view.width, view.height], [1280, 800]);
-assert.deepEqual(pair(view.point(120, 80)), [120, 80]);
-console.log('ok - desktop keeps normal coordinates and dimensions');
+assert.equal(styles['--keyboard-bottom'], '0px');
+console.log('ok - keyboard inset changes only the chat position');
+root.clientWidth = win.innerWidth = 390; root.clientHeight = win.innerHeight = 844;
+win.dispatchEvent({ type: 'resize' });
+assert.deepEqual([view.width, view.height], [390, 844]); assert.equal(resizes, 2);
+const rectangle = { left: 20, top: 30, right: 60, bottom: 70 };
+assert.equal(view.rect({ getBoundingClientRect: () => rectangle }), rectangle);
+console.log('ok - native portrait stays portrait, with no extra rotation');
+win.dispatchEvent({ type: 'resize' }); assert.equal(resizes, 2);
+console.log('ok - redundant resize notifications do not resize the renderer');
 console.log('All 5 viewport checks passed');
