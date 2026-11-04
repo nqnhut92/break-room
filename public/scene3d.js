@@ -73,10 +73,9 @@ const merge = (list) => {
 
 // Cheap baked ambient occlusion: vertex colours fade darker towards the floor, so every piece of furniture
 // gets a soft contact shadow where it meets the ground, for free at runtime.
-// Two hammer orientations: upright in the fist, like a hero holding it at rest (head up, handle straight, leaning a
-// little out and forward), and "along the arm" for the swing, with the head at the far end.
-const _hammerUpright = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.1, 0, 0.42));
-const _hammerSwing = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI / 2, 0));
+// The hammer's handle continues the forearm, with the head at the far end and its long side along the swing: it hangs
+// down from a relaxed hand at rest, and swinging the arm swings the hammer.
+const _hammerAlongArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI / 2, 0));
 function bakeAO(geo) {
   if (!geo) return geo;
   const pos = geo.attributes.position;
@@ -1068,7 +1067,6 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     const head = merge(headParts);
 
-    const limb = (hex, withHand) => merge([capsule(4.8, 20, hex, 0, -16, 0), ...(withHand ? [sph(4.5, skin, 0, -31.5, 0)] : [])]);
     const legGeo = () => merge([capsule(5.6, 18, pantsHex, 0, -14, 0), sph(6.4, '#262c3b', 0, -33, 3.5, 1, 0.62, 1.5)]);
     const mat = bodyMat;
     const mk = (geo) => {
@@ -1101,12 +1099,25 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     g.add(legL, legR);
 
     // The model faces +z, towards the camera, so its own right hand is on the -x side (the viewer's left).
-    const armL = new THREE.Group();
+    // Arms have an elbow: an upper arm from the shoulder and a forearm with the hand, so the right arm can hold the
+    // hammer up beside the head without the handle cutting through a straight arm.
+    const makeArm = () => {
+      const shoulder = new THREE.Group();
+      shoulder.add(mk(merge([capsule(4.8, 7, jacket, 0, -9, 0), sph(5, jacket, 0, -17, 0)])));
+      const fore = new THREE.Group();
+      fore.position.y = -17;
+      fore.add(mk(merge([capsule(4.4, 7, jacket, 0, -8, 0), sph(4.7, skin, 0, -17.5, 0)])));
+      shoulder.add(fore);
+      return { shoulder, fore };
+    };
+    const armLg = makeArm();
+    const armRg = makeArm();
+    const armL = armLg.shoulder;
+    const foreL = armLg.fore;
+    const armR = armRg.shoulder;
+    const foreR = armRg.fore;
     armL.position.set(19, 72, 0);
-    armL.add(mk(limb(jacket, true)));
-    const armR = new THREE.Group();
     armR.position.set(-19, 72, 0);
-    armR.add(mk(limb(jacket, true)));
     // Mjolnir-ish hammer in the right hand: short leather-wrapped handle with a lanyard loop,
     // a wide rectangular steel head with darker bevelled end caps and gold rune inlays.
     const STEEL = '#c3ccda';
@@ -1149,10 +1160,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     ])));
     // The handle continues the arm and the head sits at the far end, with its long side along the swing, so raising the
     // arm lifts the hammer and swinging it down brings the head onto whatever is in front.
-    hammer.position.set(0, -30, 0);
-    hammer.quaternion.copy(_hammerUpright); // updatePlayer blends it towards the swing orientation
+    hammer.position.set(0, -17, 0); // in the fist, at the end of the forearm
+    hammer.quaternion.copy(_hammerAlongArm);
     hammer.scale.setScalar(0.82);
-    armR.add(hammer);
+    foreR.add(hammer);
     root.add(armL, armR);
 
     const blob = new THREE.Mesh(
@@ -1195,7 +1206,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, ring, label, bub, emo, nm, rl, hpb, hpf, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, ring, label, bub, emo, nm, rl, hpb, hpf, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1228,6 +1239,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.headM.rotation.z = Math.sin(wp) * 0.06 * mv + Math.sin(rig.t * 1.3) * 0.05 * idle;
     rig.headM.rotation.x = -Math.sin(wp * 2) * 0.05 * mv + breathe * 0.02;
     rig.armL.rotation.x = -sw * 0.95 + breathe * 0.05;
+    rig.foreL.rotation.x = -0.3 - Math.abs(sw) * 0.4; // a relaxed bend
     rig.armL.rotation.z = 0.14 + Math.sin(rig.t * 1.7) * 0.03 * idle + Math.abs(sw) * 0.12;
 
     // right arm + hammer: carried raised over the shoulder, wound up, slammed down in front, then lifted again.
@@ -1236,7 +1248,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
     const armed = rig.hammer.visible;
-    const CARRY = -0.5; // at rest: the arm hangs a little forward and out, the hammer stands upright in the fist
+    const CARRY = -0.12; // at rest: the arm hangs naturally at the side
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
     let lean = 0.1 * mv;
     let hk = 0; // 0 hammer upright, 1 hammer along the arm
@@ -1271,8 +1283,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.prevSwing = p.swing;
     rig.root.rotation.x = lean;
     rig.armR.rotation.x = a;
-    rig.armR.rotation.z = (armed ? -0.55 : -0.1) - Math.abs(sw) * 0.1; // armed: held out to the side, clear of the head
-    if (armed) rig.hammer.quaternion.slerpQuaternions(_hammerUpright, _hammerSwing, hk);
+    rig.armR.rotation.z = -0.12 - Math.abs(sw) * 0.1;
+    // Elbow: a relaxed bend at rest (the hammer hangs low in front of the hand), straight for the swing.
+    rig.foreR.rotation.x = armed ? lerp(-0.9, -0.2, hk) : -0.2;
 
     // knocked out: lie flat on one side. Sideways rather than backwards, because the camera looks from the south and
     // a body lying north-south would just look like it is still standing.
