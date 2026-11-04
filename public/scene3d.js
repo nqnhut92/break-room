@@ -964,7 +964,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (b.hp > 0) {
         updatePlayer(rig, b.pl, dt, false, S);
         updateElectricTarget(rig, rig.torsoM, rig.torsoM.geometry, b.pl.electricUntil);
-        if (b.wind) { rig.armR.rotation.x = -1.8; rig.foreR.rotation.x = -0.7; }
+        animateMini(rig, b, dt);
       }
       rig.miniWind.visible = !!b.wind && b.hp > 0;
       if (b.wind) {
@@ -978,6 +978,53 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       for (const m of rig.miniWind.children) { m.geometry.dispose(); m.material.dispose(); }
       miniRigs.delete(id);
     }
+  }
+
+  // Independent two-legged boss motion. Keep VKL's one-legged rig and players untouched.
+  function animateMini(rig, b, dt) {
+    const compact = b.pl.mini === 'TML';
+    const smooth = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+    const now = performance.now();
+    // Drive strides from actual interpolated travel, so wandering has a slower cadence
+    // and a blocked boss does not run on the spot. Ignore respawn teleports.
+    const distance = rig.miniX == null ? 0 : Math.hypot(b.x - rig.miniX, b.y - rig.miniY);
+    rig.miniX = b.x; rig.miniY = b.y;
+    const speed = dt > 0 && distance < 100 ? distance / dt : 0;
+    const ease = 1 - Math.exp(-10 * dt);
+    rig.miniMove = (rig.miniMove || 0) + (Math.min(1, speed / 180) - (rig.miniMove || 0)) * ease;
+    rig.miniWalk = (rig.miniWalk || 0) + (distance < 100 ? distance : 0) / (compact ? 30 : 37);
+    const mv = rig.miniMove, phase = rig.miniWalk;
+    const step = Math.sin(phase), breath = Math.sin(rig.t * 2.1);
+    const guard = b.mode === 'chase' || b.mode === 'windup' || b.mode === 'recover';
+    rig.miniGuard = (rig.miniGuard || 0) + ((guard ? 1 : 0) - (rig.miniGuard || 0)) * ease;
+    const ready = rig.miniGuard;
+    const windTarget = b.wind ? smooth((now - b.wind.t0) / b.wind.ms) : 0;
+    rig.miniWindPose = (rig.miniWindPose || 0) + (windTarget - (rig.miniWindPose || 0)) * (1 - Math.exp(-22 * dt));
+    const wind = rig.miniWindPose;
+    // miniStrike starts swing at the actual server impact. Start at contact rather
+    // than replaying another windup after the warning circle has disappeared.
+    const strike = Math.max(0, Math.min(1, b.pl.swing || 0));
+    const impact = smooth(Math.min(1, strike / 0.8));
+    const follow = Math.sin((1 - strike) * Math.PI) * (strike > 0 ? 1 : 0);
+    const roll = step * mv;
+    rig.root.position.set(roll * (compact ? 1.8 : 3), Math.abs(step) * 3 * mv - wind * 3 - follow * 3, 0);
+    rig.root.rotation.set(0.07 * mv - wind * 0.13 + impact * 0.24, wind * 0.23 - impact * 0.28,
+      roll * (compact ? 0.035 : 0.065));
+    const sy = 1 + breath * 0.012 * (1 - mv) - wind * 0.025;
+    rig.root.scale.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy));
+    rig.legL.rotation.set(step * 0.55 * mv - wind * 0.1, 0, 0.035);
+    rig.legR.rotation.set(-step * 0.55 * mv + wind * 0.1, 0, -0.035);
+    rig.legL.position.y = 38 + Math.max(0, -step) * 4 * mv;
+    rig.legR.position.y = 38 + Math.max(0, step) * 4 * mv;
+    rig.torsoM.rotation.y = roll * 0.1 + wind * 0.18 - impact * 0.22;
+    rig.headM.rotation.set(-0.03 + breath * 0.015 - wind * 0.06, -roll * 0.08 - wind * 0.1, roll * 0.025);
+    // Bent elbows, balanced free hand, and a full-body punch / heavy double slam.
+    rig.armR.rotation.set(-0.2 + breath * 0.025 - ready * 0.35 + roll * 0.24 - wind * 1.65 - impact * 1.0,
+      -wind * 0.22, -0.16 - wind * 0.2);
+    rig.foreR.rotation.x = -0.35 - ready * 0.65 - wind * 0.5 + impact * 0.9;
+    rig.armL.rotation.set(-0.18 - breath * 0.025 - ready * 0.4 - roll * 0.24 - wind * (compact ? 0.25 : 1.55) - impact * (compact ? 0.25 : 1.0),
+      wind * 0.12, 0.16 + wind * 0.18);
+    rig.foreL.rotation.x = -0.3 - ready * 0.7 - wind * 0.4 + impact * (compact ? 0.1 : 0.85);
   }
 
   // Local visual feedback only: no stun or extra damage. Reuse each target's buffers.
@@ -1283,10 +1330,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const skin = p.gender === 'boss' ? '#f1c9a5' : SKIN[Math.abs(p.id) % SKIN.length]; // the boss has a negative id
     const hair = HAIR[Math.abs(p.id * 3) % HAIR.length];
     const boss = p.gender === 'boss';
+    const mini = !!p.mini;
+    const bossLook = boss || mini;
     const female = p.gender === 'f';
-    const jacket = boss ? '#1f2a44' : shirtHex;
-    const pantsHex = boss ? '#161c2c' : '#2a3040';
-    const hairHex = boss ? '#d3d9e3' : hair;
+    const jacket = boss ? '#1f2a44' : mini ? (p.mini === 'TML' ? '#68432c' : '#49315e') : shirtHex;
+    const pantsHex = bossLook ? '#161c2c' : '#2a3040';
+    const hairHex = boss ? '#d3d9e3' : mini ? (p.mini === 'TML' ? '#a8a2a0' : '#24202e') : hair;
     // hairstyles: 0 long bob, 1 spiky, 2 bun, 3 side part. Girls get 0 or 2, boys 1 or 3, the boss is always spiky silver.
     const style = boss ? 1 : female ? (p.id % 2 ? 0 : 2) : p.id % 2 ? 1 : 3;
 
@@ -1299,8 +1348,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const cone = (r, h, hex, x, y, z, rx = 0, ry = 0, rz = 0) => place(paint(new THREE.ConeGeometry(r, h, 10), hex), x, y, z, rx, ry, rz);
 
     const torsoParts = [capsule(14, 8, jacket, 0, 0, 0, 1, 1, 0.82), cyl(14.6, 14.6, 3.5, shade(jacket, 0.7), 0, -13, 0, 16)];
-    if (boss) {
+    if (bossLook) {
       torsoParts.push(box(9, 20, 2.4, '#f4f6fa', 0, 6, 11.2), box(3.8, 17, 2.4, '#c0392b', 0, 3, 12.6));
+    }
+    if (mini) {
+      // Lapels and broad shoulders make these office bruisers read differently from staff.
+      torsoParts.push(box(7, 18, 3, shade(jacket, 0.7), -8, 6, 11, 0, 0, -0.22),
+        box(7, 18, 3, shade(jacket, 0.7), 8, 6, 11, 0, 0, 0.22));
     }
     const torso = merge(torsoParts);
 
@@ -1328,6 +1382,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     } else {
       headParts.push(sph(9, hairHex, -6, 12, 12, 1.7, 0.5, 0.8), sph(6, hairHex, -16, 3, 2, 0.7, 1.2, 1));
     }
+    if (mini) {
+      headParts.push(box(8, 2, 2, hairHex, -7, 5, 17.4, 0, 0, -0.14),
+        box(8, 2, 2, hairHex, 7, 5, 17.4, 0, 0, 0.14));
+    }
     const head = merge(headParts);
 
     const legGeo = () => merge([capsule(5.6, 18, pantsHex, 0, -14, 0), sph(6.4, '#262c3b', 0, -33, 3.5, 1, 0.62, 1.5)]);
@@ -1342,9 +1400,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const torsoM = mk(torso);
     torsoM.position.y = 58;
     root.add(torsoM);
+    if (mini) torsoM.scale.set(1.16, 1.05, 1.08);
     const headM = mk(head);
     headM.position.y = 90;
-    headM.scale.setScalar(1.12); // a slightly bigger head reads as cuter from the camera
+    headM.scale.setScalar(mini ? 1.02 : 1.12); // a slightly bigger head reads as cuter from the camera
     root.add(headM);
     const acc = buildAccessory(p.role);
     if (acc) {
@@ -1382,6 +1441,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const foreR = armRg.fore;
     armL.position.set(19, 72, 0);
     armR.position.set(-19, 72, 0);
+    if (mini) {
+      armL.position.x = 22; armR.position.x = -22;
+      armL.scale.setScalar(1.12); armR.scale.setScalar(1.12);
+      legL.position.x = -10; legR.position.x = 10;
+    }
     // Mjolnir-ish hammer in the right hand: short leather-wrapped handle with a lanyard loop,
     // a wide rectangular steel head with darker bevelled end caps and gold rune inlays.
     const STEEL = '#c3ccda';
