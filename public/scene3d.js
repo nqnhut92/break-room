@@ -600,7 +600,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           box(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
         ], p.x, p.y);
       } else if (p.k === 'wall') {
-        const hgt = p.low ? 64 : 210; // a low wall lets the camera see over it
+        const hgt = 210;
         const b = bucket(p.x, p.y);
         b.body.push(at(box(p.w + 2, 18, p.h + 2, '#3a4458', 0, 9, 0), p.x, 0, p.y));
         b.body.push(at(box(p.w + 2, 10, p.h + 2, '#3a4458', 0, hgt - 5, 0), p.x, 0, p.y));
