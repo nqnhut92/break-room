@@ -113,3 +113,13 @@ Người chơi đánh nhau chỉ tạo hiệu ứng, không mất máu hoặc ma
 Boss triệu hồi rắn tại 70%, 40%, 10% máu, mỗi mốc một lần mỗi lượt. Số rắn mỗi đợt bằng số người đang online trong server. Rắn xanh lá đuổi người sống gần nhất khắp bản đồ qua các cửa, có 4 máu, mỗi cú búa trừ 1, tốc độ 200 và cắn 5 sát thương mỗi 1,2 giây. Rắn còn lại được dọn khi boss hồi sinh. Redis đồng bộ mốc triệu hồi và máu rắn; một instance điều khiển di chuyển, lưu vị trí mỗi giây; trình duyệt dựng hiệu ứng.
 
 Mỗi 5 phút, nút “Đồng nghiệp mời nước” hiện trong 5 giây. Một người bấm sẽ hồi đầy máu và mana cho người đang kết nối trong server; người bị hạ hồi sinh ở sảnh. Lịch và lượt nhận dùng chung giữa các instance.
+
+## Bắt đấu 1:1
+
+Cứ 40–60 giây (ngẫu nhiên), VKL chọn một người sống trong phòng hoặc cách mép phòng tối đa 320 đơn vị. Nếu không có ai đủ gần thì bỏ lượt và hẹn lại sau 40–60 giây. Boss tung dây kéo người đó vào phòng, thổi những người sống còn lại ra hành lang phía tây.
+
+Trong 15 giây, người bị bắt được di chuyển và chiến đấu trong phòng nhưng không ra được; người khác không vào phòng, gây sát thương lên boss hoặc nhận đòn boss. Hết giờ, hoặc một bên bị hạ, phòng mở lại. Ngắt kết nối không xóa thời gian bị bắt; tải lại trang khôi phục thời gian còn lại. Người giữ lease boss ghi lịch, mục tiêu và vị trí kéo/thổi nguyên tử trong store, có kiểm tra phiên bản.
+
+Rắn có thân liền uốn chữ S, đuôi thuôn và lưỡi chẻ. Khi triệu hồi, boss giơ tay cùng vòng phép xanh. Hiệu ứng dùng hình học tái sử dụng, không thêm post-processing.
+
+Test: `test/duel.js` (luật, lịch, cửa khóa), `test/duel-realtime.js` (hai instance, tải lại trang, đổi leader), `test/shared.js` (hợp đồng store trên memory và Redis).

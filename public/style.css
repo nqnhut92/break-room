@@ -675,3 +675,78 @@ canvas {
 @media (prefers-reduced-motion: reduce) { #hurt.on { animation: none; opacity: 0.35; } }
 
 .btn.drink { background: #1a7354; border-color: #7df3ba; color: #fff; font-weight: 800; box-shadow: 0 0 20px #7df3ba55; }
+
+#joystick { display: none; }
+#rotateOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top)) 20px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+#rotateOverlay .card { text-align: center; margin: auto; }
+#rotateOverlay p { color: var(--muted); line-height: 1.5; }
+#rotateNote { font-size: 13px; }
+.rotate-icon { font-size: 56px; color: var(--accent-2); }
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #joystick {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    left: max(20px, env(safe-area-inset-left));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    width: clamp(104px, 27vh, 136px);
+    aspect-ratio: 1;
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    background: rgba(18, 22, 31, 0.5);
+    pointer-events: auto;
+    touch-action: none;
+  }
+  #joystick.active { border-color: var(--accent-2); }
+  #joystickKnob {
+    width: 42%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(238, 241, 246, 0.8);
+    box-shadow: 0 3px 12px #0006;
+    pointer-events: none;
+  }
+  #topbar { left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); flex-wrap: nowrap; align-items: flex-start; }
+  #topLeft { gap: 5px; flex-wrap: nowrap; }
+  .wide-only, .pill.hp, #hint { display: none; }
+  .narrow-only { display: inline; }
+  #board { width: auto; max-width: 45vw; padding: 4px 8px; font-size: 11px; }
+  #boardList { display: none; }
+  .board-total { font-size: 14px; }
+  .board-title { font-size: 10px; }
+  #bottombar { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); width: 220px; padding: 0; gap: 6px; justify-content: flex-end; }
+  #bottombar .btn { min-height: 44px; padding: 8px 10px; font-size: 12px; }
+  #bottombar #smashBtn { width: 90px; min-height: 58px; font-size: 18px; }
+  #emotes { width: 100%; overflow-x: auto; }
+  #emotes button { flex: 0 0 36px; min-height: 36px; padding: 3px; }
+  #sideBtns { right: max(12px, env(safe-area-inset-right)); flex-direction: row; gap: 4px; }
+  #sideBtns .btn { width: 36px; height: 36px; font-size: 18px; }
+  #zoomBtns { flex-direction: row; gap: 4px; }
+  #minimap { left: max(10px, env(safe-area-inset-left)); width: 112px; height: 70px; }
+  #leftCol { left: max(10px, env(safe-area-inset-left)); bottom: max(164px, calc(env(safe-area-inset-bottom) + 148px)); max-width: 220px; }
+  #chatLog { width: 220px; height: 58px; }
+  #toasts { gap: 3px; }
+  .toast { padding: 4px 8px; font-size: 11px; }
+}
+
+/* Keep the help heading and close action in view; only the instructions scroll. */
+#help { overflow: hidden; }
+#help .card { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); min-height: 0; overflow: hidden; }
+#helpTitle { flex: 0 0 auto; margin: 0; }
+#helpContent { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-right: 8px; }
+#helpClose { flex: 0 0 auto; }
+#duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); max-width: min(440px, 65vw); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: none; }
+@media (pointer: coarse) and (orientation: landscape) {
+  #help .card { padding: 16px; gap: 10px; }
+  #duelBanner { top: 56px; max-width: 42vw; padding: 5px 10px; font-size: 12px; }
+}

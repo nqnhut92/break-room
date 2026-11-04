@@ -898,6 +898,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     bossRig.g.visible = !b.dead;
     bossRig.label.classList.toggle('gone', !!b.dead);
     if (!b.dead) updatePlayer(bossRig, b.pl, dt, false, S);
+    if (!b.dead && b.cast && performance.now() < b.cast.until) {
+      const pulse = Math.sin(time * 12) * 0.12;
+      bossRig.armL.rotation.x = -2.4 + pulse;
+      bossRig.armR.rotation.x = -2.4 - pulse;
+      bossRig.foreL.rotation.x = bossRig.foreR.rotation.x = -0.5;
+      bossRig.root.rotation.x = -0.12;
+    }
     updateElectricTarget(bossRig, bossRig.torsoM, bossRig.torsoM.geometry, b.electricUntil);
     // the punch circle: an outline plus a disc that fills up until the fist lands
     const w = b.wind;
@@ -1077,31 +1084,69 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   const snakeRigs = new Map();
   let snakeGeometry = null;
-  const snakeProxyGeo = new THREE.BoxGeometry(42, 38, 64);
+  const snakeProxyGeo = new THREE.BoxGeometry(38, 30, 138);
   const snakeBarGeo = new THREE.BoxGeometry(28, 3, 2);
   const snakeBarMat = new THREE.MeshBasicMaterial({ color: 0x8af28a });
   const snakeBarBackMat = new THREE.MeshBasicMaterial({ color: 0x294834 });
   function makeSnake(s) {
-    if (!snakeGeometry) snakeGeometry = merge([
-      ell(12, 8, 13, '#61c96f', 0, 9, -17),
-      ell(11, 10, 13, '#7cde7a', 0, 14, -3),
-      ell(16, 13, 16, '#91eb83', 0, 24, 14),
-      ell(11, 5, 10, '#d3ffb3', 0, 16, 20),
-      ell(5.5, 6.5, 3, '#ffffff', -8, 29, 27), ell(5.5, 6.5, 3, '#ffffff', 8, 29, 27),
-      ell(2.8, 4, 1.5, '#253c32', -7, 29, 29.5), ell(2.8, 4, 1.5, '#253c32', 7, 29, 29.5),
-      ell(3, 2, 1, '#f4a6b3', -12, 21, 26), ell(3, 2, 1, '#f4a6b3', 12, 21, 26),
-      pill(3.5, 12, '#55b963', 0, 5, -32, Math.PI / 2),
-    ]);
+    if (!snakeGeometry) {
+      // One tapered S-shaped body: no stacked round segments that read as a caterpillar.
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 13, 4), new THREE.Vector3(7, 9, -15),
+        new THREE.Vector3(-9, 8, -39), new THREE.Vector3(9, 6, -65), new THREE.Vector3(0, 3, -92),
+      ]);
+      const positions = [], colors = [], indices = [], radial = 10, rings = 36;
+      const green = new THREE.Color('#3da85c'), belly = new THREE.Color('#c9e995');
+      for (let i = 0; i <= rings; i++) {
+        const t = i / rings, c = curve.getPoint(t), tangent = curve.getTangent(t);
+        const side = new THREE.Vector3(tangent.z, 0, -tangent.x).normalize();
+        const radius = 8.2 * Math.pow(1 - t, 0.65) + 0.35;
+        for (let j = 0; j <= radial; j++) {
+          const angle = j / radial * Math.PI * 2, lateral = Math.cos(angle) * radius;
+          positions.push(c.x + side.x * lateral, c.y + Math.sin(angle) * radius * 0.72, c.z + side.z * lateral);
+          const col = Math.sin(angle) < -0.2 ? belly : green;
+          colors.push(col.r, col.g, col.b);
+          if (i < rings && j < radial) {
+            const a = i * (radial + 1) + j, b = a + radial + 1;
+            indices.push(a, a + 1, b, a + 1, b + 1, b);
+          }
+        }
+      }
+      const body = new THREE.BufferGeometry();
+      body.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      body.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      body.setIndex(indices); body.computeVertexNormals();
+      snakeGeometry = merge([
+        body,
+        ell(11, 6, 15, '#50bc69', 0, 14, 14),
+        ell(9, 2, 12, '#d0eaa0', 0, 10, 17),
+        // Small sideways eyes, narrow pupils, a low muzzle and a forked tongue.
+        ell(2.8, 2.8, 3.2, '#ffd65c', -8, 18, 17), ell(2.8, 2.8, 3.2, '#ffd65c', 8, 18, 17),
+        ell(0.8, 2.4, 1.2, '#142b22', -9, 18, 19), ell(0.8, 2.4, 1.2, '#142b22', 9, 18, 19),
+        box(11, 0.8, 1, '#254a31', 0, 12, 28),
+        box(1.4, 1, 10, '#eb586a', 0, 11, 32),
+        box(1, 1, 6, '#eb586a', -1.7, 11, 38, 0, -0.5), box(1, 1, 6, '#eb586a', 1.7, 11, 38, 0, 0.5),
+      ]);
+      snakeGeometry.userData.rest = snakeGeometry.attributes.position.array.slice();
+    }
     const group = new THREE.Group(), body = new THREE.Mesh(snakeGeometry, bodyMat);
     body.castShadow = true; body.receiveShadow = true; group.add(body);
     const proxy = new THREE.Mesh(snakeProxyGeo, pickMat);
-    proxy.position.y = 19; proxy.userData.snakeId = s.id; group.add(proxy);
+    proxy.position.set(0, 15, -26); proxy.userData.snakeId = s.id; group.add(proxy);
     const back = new THREE.Mesh(snakeBarGeo, snakeBarBackMat), fill = new THREE.Mesh(snakeBarGeo, snakeBarMat);
-    back.position.set(0, 47, 0); fill.position.set(0, 47, 1.5); group.add(back, fill);
+    back.position.set(0, 38, 0); fill.position.set(0, 38, 1.5); group.add(back, fill);
     scene.add(group);
     return { group, body, proxy, fill };
   }
   function updateSnakes(dt, S) {
+    if (snakeGeometry) {
+      const position = snakeGeometry.attributes.position, rest = snakeGeometry.userData.rest;
+      for (let i = 0; i < position.count; i++) {
+        const z = rest[i * 3 + 2], weight = Math.max(0, -z / 92);
+        position.array[i * 3] = rest[i * 3] + Math.sin(time * 8 + z * 0.09) * 4 * weight;
+      }
+      position.needsUpdate = true;
+    }
     for (const [id, s] of S.snakes) {
       let rig = snakeRigs.get(id);
       if (!rig) { rig = makeSnake(s); snakeRigs.set(id, rig); }
@@ -1110,7 +1155,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.group.position.set(s.x, 0, s.y);
       const diff = Math.atan2(Math.sin((s.d || 0) - rig.group.rotation.y), Math.cos((s.d || 0) - rig.group.rotation.y));
       rig.group.rotation.y += diff * k;
-      rig.body.rotation.z = Math.sin(time * 11 + id) * 0.08;
+      rig.body.rotation.z = Math.sin(time * 8 + id) * 0.025;
       rig.fill.scale.x = Math.max(0, s.hp / 4);
       updateElectricTarget(rig, rig.group, snakeGeometry, s.electricUntil);
     }
@@ -1415,7 +1460,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   function updatePlayer(rig, p, dt, isMe, S) {
     const reacting = (p.hitUntil || 0) > performance.now();
-    rig.g.position.set(p.x + (reacting ? (Math.random() - 0.5) * 6 : 0), 0, p.y + (reacting ? (Math.random() - 0.5) * 6 : 0));
+    rig.g.position.set(p.x + (reacting ? (Math.random() - 0.5) * 6 : 0), p.fxLift || 0, p.y + (reacting ? (Math.random() - 0.5) * 6 : 0));
     // face the heading smoothly
     let diff = p.heading - rig.g.rotation.y;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -1748,6 +1793,96 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       paper.s = rand(12, 20);
     }
   }
+  // Reused spell rings and ropes keep the mobile renderer bounded, without extra lights.
+  const spellRings = Array.from({ length: 16 }, () => {
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(0.88, 1, 48), new THREE.MeshBasicMaterial({ color: 0x79ed9b, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+    mesh.rotation.x = -Math.PI / 2; mesh.visible = false; scene.add(mesh);
+    return { mesh, life: 0 };
+  });
+  let ringNext = 0;
+  function spellRing(x, z, color, radius, life, rise = 0) {
+    const ring = spellRings[ringNext++ % spellRings.length];
+    Object.assign(ring, { life, max: life, radius, rise });
+    ring.mesh.material.color.set(color); ring.mesh.material.opacity = 0.85;
+    ring.mesh.position.set(x, 4, z); ring.mesh.visible = true;
+  }
+  function fxSummon(x, z) {
+    for (let i = 0; i < 3; i++) spellRing(x, z, i % 2 ? '#d1ff80' : '#53ec93', 70 + i * 32, 1.3 + i * 0.15, 100 + i * 45);
+    fxDebris(x, 100, z, 22, ['#54dc87', '#caff83', '#25865b']);
+    floatText(x, 260, z, 'TRIỆU HỒI RẮN', '#aaff9d', 22);
+  }
+  function fxDuelCast(x, z) {
+    for (let i = 0; i < 3; i++) spellRing(x, z, '#ffc265', 90 + i * 55, 0.8 + i * 0.12, 25);
+    floatText(x, 260, z, 'ĐẤU 1:1!', '#ffd38a', 24);
+  }
+  function fxBlow(x, z, tx, tz) {
+    spellRing(x, z, '#d5f6ff', 65, 0.6, 60);
+    // A short trail follows the direction of the gust.
+    for (let i = 0; i < 8; i++) {
+      const t = i / 8;
+      fxSmoke(x + (tx - x) * t, 20 + t * 35, z + (tz - z) * t);
+    }
+  }
+  const ropeGeometry = new THREE.CylinderGeometry(2.2, 2.2, 1, 6);
+  const ropeMaterial = new THREE.MeshBasicMaterial({ color: 0xffc16a });
+  const ropes = Array.from({ length: 4 }, () => {
+    const group = new THREE.Group();
+    for (let i = 0; i < 16; i++) group.add(new THREE.Mesh(ropeGeometry, ropeMaterial));
+    group.visible = false; scene.add(group);
+    return { group, life: 0 };
+  });
+  let ropeNext = 0;
+  function fxRope(x, z, fromX, fromZ, tx, tz, duration) {
+    const rope = ropes[ropeNext++ % ropes.length];
+    Object.assign(rope, { life: duration, max: duration, x, z, fromX, fromZ, tx, tz });
+    rope.group.visible = true;
+  }
+  const ropeStart = new THREE.Vector3(), ropeEnd = new THREE.Vector3(), ropeDirection = new THREE.Vector3();
+  const ropeUp = new THREE.Vector3(0, 1, 0);
+  const duelGate = new THREE.Mesh(new THREE.BoxGeometry(8, 170, 158), new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0.22, depthWrite: false }));
+  duelGate.position.set(2880, 85, 1700); duelGate.visible = false; scene.add(duelGate);
+  const duelMark = new THREE.Mesh(new THREE.RingGeometry(27, 32, 40), new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+  duelMark.rotation.x = -Math.PI / 2; duelMark.visible = false; scene.add(duelMark);
+  function updateSpells(dt, S) {
+    for (const ring of spellRings) {
+      if (ring.life <= 0) continue;
+      ring.life = Math.max(0, ring.life - dt);
+      const t = 1 - ring.life / ring.max;
+      ring.mesh.visible = ring.life > 0;
+      ring.mesh.scale.setScalar(ring.radius * (0.4 + t * 1.4));
+      ring.mesh.position.y = 4 + t * ring.rise;
+      ring.mesh.material.opacity = (1 - t) * 0.85;
+    }
+    for (const rope of ropes) {
+      if (rope.life <= 0) continue;
+      rope.life = Math.max(0, rope.life - dt); rope.group.visible = rope.life > 0;
+      const t = 1 - rope.life / rope.max;
+      const eased = t * t * (3 - 2 * t);
+      const tx = rope.fromX + (rope.tx - rope.fromX) * eased, tz = rope.fromZ + (rope.tz - rope.fromZ) * eased;
+      const extension = Math.min(1, t / 0.2);
+      const ex = rope.x + (tx - rope.x) * extension, ez = rope.z + (tz - rope.z) * extension;
+      for (let i = 0; i < rope.group.children.length; i++) {
+        const a = i / 16, b = (i + 1) / 16;
+        ropeStart.set(rope.x + (ex - rope.x) * a, 135 - 90 * a + Math.sin(a * Math.PI) * 35 * (1 - t), rope.z + (ez - rope.z) * a);
+        ropeEnd.set(rope.x + (ex - rope.x) * b, 135 - 90 * b + Math.sin(b * Math.PI) * 35 * (1 - t), rope.z + (ez - rope.z) * b);
+        const mesh = rope.group.children[i];
+        mesh.position.copy(ropeStart).add(ropeEnd).multiplyScalar(0.5);
+        ropeDirection.subVectors(ropeEnd, ropeStart);
+        mesh.scale.y = ropeDirection.length();
+        mesh.quaternion.setFromUnitVectors(ropeUp, ropeDirection.normalize());
+      }
+    }
+    const active = S.duel?.target && performance.now() < S.duel.until && !S.boss?.dead;
+    duelGate.visible = !!active;
+    duelMark.visible = !!active;
+    if (active) {
+      duelGate.material.opacity = 0.17 + Math.sin(time * 6) * 0.06;
+      const p = S.players.get(S.duel.target);
+      duelMark.visible = !!p && !p.dead;
+      if (p) duelMark.position.set(p.x, 5, p.y);
+    }
+  }
+
   function fxSmoke(x, y, z) {
     const sp = puffs[pNext];
     pNext = (pNext + 1) % MAXP;
@@ -2112,6 +2247,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     updateBoss(dt, S);
     updateSnakes(dt, S);
 
+    updateSpells(dt, S);
     updateParticles(dt);
     renderer.render(scene, camera);
 
@@ -2229,7 +2365,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   return {
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
-    fx: { process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
+    fx: { summon: fxSummon, duelCast: fxDuelCast, blow: fxBlow, rope: fxRope, process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
   };

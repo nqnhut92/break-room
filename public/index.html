@@ -65,6 +65,7 @@
       </div>
     </div>
 
+    <div id="joystick" role="group" aria-label="Núm di chuyển: kéo để đi"><span id="joystickKnob"></span></div>
     <div id="bottombar">
       <div id="emotes"></div>
       <form id="chatForm" autocomplete="off">
@@ -90,7 +91,7 @@
     <div id="help" hidden>
       <div class="card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
         <h2 id="helpTitle">Cách chơi</h2>
-        <ul id="helpList"></ul>
+        <div id="helpContent" tabindex="0" role="region" aria-label="Nội dung hướng dẫn"><ul id="helpList"></ul></div>
         <button id="helpClose" class="btn smash" type="button">Đã hiểu</button>
       </div>
     </div>
@@ -132,6 +133,7 @@
       </div>
     </div>
 
+    <div id="duelBanner" role="status" hidden></div>
     <div id="hint">WASD / mũi tên để di chuyển · Space để đập · 1-3 đổi skill · I gọi IT · Enter hoặc / để chat (Esc thoát) · Shift+1-8 thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
   </div>
 
@@ -164,6 +166,16 @@
       <button id="joinBtn" class="btn smash" type="submit" disabled>Vào văn phòng</button>
       <p id="joinErr" class="err" role="alert"></p>
     </form>
+  </div>
+
+  <div id="rotateOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rotateTitle">
+    <div class="card">
+      <span class="rotate-icon" aria-hidden="true">↻ ▭</span>
+      <h2 id="rotateTitle">Xoay ngang điện thoại</h2>
+      <p>Chơi ở màn hình ngang để di chuyển bằng núm bên trái và đập bằng tay phải.</p>
+      <button id="landscapeBtn" class="btn smash" type="button">Chơi toàn màn hình</button>
+      <p id="rotateNote">Nếu màn hình chưa xoay, hãy tắt khóa xoay và xoay ngang điện thoại.</p>
+    </div>
   </div>
 
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>

@@ -114,12 +114,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     players: new Map(),
     snakes: new Map(),
     objects: [],
+    duel: null,
     boss: null, // VKL of this server (see the boss section)
     hpCfg: null,
     keys: new Set(),
     target: null,
     attackId: null,
     smashHeld: false,
+    joystick: { x: 0, y: 0, pointerId: null },
     skill: 'hammer',
     lastAir: 0,
     lastSend: 0,
@@ -363,6 +365,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.fatal = true;
         S.joined = false;
         S.keys.clear();
+        resetJoystick();
         S.smashHeld = false;
         $('conn').hidden = true;
         $('overlay').classList.remove('gone');
@@ -425,6 +428,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.objects = m.objects.map(makeObject);
         S.snakes = new Map((m.snakes || []).map(s => [s.id, { ...s, tx: s.x, ty: s.y }]));
         initBoss(m.boss);
+        receiveDuel({ state: m.duel, ...m.duel }, true);
         const meNow = S.players.get(S.me);
         $('downOverlay').hidden = !(meNow && meNow.dead); // refreshing while knocked out keeps the countdown
         S.target = null;
@@ -450,7 +454,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           S.welcomed = true;
           const hint = $('hint');
           const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-          if (touch) hint.textContent = 'Chạm vào nền để đi · chạm vào đồ vật để đập · giữ nút ĐẬP! để đập liên tục';
+          if (touch) hint.textContent = 'Kéo núm trái để đi · chạm vào nền để đi · chạm vào đồ vật để đập · giữ nút ĐẬP! để đập liên tục';
           hint.classList.remove('fade'); // the hint stays on screen, kept subtle by its style
         }
         break;
@@ -475,6 +479,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
             p.d = e[3];
           }
         }
+        break;
+      case 'position': {
+        const p = S.players.get(m.id);
+        if (p && !p.forcedMotion) { p.x = p.tx = m.x; p.y = p.ty = m.y; }
+        break;
+      }
+      case 'bduel':
+        receiveDuel(m);
         break;
       case 'boss':
         bossMove(m);
@@ -530,6 +542,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       case 'snakeSpawn':
         for (const s of m.snakes) S.snakes.set(s.id, { ...s, tx: s.x, ty: s.y });
+        if (S.boss && !S.boss.dead) {
+          S.boss.cast = { kind: 'summon', until: performance.now() + 1300 };
+          if (scene) scene.fx.summon(m.x ?? S.boss.x, m.y ?? S.boss.y);
+          sfxWind(volumeAt(S.boss.x, S.boss.y));
+        }
         toast('🐍 Chiêu ẩn của VKL! Rắn xuất hiện ở mốc ' + m.waves.join('%, ') + '% máu.');
         break;
       case 'snakePs':
@@ -662,6 +679,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           S.fatal = true;
           S.joined = false;
           S.keys.clear();
+          resetJoystick();
           S.smashHeld = false;
           $('conn').hidden = true;
           $('overlay').classList.remove('gone');
@@ -699,7 +717,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       li.appendChild(span);
       list.appendChild(li);
     }
-    $('boardMore').hidden = m.board.length <= BOARD_TOP;
+    $('boardMore').hidden = !coarseUi && m.board.length <= BOARD_TOP;
     if (!rankEl.hidden) renderRanking();
   }
 
@@ -797,6 +815,47 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       },
     };
   }
+  function duelActive() {
+    return !!(S.duel?.target && performance.now() < S.duel.until && !S.boss?.dead);
+  }
+  function receiveDuel(m, welcome = false) {
+    const state = m.state;
+    if (!state) { S.duel = null; return; }
+    if (!welcome && S.duel && state.version <= S.duel.version) return;
+    const wasActive = duelActive();
+    S.duel = { ...state, bounds: m.bounds, until: performance.now() + Math.max(0, m.ms || 0) };
+    if (!duelActive()) {
+      $('duelBanner').hidden = true;
+      if (wasActive && !welcome) toast('🔓 Kết thúc 1:1, phòng server đã mở lại.');
+      return;
+    }
+    if (welcome) return; // reconnect restores the remaining timer, never replays the pull
+    S.keys.clear(); resetJoystick(); S.smashHeld = false; S.target = null; S.attackId = null;
+    if (S.boss) { S.boss.wind = null; S.boss.cast = { kind: 'duel', until: performance.now() + 1200 }; }
+    const captured = S.players.get(state.target);
+    toast('🪢 VKL kéo ' + (captured?.name || 'một đồng nghiệp') + ' vào đấu 1:1 trong 15 giây!');
+    if (scene) scene.fx.duelCast(m.x, m.y);
+    for (const move of state.moves || []) {
+      const p = S.players.get(move.id);
+      if (!p || p.dead) continue;
+      p.x = move.fromX; p.y = move.fromY;
+      p.tx = move.x; p.ty = move.y;
+      p.forcedMotion = { ...move, t0: performance.now(), ms: move.kind === 'pull' ? m.pullMs : m.blowMs };
+      if (scene && move.kind === 'pull') scene.fx.rope(m.x, m.y, move.fromX, move.fromY, move.x, move.y, m.pullMs / 1000);
+      if (scene && move.kind === 'blow') scene.fx.blow(move.fromX, move.fromY, move.x, move.y);
+    }
+    sfxWind(volumeAt(m.x, m.y));
+  }
+  function constrainDuel(p, x, y) {
+    if (!duelActive()) return { x, y };
+    const r = S.duel.bounds;
+    if (!r) return { x, y };
+    const radius = r.radius || 16;
+    if (p.id === S.duel.target) return resolve(clamp(x, r.x0 + radius, r.x1 - radius), clamp(y, r.y0 + radius, r.y1 - radius));
+    if (x >= r.x0 - radius && x <= r.x1 + radius && y >= r.y0 - radius && y <= r.y1 + radius) return { x: p.x, y: p.y };
+    return { x, y };
+  }
+
   function bossObj() {
     const b = S.boss;
     return b && !b.dead ? { boss: true, x: b.x, y: b.y, broken: false } : null;
@@ -855,6 +914,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
   }
   function bossDown(m) {
+    S.duel = null;
+    $('duelBanner').hidden = true;
     const b = S.boss;
     if (b) {
       b.dead = true;
@@ -903,9 +964,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
   }
   function playerDown(m) {
+    if (S.duel?.target === m.id) { S.duel = null; $('duelBanner').hidden = true; }
     const p = S.players.get(m.id);
     if (!p) return;
     p.dead = true;
+    p.forcedMotion = null; p.fxLift = 0;
     p.hp = 0;
     p.deadAt = performance.now() + m.ms;
     p.moving = false;
@@ -913,6 +976,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (scene) scene.fx.floatText(p.x, 150, p.y, '-' + m.dmg, '#ff6b5a', 20);
     if (m.id === S.me) {
       S.keys.clear();
+      resetJoystick();
       S.smashHeld = false;
       S.target = null;
       S.attackId = null;
@@ -927,6 +991,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const p = S.players.get(m.id);
     if (!p) return;
     p.dead = false;
+    p.forcedMotion = null; p.fxLift = 0;
     p.hp = S.hpCfg ? S.hpCfg.max : 100;
     p.hpT = performance.now();
     p.x = p.tx = m.x;
@@ -950,7 +1015,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       $('hpNum').textContent = String(Math.round(pct * (S.hpCfg ? S.hpCfg.max : 100)));
       if (me.dead) $('downSecs').textContent = String(Math.max(0, Math.ceil((me.deadAt - performance.now()) / 1000)));
     }
-    if (me) me.alwaysHp = narrowMQ.matches; // on a phone the health bar lives over the character instead of the top row
+    if (me) me.alwaysHp = (narrowMQ.matches || coarseUi); // on a phone the health bar lives over the character instead of the top row
     const b = S.boss;
     if (!b || !me) {
       return;
@@ -1014,6 +1079,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   chatInput.addEventListener('focus', () => {
     S.keys.clear(); // a key held while clicking into the box must not keep walking
+    resetJoystick();
     S.smashHeld = false;
     chatWake();
   });
@@ -1050,6 +1116,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   let updateTimer = 0;
   function showUpdate(kicked) {
     S.keys.clear();
+    resetJoystick();
     S.smashHeld = false;
     updateEl.hidden = false;
     if (kicked) {
@@ -1103,6 +1170,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   function exitOpen() {
     S.keys.clear();
+    resetJoystick();
     S.smashHeld = false;
     S.target = null;
     S.attackId = null;
@@ -1121,6 +1189,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.fatal = true; // no auto-reconnect
     S.joined = false;
     S.keys.clear();
+    resetJoystick();
     S.smashHeld = false;
     S.target = null;
     S.attackId = null;
@@ -1256,7 +1325,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   // On narrow screens the top bar wraps onto two rows and the damage board sits under it: keep the map below all of it.
   function mmPlace() {
-    const narrow = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    const narrow = coarseUi || window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
     if (!narrow) {
       mm.cv.style.top = '';
       return;
@@ -1292,7 +1361,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     const items = touch
       ? [
-          '<b>Chạm vào nền</b> để đi tới đó, <b>chạm vào đồ vật</b> để đi tới và đập một cú.',
+          '<b>Kéo núm bên trái</b> để di chuyển. <b>Chạm vào nền</b> để đi tới đó, <b>chạm vào đồ vật</b> để đi tới và đập một cú.',
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
           '<b>Bấm 💬</b> để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
@@ -1309,6 +1378,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
       'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
+      'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 15 giây. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Rắn đuổi khắp bản đồ, cắn nhẹ và chịu 4 cú búa. Rắn còn lại biến mất khi boss hồi sinh.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
@@ -1484,7 +1554,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   window.addEventListener('keydown', (e) => {
-    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
     const k = e.key.toLowerCase();
     if (MOVE_KEYS[k]) {
       e.preventDefault();
@@ -1517,8 +1587,88 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   window.addEventListener('blur', () => {
     S.keys.clear();
+    resetJoystick();
     S.smashHeld = false;
   });
+
+  // Fixed left thumb stick; pointer capture lets the other thumb hold smash independently.
+  function resetJoystick() {
+    const j = S.joystick, id = j.pointerId;
+    j.x = j.y = 0;
+    j.pointerId = null;
+    $('joystickKnob').style.transform = '';
+    $('joystick').classList.remove('active');
+    if (id !== null && $('joystick').hasPointerCapture(id)) $('joystick').releasePointerCapture(id);
+  }
+  function mobilePortrait() {
+    return coarseUi && window.matchMedia('(orientation: portrait)').matches;
+  }
+  function syncOrientation() {
+    $('rotateOverlay').hidden = !mobilePortrait();
+    resetJoystick();
+    S.keys.clear();
+    S.smashHeld = false;
+    S.target = null;
+    S.attackId = null;
+  }
+  let lockingLandscape = false;
+  async function requestLandscape() {
+    if (!coarseUi || lockingLandscape) return;
+    lockingLandscape = true;
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+    } catch (err) {
+      // Unsupported/denied: the portrait overlay still requires the phone to be turned.
+    } finally {
+      lockingLandscape = false;
+      syncOrientation();
+    }
+  }
+  $('landscapeBtn').addEventListener('click', requestLandscape);
+  window.addEventListener('resize', syncOrientation);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      resetJoystick();
+      S.keys.clear();
+      S.smashHeld = false;
+      S.target = null;
+      S.attackId = null;
+    }
+  });
+  syncOrientation();
+  const joystick = $('joystick');
+  function moveJoystick(e) {
+    if (e.pointerId !== S.joystick.pointerId) return;
+    const rect = joystick.getBoundingClientRect();
+    const radius = rect.width * 0.3;
+    const dx = e.clientX - rect.left - rect.width / 2;
+    const dy = e.clientY - rect.top - rect.height / 2;
+    const distance = Math.hypot(dx, dy);
+    const scale = distance > radius ? radius / distance : 1;
+    $('joystickKnob').style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
+    const strength = clamp((distance / radius - 0.16) / 0.84, 0, 1);
+    S.joystick.x = distance ? dx / distance * strength : 0;
+    S.joystick.y = distance ? dy / distance * strength : 0;
+    S.target = null;
+    S.attackId = null;
+  }
+  joystick.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || S.joystick.pointerId !== null) return;
+    S.joystick.pointerId = e.pointerId;
+    joystick.setPointerCapture(e.pointerId);
+    joystick.classList.add('active');
+    moveJoystick(e);
+  });
+  joystick.addEventListener('pointermove', moveJoystick);
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    joystick.addEventListener(type, (e) => {
+      if (e.pointerId === S.joystick.pointerId) resetJoystick();
+    });
+  }
 
   // Two fingers on the canvas pinch to zoom (out as well as in); the zoom buttons do the same in steps.
   const fingers = new Map();
@@ -1555,7 +1705,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         return;
       }
     }
-    if (!S.joined || !scene) return;
+    if (!S.joined || !scene || mobilePortrait() || S.joystick.pointerId !== null) return;
     // Tap-to-walk and tap-to-smash are for touch screens (and pens). With a mouse, play with the keyboard.
     if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
     const hit = scene.pick(e.clientX, e.clientY);
@@ -1590,10 +1740,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const smashBtn = $('smashBtn');
   smashBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    smashBtn.setPointerCapture(e.pointerId);
     S.smashHeld = true;
     tryHit(nearest());
   });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) =>
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) =>
     smashBtn.addEventListener(ev, () => {
       S.smashHeld = false;
     })
@@ -1830,6 +1982,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       $('joinErr').classList.remove('ok');
       setJoinBusy(true);
       initAudio();
+      if (e.isTrusted) requestLandscape();
       connect();
     });
   })();
@@ -1840,12 +1993,26 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.shake = Math.max(0, S.shake - dt * 3);
     if (!S.joined) return;
 
+    const duelOn = duelActive();
+    $('duelBanner').hidden = !duelOn;
+    if (duelOn) {
+      const name = S.players.get(S.duel.target)?.name || 'Đồng nghiệp';
+      $('duelBanner').textContent = (S.duel.target === S.me ? '🪢 Bạn đang đấu 1:1 với VKL' : '🔒 VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';
+    }
     const me = S.players.get(S.me);
     if (me) updateMe(me, dt);
     bossTick(dt);
 
     for (const p of S.players.values()) {
-      if (p.id !== S.me) {
+      if (p.forcedMotion) {
+        const f = p.forcedMotion, t = clamp((performance.now() - f.t0) / f.ms, 0, 1);
+        const eased = t * t * (3 - 2 * t);
+        p.x = f.fromX + (f.x - f.fromX) * eased;
+        p.y = f.fromY + (f.y - f.fromY) * eased;
+        p.fxLift = Math.sin(t * Math.PI) * (f.kind === 'blow' ? 75 : 18);
+        p.moving = false;
+        if (t >= 1) { p.forcedMotion = null; p.fxLift = 0; p.x = p.tx = f.x; p.y = p.ty = f.y; }
+      } else if (p.id !== S.me) {
         const k = Math.min(1, dt * 12);
         const ox = p.x;
         const oy = p.y;
@@ -1868,12 +2035,19 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   function updateMe(me, dt) {
     const now0 = performance.now();
+    if (me.forcedMotion) { me.moving = false; return; }
     if (me.dead) {
+      resetJoystick();
       me.moving = false;
       return; // knocked out: no walking, no swinging until the server revives us
     }
-    let dx = 0;
-    let dy = 0;
+    if (mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden) {
+      resetJoystick();
+      me.moving = false;
+      return;
+    }
+    let dx = S.joystick.x;
+    let dy = S.joystick.y;
     if (S.keys.has('l')) dx -= 1;
     if (S.keys.has('r')) dx += 1;
     if (S.keys.has('u')) dy -= 1;
@@ -1909,13 +2083,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const ox = me.x;
     const oy = me.y;
     if (len > 0) {
-      const step = SPEED * dt;
+      const step = SPEED * dt * Math.min(1, len);
       const r = resolve(
         clamp(me.x + (dx / len) * step, 20, S.world.w - 20),
         clamp(me.y + (dy / len) * step, 20, S.world.h - 20)
       );
-      me.x = clamp(r.x, 20, S.world.w - 20);
-      me.y = clamp(r.y, 20, S.world.h - 20);
+      const allowed = constrainDuel(me, r.x, r.y);
+      me.x = clamp(allowed.x, 20, S.world.w - 20);
+      me.y = clamp(allowed.y, 20, S.world.h - 20);
       if (Math.abs(dx) > 0.2) me.d = dx > 0 ? 1 : -1;
       if (me.swing <= 0) me.heading = Math.atan2(dx, dy);
     }

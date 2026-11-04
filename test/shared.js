@@ -408,6 +408,26 @@ async function contract(label, makeStore) {
     assert.deepStrictEqual(await store.online([rA, rB], { now: NOW + 9000, ttlMs: 5000 }), [0, 0]);
   });
 
+  await step(label + ': duel state uses the boss lease and CAS, and pull positions survive reconnect', async () => {
+    const r = room + '-duel', now = Date.now();
+    const player = await store.join(r, { ...base, now, name: 'Duelist', token: T(91), connId: 'duel-c1' });
+    assert.strictEqual((await store.duelGet(r, { now })).version, 0);
+    assert.strictEqual(await store.bossLock(r, 'runner', { now, ttlMs: 3000 }), true);
+    const state = { version: 1, nextAt: now + 50000, target: player.id, startedAt: now, until: now + 15000, moves: [{ id: player.id, x: 3100, y: 1700, fromX: 2750, fromY: 1700, kind: 'pull' }] };
+    assert.strictEqual(await store.duelSave(r, { owner: 'stale', now, expected: 0, state }), false);
+    const races = await Promise.all([0, 1].map(() => store.duelSave(r, { owner: 'runner', now, expected: 0, state })));
+    assert.strictEqual(races.filter(Boolean).length, 1, 'only one runner commits this cast');
+    assert.deepStrictEqual(await store.duelGet(r, { now }), state);
+    const again = await store.join(r, { ...base, now, name: 'Duelist', token: T(91), connId: 'duel-c2' });
+    assert.deepStrictEqual(again.pos, { x: 3100, y: 1700, d: 1 });
+    assert.strictEqual((await store.duelGet(r, { now })).until, state.until, 'reconnect retains the timer');
+    assert.strictEqual(await store.duelSave(r, { owner: 'runner', now, expected: 0, state }), false, 'old version cannot replay the pull');
+    const cfg = { maxHp: 10, baseRegenPerSec: 0, regenPerSec: 0, regenDelayMs: 0 };
+    await store.bossHit(r, { playerId: player.id, dmg: 10, now, cfg, respawnAt: now + 1000, bounty: 1 });
+    assert.strictEqual(await store.duelSave(r, { owner: 'runner', now, expected: 1, state: { ...state, version: 2 } }), false, 'dead boss cannot start or extend a duel');
+    assert.strictEqual(await store.duelSave(r, { owner: 'runner', now, expected: 1, state: { ...state, version: 2, target: 0, until: 0, moves: [] } }), true);
+  });
+
   await step(label + ': pub/sub delivers to subscribers', async () => {
     const got = [];
     await store.subscribe(room + '-ps', (m) => got.push(m));

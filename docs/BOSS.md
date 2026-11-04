@@ -109,3 +109,13 @@ Tests: `test/boss.js` (rules, balance), `test/boss-net.js` (a whole fight over W
 At 70%, 40% and 10% health, once per threshold per boss life, VKL summons one small green snake per online player in the server. Snakes follow the nearest living player through doorways across the entire office. Each has 4 health, takes one damage per hammer hit, moves at 200 units/second and bites for 5 damage with a 1.2-second cooldown. Remaining snakes are cleared when the boss respawns. Wave claims and snake health are atomic in Redis; one leader moves them, clients draw and interpolate them. Positions are saved once per second.
 
 Every five minutes the room offers “Đồng nghiệp mời nước” for five seconds. One accepted click restores all connected players to full health and mana; downed players revive in the lobby. The schedule and claim are shared across instances.
+
+## Captured 1:1 duel
+
+Every random 40–60 seconds, VKL selects one living player inside the server room or within 320 units of its boundary. With no eligible player, that attempt is skipped and another is scheduled 40–60 seconds later. A rope pulls the captive inside; a gust blows other living occupants into the west corridor.
+
+For 15 seconds the captive can move and fight inside but cannot leave. Spectators cannot enter, damage the boss or receive its strikes. Expiry, boss death or captive death opens the room. Disconnecting does not clear capture; reconnecting restores the remaining timer. The boss lease holder commits the versioned schedule and forced positions atomically in the shared store.
+
+Snakes have a continuous S-shaped body, a tapered tail and a forked tongue. Summoning raises the boss's hands and displays green spell rings, using reused geometry without post-processing.
+
+Tests: `test/duel.js` (rules, timing, boundaries), `test/duel-realtime.js` (two instances, reconnects and leader handover), `test/shared.js` (memory/Redis store contract).
