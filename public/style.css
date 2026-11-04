@@ -194,6 +194,12 @@ canvas {
 .pill.online.warm { color: #ffb02e; }
 .pill.online.hot { color: #ff5d4a; }
 .btn.pill { padding: 6px 12px; border-radius: 999px; }
+/* the top row: every pill and the ranking share one height and centre their content */
+#topLeft { align-items: center; }
+#topLeft .pill, #board { box-sizing: border-box; min-height: 36px; display: inline-flex; align-items: center; line-height: 1.2; }
+#topLeft .btn.pill { font-size: 13px; }
+#topLeft .pill { gap: 0.28em; } /* flex drops the space between "Server" and the name, so it is a gap now */
+#topLeft .pill.online::before { margin-right: 4px; }
 
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn.smash {
@@ -275,6 +281,15 @@ canvas {
   pointer-events: none;
 }
 #bottombar > * { pointer-events: auto; }
+/* one height for everything in the row, so the emoji strip, the chat box and the buttons line up */
+#bottombar > :not(#smashBtn):not([hidden]) {
+  box-sizing: border-box;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#chatForm { padding: 0 4px; }
 
 #emotes {
   display: flex;
@@ -286,10 +301,11 @@ canvas {
 }
 #emotes button {
   font-size: 20px;
+  line-height: 1.2;
   background: transparent;
   border: 0;
   border-radius: 10px;
-  padding: 4px 6px;
+  padding: 2px 6px;
   cursor: pointer;
 }
 #emotes button:hover { background: rgba(255, 255, 255, 0.1); }
