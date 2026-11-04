@@ -9,3 +9,12 @@
 - **Smash button:** `#smashBtn` is only shown on touch screens and pens; with a mouse and keyboard Space does the same.
 
 - **Mobile orientation and zoom:** use native browser orientation; do not rotate the DOM with CSS. Canvas/HUD dimensions come from the layout viewport, not `visualViewport` (whose dimensions shrink during browser zoom). Use the visual viewport only for the chat keyboard inset. See `docs/MOBILE.md` for control placement and device checks.
+
+## Documentation maintenance
+
+- Update all documentation affected by a change in the same work: gameplay/rules → `docs/GAMEPLAY*.md` and the relevant boss/mini-boss/mole guide; hosting/env/health/reconnect → `docs/DEPLOYMENT*.md`; stores/networking/lifecycle → `docs/ARCHITECTURE*.md`; editing/testing/rendering → `docs/DEVELOPMENT*.md`; touch controls/viewport/device checks → `docs/MOBILE.md`.
+- Keep `README.md` and `README.vi.md` short entry points: overview, quick start, essential controls, test commands, documentation links and credits. Put detailed rules and implementation/operations instructions in `docs/`; update the README when its quick start, controls, links or credits change.
+- Synchronize existing English/Vietnamese pairs whenever changing their content. Do not leave either translation describing old behavior. For currently English-only guides and ADRs, update the canonical file; the documentation index records language availability.
+- Record significant new architectural decisions in `docs/adr/` using its template and index. Include context, decision, alternatives, consequences and evidence. If replacing an accepted decision, add a successor ADR with reciprocal supersession links; retain the old rationale. Routine fixes and balance changes need the applicable guides, not automatically an ADR.
+- After moving sections, update inbound links and `docs/README.md`, verify local links/anchors, and check for obsolete or conflicting facts. Code/config is the source for current defaults; do not copy stale map descriptions, object counts, provider prices or platform limits into new docs. Verify externally changing claims or link to the provider rather than presenting unverified numbers as current.
+- Before finishing, report which docs were updated and how they were checked. Documentation-only work needs link/content checks; gameplay tests are required when code changes under the rules above. `CLAUDE.md` imports this file; maintain shared instructions here rather than duplicating them.

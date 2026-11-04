@@ -31,3 +31,7 @@ Run `npm run test:redis` for the complete suite, including the viewport regressi
 - Profile the first impact after entering and after changing quality, then sustained impacts. Check shader initialization and draw/instance counts separately from frame intervals.
 
 Before claiming the Safari smart-zoom issue or impact smoothness fully resolved on hardware, repeat the joystick double-tap, chat keyboard open/close and sustained attacks on an actual iPhone, both from Safari and from the Home Screen app.
+
+## Current performance investigation
+
+The iPhone 17 Pro Max stutter report is still open. See [Performance](PERFORMANCE.md) ([Tiếng Việt](PERFORMANCE.vi.md)) for measured draw/resource counters, a geometry-disposal counterfactual, prioritized proposals and the hardware acceptance plan. No proposed runtime optimization has been deployed by this investigation.

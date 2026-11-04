@@ -20,7 +20,7 @@ Redis  (single source of truth for each server's state)
 
 ## What Redis does
 
-**1. Shared state of each server (BR-1, BR-2).** A "room" is one server. Its keys share the hash tag `{room}` (one cluster slot) and every script receives the same nine keys:
+**1. Shared state of each server (BR-1, BR-2).** A "room" is one server. Its keys share the hash tag `{room}` (one cluster slot) and base-state scripts receive the following nine-key set (feature scripts use additional keys):
 
 | Key | Type | Content |
 | --- | --- | --- |
@@ -36,6 +36,8 @@ Redis  (single source of truth for each server's state)
 
 The boss uses three more keys of the same room, each with the same expiry: `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: player id → damage dealt to the current boss), `blk` (the lease of the instance that runs the boss). They are not part of the nine-key set above; their scripts take only the keys they need. See [BOSS.md](BOSS.md).
 
+Feature state also uses `mini`, `snakes`, `rage` and `moles`; captured duels live in the `boss` hash field `duel`. These do not change the base nine-key set. See [TML/DMM](MINIBOSSES.md), [VKL](BOSS.md) and `lib/store-redis.js` for individual operations.
+
 Per-IP connection leases (one zset per IP) and the `br:keepalive` health key live outside the room.
 
 **2. Atomic operations.** Join, leave, hit, housekeeping, snapshot, reset and the boss's hit, respawn and lease are single Lua scripts. Two players hitting one object from two instances break it exactly once and the score is credited once. Name checks happen inside the join script, so two players cannot claim one name at the same instant.
@@ -50,7 +52,7 @@ Redis is not written to forever. Everything has an expiry or a bounded size:
 | --- | --- |
 | Whole room (all 9 keys) | `touch` sets `EXPIRE` to `ROOM_TTL_S` (default 1800 s) on every join, leave and housekeeping run. A room nobody touches for 30 minutes disappears completely, including scores, names and tokens |
 | Online presence (`on`, `own`) | Heartbeat refreshed by housekeeping about every second (every 2 s while nothing is broken). A player with no heartbeat for `PRESENCE_TTL_MS` (20 s) is pruned, for example after an instance dies |
-| Broken objects (`o`) | Housekeeping deletes an entry once it has been broken for `RESPAWN_MS` (25 s); "Call IT" deletes the whole hash. Untouched objects are not stored at all, so `o` holds at most the ~140 objects of the office |
+| Broken objects (`o`) | Housekeeping deletes an entry once it has been broken for `RESPAWN_MS` (25 s); "Call IT" deletes the whole hash. Untouched objects are not stored at all, so `o` holds at most the number of objects in `lib/world.js` (currently 359) |
 | Per-IP leases | Each lease expires after 60 s and is refreshed while the connection lives |
 | `br:keepalive` | 3-day expiry, rewritten by each deep health check |
 
@@ -60,11 +62,10 @@ Rough size (estimate, not measured): the state of one room is tens of KB. Redis 
 
 ## Capacity and limits
 
-- **Storage.** The dataset is bounded by 2 servers × (≈285 objects (only damaged or broken ones are stored, about 20 bytes each; measured: all 274 smashed in one room take about 6 KB) + at most 20 online players + the token entries above). It should stay far below the 30 MB of Redis Cloud Free. If memory ever fills up, the eviction policy decides what happens: with `volatile-lru` (the Redis Cloud default seen in the dashboard) Redis evicts keys that have an expiry, that is, stale room keys, instead of refusing writes. The worst case is a room losing its state mid-game (objects respawn, scores reset), not a crash.
-- **Throughput is the tighter limit.** Free Redis Cloud allows 100 ops/s and 30 connections. Each room with players costs about 1 command per second per instance holding it for housekeeping, plus pub/sub while players move, plus a few commands per smash. Watch **Metrics → Throughput** under load. Each Vercel instance holds up to two Redis connections (commands and a lazy subscriber); with several instances 30 connections can become the real ceiling.
-- **Latency.** Every action crosses Redis, so keep the function region and the database in the same region (both Singapore here). `check:store` run from elsewhere does not represent this latency; use `/api/health?deep=<HEALTH_KEY>` (`pingMs`) from the deployed function.
-- **Idle database.** Redis Cloud Free deletes a database with no commands for about 14 days. A monitor hitting the deep health check at least once a day prevents that.
-- **Security.** Free Redis Cloud has no TLS (`redis://`), so the password travels unencrypted. Use a password unique to this database and rotate it if it leaks. Never commit or log `REDIS_URL`.
+- **Storage.** Object state is bounded by the room and object counts (currently 2 rooms × 359 objects), plus player and NPC state. Only damaged or broken objects are stored. Under memory pressure Redis eviction may remove expiring keys and lose room state; check the actual provider configuration.
+- **Throughput and connections.** Each instance uses a command connection and a lazy subscriber. Monitor housekeeping, pub/sub and hit traffic; measure load instead of inferring capacity from Redis storage alone.
+- **Latency.** Put the function and Redis in the same region. Positions stay local on one instance; shared-state operations still use Redis. Measure `pingMs` through the deployed deep health check.
+- **Operations.** Quotas, TLS, eviction and idle-deletion policies depend on the current provider plan. See [Deployment](DEPLOYMENT.md).
 
 ## Where things live
 
@@ -78,3 +79,11 @@ Rough size (estimate, not measured): the state of one room is tens of KB. Redis 
 | Contract tests for both stores | `test/shared.js` |
 | Furniture layout and facing (`rot`: 0 south, PI/2 east, PI north, -PI/2 west) | `lib/world.js` |
 | 3D scene, lighting and the ✨ graphics switch (high / safe, direct render, no post-processing) | `public/scene3d.js` |
+
+## Validation and token boundaries
+
+The server decides everything important: the client only sends its position and smash requests, and the server checks distance, prevents teleporting, and limits smash rate and messages per second. Player names are sanitised on the server and displayed only through `textContent` or canvas on the client. A player's token only lets them reclaim their place after a reconnect; it is not an authentication credential: there are no accounts, and a player's public id is an integer unrelated to the token.
+
+## Architecture decisions
+
+See [ADRs](adr/README.md) for the rationale behind shared storage, leased runners, direct rendering and static collision geometry. [Development](DEVELOPMENT.md) covers editing and verification.

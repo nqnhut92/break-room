@@ -20,7 +20,7 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 
 ## Redis làm gì
 
-**1. Giữ state dùng chung của mỗi server (BR-1, BR-2).** Một "phòng" là một server. Các key của phòng cùng hash tag `{room}` (cùng một slot cluster) và mọi script nhận cùng chín key:
+**1. Giữ state dùng chung của mỗi server (BR-1, BR-2).** Một "phòng" là một server. Các key của phòng cùng hash tag `{room}` (cùng một slot cluster) và các script cho state cơ bản nhận bộ chín key sau (script cho từng tính năng dùng key riêng):
 
 | Key | Kiểu | Nội dung |
 | --- | --- | --- |
@@ -38,6 +38,8 @@ VKL dùng thêm ba key của cùng phòng (cùng hạn sống): `boss` (hash: `h
 
 Bạn sếp dùng thêm key `moles` (hash: id người chơi → `{hp, rev, conn}`), cũng nằm ngoài bộ chín key. Xem [MOLES.vi.md](MOLES.vi.md).
 
+State mở rộng gồm `mini`, `snakes`, `rage` và `moles`; đấu 1:1 nằm trong field `duel` của `boss`. Chúng không đổi bộ chín key cơ bản. Xem [TML/DMM](MINIBOSSES.md), [VKL](BOSS.vi.md) và `lib/store-redis.js` để tra thao tác cụ thể.
+
 Lease kết nối theo IP (mỗi IP một zset) và key `br:keepalive` của health check nằm ngoài phòng.
 
 **2. Thao tác nguyên tử.** Vào, rời, đập, dọn dẹp, snapshot và reset đều là một script Lua. Hai người ở hai instance đập cùng một món thì món chỉ vỡ đúng một lần và điểm cộng một lần. Việc kiểm tra tên nằm trong script vào phòng, nên hai người không thể giành cùng một tên trong cùng một khoảnh khắc.
@@ -52,7 +54,7 @@ Redis không bị ghi vô hạn. Mọi thứ đều có hạn dùng hoặc kích
 | --- | --- |
 | Cả phòng (9 key) | `touch` đặt `EXPIRE` bằng `ROOM_TTL_S` (mặc định 1800 giây) ở mỗi lần vào, rời và dọn dẹp. Phòng 30 phút không ai chạm vào thì biến mất hoàn toàn, gồm cả điểm, tên và token |
 | Online (`on`, `own`) | Nhịp tim được làm mới khi dọn dẹp, khoảng mỗi giây (mỗi 2 giây khi chưa có gì vỡ). Người không có nhịp tim quá `PRESENCE_TTL_MS` (20 giây) bị loại, ví dụ khi instance chết |
-| Đồ vật vỡ (`o`) | Dọn dẹp xoá mục sau khi vỡ đủ `RESPAWN_MS` (25 giây); "Gọi IT" xoá cả hash. Món chưa bị đụng không được lưu, nên `o` tối đa chỉ có khoảng 285 món (chỉ lưu món đã bị đập hoặc vỡ, mỗi món khoảng 20 byte; đo thực tế: đập hết cả 274 món trong một phòng chỉ tốn khoảng 6 KB) của văn phòng |
+| Đồ vật vỡ (`o`) | Xoá mục sau `RESPAWN_MS` (25 giây); Gọi IT xoá cả hash. Món nguyên vẹn không được lưu; số mục tối đa bằng số đồ vật trong `lib/world.js` (hiện 359) |
 | Lease theo IP | Mỗi lease hết hạn sau 60 giây và được làm mới khi kết nối còn sống |
 | `br:keepalive` | Hạn 3 ngày, ghi lại ở mỗi lần health check sâu |
 
@@ -62,11 +64,10 @@ Kích thước ước lượng (ước tính, chưa đo): state của một phò
 
 ## Sức chứa và giới hạn
 
-- **Dung lượng.** Dữ liệu bị chặn bởi 2 server × (khoảng 140 món + tối đa 20 người online + các mục token ở trên). Nó sẽ ở rất xa mức 30 MB của Redis Cloud Free. Nếu bộ nhớ vẫn đầy thì chính sách eviction quyết định: với `volatile-lru` (mặc định của Redis Cloud, đã thấy trên dashboard), Redis xoá các key có hạn dùng, tức là key của phòng cũ, thay vì từ chối ghi. Tệ nhất là một phòng mất state giữa chừng (đồ hồi lại, điểm về 0), chứ không sập.
-- **Throughput mới là giới hạn chặt hơn.** Redis Cloud Free cho 100 ops/giây và 30 kết nối. Mỗi phòng có người tốn khoảng 1 lệnh mỗi giây cho mỗi instance đang giữ phòng đó (dọn dẹp, nhịp tim), cộng pub/sub khi có người di chuyển, cộng vài lệnh cho mỗi lần đập. Theo dõi **Metrics → Throughput** lúc đông người. Mỗi instance Vercel giữ tối đa hai kết nối Redis (lệnh và subscriber nạp trễ); nhiều instance thì 30 kết nối có thể thành trần thật sự.
-- **Độ trễ.** Mọi hành động đi qua Redis, nên đặt region của hàm và của database cùng chỗ (ở đây cùng Singapore). `check:store` chạy từ nơi khác không đại diện cho độ trễ này; dùng `/api/health?deep=<HEALTH_KEY>` (`pingMs`) từ hàm đã deploy.
-- **Database ngủ đông.** Redis Cloud Free xoá database không có lệnh nào khoảng 14 ngày. Một monitor gọi health check sâu ít nhất mỗi ngày một lần sẽ tránh được.
-- **Bảo mật.** Redis Cloud Free không có TLS (`redis://`), mật khẩu đi không mã hoá. Dùng mật khẩu riêng cho database này và đổi nếu bị lộ. Không bao giờ commit hay ghi log `REDIS_URL`.
+- **Dung lượng.** State đồ vật bị chặn bởi số phòng và số đồ vật trong map (hiện 2 phòng × 359 món), cộng state người chơi và NPC. Chỉ lưu đồ đã bị đập hoặc vỡ. Khi thiếu bộ nhớ, chính sách eviction của Redis có thể xoá key có TTL và làm mất state; kiểm tra cấu hình thực tế của provider.
+- **Throughput và kết nối.** Mỗi instance dùng kết nối lệnh và subscriber nạp trễ. Theo dõi housekeeping, pub/sub và số lệnh khi đánh đồ; đo tải thực tế thay vì suy ra sức chứa từ dung lượng Redis.
+- **Độ trễ.** Đặt function và Redis cùng region. Tin vị trí ở cùng instance đi nội bộ; thao tác state dùng chung vẫn cần Redis. Dùng health check sâu từ bản deploy để đo `pingMs`.
+- **Vận hành.** Hạn mức, TLS, eviction và chính sách xoá database phụ thuộc gói đang dùng. Xem [Deploy](DEPLOYMENT.vi.md).
 
 ## Mỗi thứ nằm ở đâu
 
@@ -80,3 +81,11 @@ Kích thước ước lượng (ước tính, chưa đo): state của một phò
 | Test hợp đồng cho cả hai store | `test/shared.js` |
 | Bố cục đồ đạc và hướng quay (`rot`: 0 nam, PI/2 đông, PI bắc, -PI/2 tây) | `lib/world.js` |
 | Cảnh 3D, ánh sáng và nút ✨ đổi đồ họa (cao / an toàn, vẽ thẳng, không có hậu kỳ) | `public/scene3d.js` |
+
+## Ranh giới kiểm tra và token
+
+Server là nơi quyết định mọi thứ quan trọng: client chỉ gửi vị trí và yêu cầu đập, server kiểm tra khoảng cách, chống dịch chuyển tức thời, giới hạn tốc độ đập và số tin nhắn mỗi giây. Tên người chơi được làm sạch ở server và chỉ hiển thị bằng `textContent` hoặc canvas ở client. Token của người chơi chỉ để nhận lại chỗ cũ sau khi reconnect, nó không phải thông tin xác thực: không có tài khoản, và id công khai của người chơi là số nguyên không liên quan tới token.
+
+## Quyết định kiến trúc
+
+Xem [ADR](adr/README.md) để biết vì sao chọn store dùng chung, runner có lease, render trực tiếp và map va chạm tĩnh. [Phát triển](DEVELOPMENT.vi.md) hướng dẫn sửa và kiểm tra code.

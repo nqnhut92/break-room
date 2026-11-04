@@ -1,0 +1,61 @@
+# Phát triển
+
+[English](DEVELOPMENT.md) · Tiếng Việt · [Tài liệu](README.md)
+
+## Chạy local và nhiều instance
+
+Chạy local không cần Redis: toàn bộ state nằm trong RAM của tiến trình `npm start`. Muốn thử đúng như bản Vercel (nhiều server dùng chung state) thì đặt `REDIS_URL=redis://localhost:6379` rồi chạy `npm start` ở hai terminal với `PORT` khác nhau, mở mỗi cổng một tab, hai tab vẫn thấy cùng một văn phòng. `vercel dev` cũng dùng được nếu bạn cần chạy chính xác hàm `api/ws.js`, nhưng không bắt buộc.
+
+## Cấu trúc
+
+```
+api/ws.js            hàm Vercel nhận WebSocket (export http server có gắn WebSocketServer)
+api/health.js        báo đã cấu hình Redis chưa; ?deep=KEY ping Redis thật
+api/rooms.js         danh sách phòng + số người online cho màn hình vào (CDN cache 10 giây)
+lib/room-list.js     đếm người mỗi phòng bằng 1 lệnh store, cache ngắn trong tiến trình
+scripts/check-store.js  kiểm tra một Redis có chạy được game không
+lib/realtime.js      logic game và nối WebSocket, không biết đang chạy ở đâu
+lib/world.js         bố cục văn phòng, loại đồ vật, vật cản và hàm va chạm (cố định)
+lib/store-redis.js   state dùng chung + pub/sub trong Redis (script Lua nguyên tử)
+lib/store-memory.js  cùng giao diện nhưng trong RAM, cho local và test
+lib/config.js        chọn store theo biến môi trường
+server.js            chạy local: file tĩnh + WebSocket ở /api/ws
+public/              index.html, style.css, game.js (mạng, input, HUD, âm thanh WebAudio),
+                     scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn),
+                     assets/textures/ (texture sàn, CC0)
+test/                world.js (bố cục, đường đi), smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
+vercel.json          thư mục tĩnh và maxDuration
+docs/                hướng dẫn chơi, deploy, kiến trúc, phát triển và adr/
+```
+
+## Test
+
+```bash
+npm test
+```
+
+`test/world.js` kiểm tra bố cục và đường đi. `test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM (gồm AFK, giới hạn kết nối/phòng và công tắc tắt khẩn cấp). `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`. Máy không có `redis-server`? Chạy `npm run test:redis`: lệnh này bật một container Redis tạm bằng podman hoặc docker (`scripts/test-with-redis.sh`), chạy đủ bộ test rồi xóa container; lần đầu sẽ kéo image `redis:7-alpine`.
+
+## Dựng hình và nâng cấp thư viện
+
+Hình 3D dùng texture có giấy phép và hình học dựng bằng code:
+
+- **Texture** (ambientCG, CC0, `public/assets/textures/`, ghi chú giấy phép trong `License.txt`): sàn gỗ, thảm, gạch và tấm kim loại, bản đồ màu và pháp tuyến 512 px (khoảng 0,7 MB), nhuộm màu trong `FLOOR_FILES` ở `scene3d.js`. Thiếu file thì dùng lại sàn vẽ bằng canvas như cũ.
+- **Nhân vật dựng bằng code** (`makePlayer` trong `scene3d.js`): thân "chibi" tròn làm từ hình cầu và viên nang, bốn kiểu tóc, mũ theo vai trò, sếp mặc vest xanh navy tóc bạc. Chuyển động cũng do code (thở, nhún, nghiêng, giãn co, vung búa), không dùng file model.
+- **Mọi thứ còn lại dựng bằng code** (`public/scene3d.js`) từ khối hộp bo góc, hình elip, viên nang và trụ: đồ đạc, nhân vật, tường kính, mảnh vỡ và hiệu ứng. Không có file model nên không cần giấy phép hay tải gì. `box()` bo góc, `sbox()` giữ góc vuông (tường).
+
+Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` (từ `examples/jsm/utils`) vào `public/vendor/`, và `RoundedBoxGeometry.js`, `RoomEnvironment.js` (từ `examples/jsm/geometries` và `examples/jsm/environments`) vào `public/vendor/jsm/` với cùng tên thư mục.
+
+Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, game tự giảm độ phân giải và bóng đổ trên màn hình cảm ứng.
+
+## Chỉnh map và đồ họa
+
+Bố cục, cửa và tường dùng chung nằm trong `FLOOR_ROOMS` ở `lib/world.js`; đổi tên phòng chơi trong `ROOMS`. `rot`: 0 hướng nam, PI/2 đông, PI bắc, -PI/2 tây. Giữ ID và loại đồ vật ổn định vì state Redis được lưu theo ID. Khi đổi map, kiểm tra đường tới đồ vật, cửa đi được và vách kín; xem [ADR 0004](adr/0004-static-world.md).
+
+Vai trò ở `public/roles.js` phải khớp `ROLE_IDS` trong `lib/world.js`. Mana nằm ở `MANA` trong `lib/realtime.js`.
+
+Hai mức đồ họa vẽ thẳng ra màn hình, không dùng EffectComposer. Lý do và điều kiện xem xét lại: [ADR 0003](adr/0003-direct-rendering.md). Quy tắc viewport và kiểm tra điện thoại: [MOBILE.md](MOBILE.md).
+
+## Đo tải render trên mobile
+
+Xem [kết quả điều tra và kế hoạch kiểm tra máy thật](PERFORMANCE.vi.md). Phép đo đã dùng renderer thật với state mô phỏng, bộ đếm tính cả shadow pass và đối chứng cleanup geometry. Script chẩn đoán và capture gốc hiện giữ local, chưa phát hành trong repo; không cần cài Playwright để chạy game. Bộ đếm trên SwiftShader không phải FPS iPhone.
