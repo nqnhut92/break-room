@@ -2,7 +2,7 @@
 
 [English](MOLES.md) · Tiếng Việt
 
-Bạn sếp là người chơi giả do server điều khiển. Nó vào phòng qua đúng cửa mà người thật dùng (có chỗ, tên tiếng Việt ngẫu nhiên, vai trò, tính vào số online và bảng xếp hạng) nên nhìn giống một đồng nghiệp bình thường. Không có gì trên đường truyền cho biết nó là ai.
+Bạn sếp là người chơi giả do server điều khiển. Nó vào phòng qua đúng cửa mà người thật dùng (có chỗ, tên ngẫu nhiên viết như người ta hay gõ (biệt danh, `tuan97`, `hoa_qa`, thêm chữ cái đầu), vai trò, tính vào số online và bảng xếp hạng) nên nhìn giống một đồng nghiệp bình thường. Không có gì trên đường truyền cho biết nó là ai.
 
 - **Xuất hiện.** Instance đang điều khiển phòng (giữ lease của sếp) thêm một con mỗi 1–3 phút, không bao giờ quá nửa số người thật (6 người thì tối đa 3 con) và luôn chừa một chỗ trống. Người thật vào phòng đầy thì chiếm chỗ của một con.
 - **Hòa nhập.** 20–90 giây đầu nó đi dạo và đập đồ như người chơi (cùng lưới đường đi với rắn). Nó không chat, không thả emoji.
