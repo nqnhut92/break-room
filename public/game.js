@@ -961,12 +961,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     syncMapBtn();
   });
   syncMapBtn();
-  // graphics quality: high (bloom) by default on desktop, low on touch devices; the choice is remembered
+  // glow effect (bloom): experimental and off by default, because the post-processing chain showed flickering black
+  // rectangles on some GPUs; the choice is remembered
   {
-    const coarseGfx = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    let q = coarseGfx ? 'low' : 'high';
+    let q = 'low';
     try {
-      q = localStorage.getItem('br-gfx') || q;
+      q = localStorage.getItem('br-glow') || q;
     } catch (e) { /* ignore */ }
     const applyGfx = () => {
       $('gfxBtn').setAttribute('aria-pressed', String(q === 'high'));
@@ -975,7 +975,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     $('gfxBtn').addEventListener('click', () => {
       q = q === 'high' ? 'low' : 'high';
       try {
-        localStorage.setItem('br-gfx', q);
+        localStorage.setItem('br-glow', q);
       } catch (e) { /* ignore */ }
       applyGfx();
     });

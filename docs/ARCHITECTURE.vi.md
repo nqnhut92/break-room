@@ -77,4 +77,4 @@ Kích thước ước lượng (ước tính, chưa đo): state của một phò
 | Danh sách server (`BR-1`, `BR-2`) | `lib/world.js` (`ROOMS`), `lib/room-list.js` |
 | Test hợp đồng cho cả hai store | `test/shared.js` |
 | Bố cục đồ đạc và hướng quay (`rot`: 0 nam, PI/2 đông, PI bắc, -PI/2 tây) | `lib/world.js` |
-| Cảnh 3D, ánh sáng, chất lượng đồ họa (bloom ở mức "cao", vẽ thẳng ở mức "thấp", nút ✨) | `public/scene3d.js`, `public/vendor/jsm/` |
+| Cảnh 3D, ánh sáng, chất lượng đồ họa (mặc định vẽ thẳng; nút ✨ bật bloom thử nghiệm) | `public/scene3d.js`, `public/vendor/jsm/` |
