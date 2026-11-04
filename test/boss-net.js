@@ -82,6 +82,9 @@ async function main() {
     // stand still and take the rest of it
     const down = await take(a, (m) => m.t === 'down' && m.id === a.id, 12000);
     assert.strictEqual(down.ms, 1500);
+    send(a, { t: 'deaths' });
+    const deaths = await take(a, (m) => m.t === 'deaths', 1500);
+    assert.deepStrictEqual(deaths.list.filter((e) => e.id === a.id), [{ id: a.id, n: 1 }], 'the knock-out is counted');
     // knocked out: walking and swinging do nothing
     send(a, { t: 'move', x: 2500, y: 1700, d: 1 });
     send(a, { t: 'bhit' });

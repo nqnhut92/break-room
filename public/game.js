@@ -530,6 +530,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'bup':
         bossBack(m);
         break;
+      case 'deaths':
+        S.deaths = m.list;
+        if (!rankEl.hidden) renderRanking();
+        break;
       case 'rage':
         setRage(m.v);
         break;
@@ -809,7 +813,21 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function renderRanking() {
     const list = $('rankList');
     list.textContent = '';
-    for (const e of S.board || []) {
+    const byDeaths = S.rankMode === 'deaths';
+    $('rankTabScore').setAttribute('aria-selected', String(!byDeaths));
+    $('rankTabDeaths').setAttribute('aria-selected', String(byDeaths));
+    let rows = S.board || [];
+    if (byDeaths) {
+      const n = new Map((S.deaths || []).map((d) => [d.id, d.n]));
+      rows = rows.map((e) => ({ ...e, deaths: n.get(e.id) || 0 })).filter((e) => e.deaths > 0).sort((a, b) => b.deaths - a.deaths || a.id - b.id);
+      if (!rows.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'Chưa ai ngủm. Đi gặp sếp đi 😈';
+        list.appendChild(li);
+      }
+    }
+    for (const e of rows) {
       const li = document.createElement('li');
       if (e.id === S.me) li.className = 'me';
       const who = document.createElement('div');
@@ -827,13 +845,21 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       const sc = document.createElement('span');
       sc.className = 'sc';
-      sc.textContent = fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
+      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
       li.append(who, sc);
       list.appendChild(li);
     }
   }
   const rankEl = $('ranking');
+  function rankMode(mode) {
+    S.rankMode = mode;
+    if (mode === 'deaths') send({ t: 'deaths' });
+    renderRanking();
+  }
+  $('rankTabScore').addEventListener('click', () => rankMode('score'));
+  $('rankTabDeaths').addEventListener('click', () => rankMode('deaths'));
   function rankOpen() {
+    if (S.rankMode === 'deaths') send({ t: 'deaths' });
     renderRanking();
     rankEl.hidden = false;
     $('rankClose').focus();

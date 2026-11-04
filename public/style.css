@@ -803,6 +803,10 @@ canvas {
 
 /* personal ultimate: a bar that fills by hitting the boss or a mole, and a button that lights up when it is full */
 .pill.rage { display: inline-flex; align-items: center; gap: 6px; }
+#rankList li.empty::before { content: none; }
+.rank-tabs { display: flex; gap: 6px; }
+.rank-tabs .btn { flex: 1; padding: 6px 10px; font-size: 13px; }
+.rank-tabs .btn[aria-selected="true"] { border-color: var(--accent-2); background: rgba(255, 176, 46, 0.16); }
 .hp-track i#rageFill { background: #ff8a3d; transition: transform 0.15s; }
 .pill.rage.full { border-color: #ffd24a; box-shadow: 0 0 10px rgba(255, 190, 60, 0.7); }
 .pill.rage.full #rageFill { background: #ffd24a; }

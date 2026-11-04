@@ -288,6 +288,13 @@ async function contract(label, makeStore) {
     assert.strictEqual((await store.snakeList(r, { now: NOW + 1000 })).length, 0);
   });
 
+  await step(label + ': knock-outs are counted per player', async () => {
+    const r = room + '-deaths';
+    await store.deathAdd(r, 3, NOW); await store.deathAdd(r, 3, NOW); await store.deathAdd(r, 4, NOW);
+    const list = (await store.deathList(r, NOW)).sort((a, b) => a.id - b.id);
+    assert.deepStrictEqual(list, [{ id: 3, n: 2 }, { id: 4, n: 1 }]);
+  });
+
   await step(label + ': the ultimate bar is remembered per player', async () => {
     const r = room + '-rage';
     assert.strictEqual(await store.rageGet(r, 5), 0);
