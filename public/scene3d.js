@@ -122,9 +122,11 @@ const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 
 const KENNEY_FILES = {
   desk: 'desk', chair: 'chairDesk', monitor: 'computerScreen', laptop: 'laptop', keyboard: 'computerKeyboard',
   mouse: 'computerMouse', coffee: 'kitchenCoffeeMachine', plant: 'pottedPlant', table: 'table', sofa: 'loungeSofa',
-  rug: 'rugRectangle',
+  rug: 'rugRectangle', tv: 'televisionModern', toilet: 'toilet', sink: 'bathroomSink', bookcase: 'bookcaseClosed',
+  lamp: 'lampRoundFloor', trash: 'trashcan', coatrack: 'coatRackStanding',
 };
-const KENNEY_WIDTH = { desk: 150, chair: 62, monitor: 50, laptop: 56, keyboard: 30, mouse: 11, coffee: 54, plant: 44, table: 190, sofa: 250, rug: 420 };
+const KENNEY_WIDTH = { desk: 150, chair: 62, monitor: 50, laptop: 56, keyboard: 30, mouse: 11, coffee: 54, plant: 44, table: 190, sofa: 250, rug: 420,
+  tv: 100, toilet: 44, sink: 46, bookcase: 90, lamp: 34, trash: 30, coatrack: 50 };
 const kenney = {};
 
 function colored(src, color) {
@@ -209,7 +211,7 @@ function buildModel(type, types) {
   const body = [];
   const glow = [];
   let pick = null;
-  const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant'].includes(type);
+  const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant', 'tv', 'toilet', 'sink'].includes(type);
   if (type === 'desk') {
     for (const g of kenneyProp({ k: 'desk' }) || deskGeometry()) body.push(g);
     // a mug and a stack of paper so the desks do not look empty
@@ -221,6 +223,10 @@ function buildModel(type, types) {
   } else if (useKenney) {
     const k = kenney[type];
     body.push(k.geo.clone());
+    if (type === 'tv') {
+      glow.push(box(k.w * 0.9, k.h * 0.72, 0.8, '#4aa8ff', 0, k.h * 0.58, k.d / 2 + 0.2));
+      glow.push(box(k.w * 0.6, 3, 0.9, '#bfe3ff', 0, k.h * 0.85, k.d / 2 + 0.4));
+    }
     pick = [Math.max(40, k.w + 10), Math.max(40, k.h + 10), Math.max(40, k.d + 10)];
   } else switch (type) {
     case 'monitor':
@@ -384,6 +390,7 @@ function kenneyProp(p) {
     ];
   }
   if (p.k === 'sofa' && kenney.sofa) return [kgeo('sofa')];
+  if (p.k === 'deco' && kenney[p.model]) return [kgeo(p.model)];
   if (p.k === 'rug' && kenney.rug) {
     const g = kgeo('rug');
     g.scale(p.w / KENNEY_WIDTH.rug, 1, p.h / kenney.rug.d);
@@ -593,7 +600,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           box(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
         ], p.x, p.y);
       } else if (p.k === 'wall') {
-        const hgt = 210;
+        const hgt = p.low ? 64 : 210; // a low wall lets the camera see over it
         const b = bucket(p.x, p.y);
         b.body.push(at(box(p.w + 2, 18, p.h + 2, '#3a4458', 0, 9, 0), p.x, 0, p.y));
         b.body.push(at(box(p.w + 2, 10, p.h + 2, '#3a4458', 0, hgt - 5, 0), p.x, 0, p.y));
