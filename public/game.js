@@ -961,26 +961,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     syncMapBtn();
   });
   syncMapBtn();
-  // glow effect (bloom): experimental and off by default, because the post-processing chain showed flickering black
-  // rectangles on some GPUs; the choice is remembered
-  {
-    let q = 'low';
-    try {
-      q = localStorage.getItem('br-glow') || q;
-    } catch (e) { /* ignore */ }
-    const applyGfx = () => {
-      $('gfxBtn').setAttribute('aria-pressed', String(q === 'high'));
-      if (scene && scene.setQuality) scene.setQuality(q);
-    };
-    $('gfxBtn').addEventListener('click', () => {
-      q = q === 'high' ? 'low' : 'high';
-      try {
-        localStorage.setItem('br-glow', q);
-      } catch (e) { /* ignore */ }
-      applyGfx();
-    });
-    applyGfx();
-  }
   // the static part: floor zones and walls/furniture, drawn once per welcome into an offscreen canvas
   function mmBuild(world, props, zones) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);

@@ -1218,7 +1218,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }),
     );
     blob.rotation.x = -Math.PI / 2;
-    blob.position.y = 0.8;
+    blob.position.y = 3.4; // above the rugs (about 2.7 thick), or they hide the ring and the shadow
     g.add(blob);
 
     const ring = new THREE.Mesh(
@@ -1226,7 +1226,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.9, depthWrite: false }),
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 1.2;
+    ring.position.y = 4;
     ring.visible = false;
     g.add(ring);
 
@@ -1681,8 +1681,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     updateBoss(dt, S);
 
     updateParticles(dt);
-    if (composer) composer.render();
-    else renderer.render(scene, camera);
+    renderer.render(scene, camera);
 
     // DOM overlays (after render so the camera matrices are current)
     updateHealthBars(S);
@@ -1732,53 +1731,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return null;
   }
 
-  // ---- quality: 'high' adds bloom (glowing screens) through a post-processing chain, 'low' renders directly ----
-  let composer = null;
-  let fxaaPass = null;
-  let quality = 'low';
-  let postLoad = null;
-  async function setQuality(q) {
-    quality = q === 'high' ? 'high' : 'low';
-    glowMat.color.setScalar(quality === 'high' ? 1.9 : 1); // HDR values are what the bloom picks up
-    if (quality === 'low') {
-      composer = null;
-      return;
-    }
-    try {
-      postLoad = postLoad || Promise.all([
-        import('./vendor/jsm/postprocessing/EffectComposer.js'),
-        import('./vendor/jsm/postprocessing/RenderPass.js'),
-        import('./vendor/jsm/postprocessing/UnrealBloomPass.js'),
-        import('./vendor/jsm/postprocessing/OutputPass.js'),
-        import('./vendor/jsm/postprocessing/ShaderPass.js'),
-        import('./vendor/jsm/shaders/FXAAShader.js'),
-      ]);
-      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }, { ShaderPass }, { FXAAShader }] = await postLoad;
-      if (quality !== 'high') return; // switched back while loading
-      const target = new THREE.WebGLRenderTarget(W || 800, H || 600, { type: THREE.HalfFloatType });
-      const c = new EffectComposer(renderer, target);
-      c.setPixelRatio(renderer.getPixelRatio());
-      c.setSize(W || 800, H || 600);
-      c.addPass(new RenderPass(scene, camera));
-      c.addPass(new UnrealBloomPass(new THREE.Vector2((W || 800) / 2, (H || 600) / 2), 0.35, 0.5, 0.9));
-      c.addPass(new OutputPass());
-      // anti-aliasing as a pass: a multisampled target glitched on some GPUs
-      const fxaa = new ShaderPass(FXAAShader);
-      fxaa.material.uniforms.resolution.value.set(1 / ((W || 800) * renderer.getPixelRatio()), 1 / ((H || 600) * renderer.getPixelRatio()));
-      fxaaPass = fxaa;
-      c.addPass(fxaa);
-      composer = c;
-    } catch (e) {
-      composer = null; // keep the plain renderer if anything fails to load
-    }
-  }
-
   function resize(w, h) {
     W = w;
     H = h;
     renderer.setSize(w, h, false);
-    if (composer) composer.setSize(w, h);
-    if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio()));
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
@@ -1802,7 +1758,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
+    renderer, build, update, pick, resize, zoom, zoomLimits, cameraTo, ready,
     fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
