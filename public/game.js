@@ -1260,6 +1260,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // ---------------------------------------------------------------- input ----
   function showSkill(p, skill, target) {
     p.skill = SKILLS.some(s => s.id === skill) ? skill : 'hammer';
+    if (p.skill === 'electric' && target) target.electricUntil = performance.now() + 500;
     if (p.skill === 'milkTea' && scene) {
       const distance = 100 * S.milkTeaRangeMultiplier;
       const x = target ? target.x : p.x + Math.sin(p.heading) * distance;

@@ -884,6 +884,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     bossRig.g.visible = !b.dead;
     bossRig.label.classList.toggle('gone', !!b.dead);
     if (!b.dead) updatePlayer(bossRig, b.pl, dt, false, S);
+    updateElectricTarget(bossRig, bossRig.torsoM, bossRig.torsoM.geometry, b.electricUntil);
     // the punch circle: an outline plus a disc that fills up until the fist lands
     const w = b.wind;
     if (!w || b.dead) {
@@ -911,6 +912,55 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     windMesh.scale.setScalar(w.r);
     windMesh.userData.fill.scale.setScalar(Math.max(0.02, t));
     windMesh.userData.fill.material.opacity = 0.3 + 0.35 * t;
+  }
+
+  // Local visual feedback only: no stun or extra damage. Reuse each target's buffers.
+  function updateElectricTarget(rig, parent, geometry, until) {
+    const remaining = Math.max(0, ((until || 0) - performance.now()) / 1000);
+    if (!remaining) {
+      if (rig.electricFx) rig.electricFx.group.visible = false;
+      return 0;
+    }
+    if (!rig.electricFx) {
+      geometry.computeBoundingBox();
+      const bounds = geometry.boundingBox;
+      const center = bounds.getCenter(new THREE.Vector3());
+      const size = bounds.getSize(new THREE.Vector3());
+      const group = new THREE.Group();
+      const outline = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 35),
+        new THREE.LineBasicMaterial({ color: 0x78ecff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      const positions = new Float32Array(3 * 12 * 6);
+      const arcGeo = new THREE.BufferGeometry();
+      arcGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const arcs = new THREE.LineSegments(arcGeo,
+        new THREE.LineBasicMaterial({ color: 0xb18aff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      arcs.frustumCulled = false;
+      group.add(outline, arcs);
+      parent.add(group);
+      rig.electricFx = { group, outline, arcs, positions, center, size };
+    }
+    const fx = rig.electricFx;
+    fx.group.visible = true;
+    fx.outline.material.opacity = Math.min(1, Math.max(0, remaining - 0.2) / 0.1);
+    fx.arcs.material.opacity = Math.min(1, remaining / 0.2);
+    let offset = 0;
+    for (let ring = 0; ring < 3; ring++) {
+      const height = fx.center.y + (ring - 1) * fx.size.y * 0.28;
+      let px, py, pz;
+      for (let i = 0; i <= 12; i++) {
+        const angle = i / 12 * Math.PI * 2 + time * (ring % 2 ? -8 : 8);
+        const x = fx.center.x + Math.cos(angle) * (fx.size.x / 2 + 4 + Math.random() * 5);
+        const y = height + (Math.random() - 0.5) * 12;
+        const z = fx.center.z + Math.sin(angle) * (fx.size.z / 2 + 4 + Math.random() * 5);
+        if (i) {
+          fx.positions.set([px, py, pz, x, y, z], offset);
+          offset += 6;
+        }
+        px = x; py = y; pz = z;
+      }
+    }
+    fx.arcs.geometry.attributes.position.needsUpdate = true;
+    return Math.min(1, remaining / 0.3);
   }
 
   // ---- objects ------------------------------------------------------------
@@ -1816,11 +1866,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig.wreck.visible = o.broken;
         rig.proxy.userData.broken = o.broken;
       }
+      const electric = updateElectricTarget(rig, rig.group, rig.body.geometry, o.electricUntil);
       let sx = 0;
       let sz = 0;
-      if (o.shake > 0) {
-        sx = (Math.random() - 0.5) * 9 * o.shake;
-        sz = (Math.random() - 0.5) * 9 * o.shake;
+      const shake = Math.max(o.shake, electric * 0.45);
+      if (shake > 0) {
+        sx = (Math.random() - 0.5) * 9 * shake;
+        sz = (Math.random() - 0.5) * 9 * shake;
       }
       const sc = o.pop > 0 ? 1 - 0.6 * o.pop : 1;
       rig.group.position.x = o.x + sx;
@@ -1830,7 +1882,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const dark = 1 - dmg * 0.45;
       const f = o.flash;
       rig.mat.color.setRGB(dark, dark, dark);
-      rig.mat.emissive.setRGB(f * 0.7, f * 0.6, f * 0.5);
+      rig.mat.emissive.setRGB(f * 0.7 + electric * 0.18, f * 0.6 + electric * 0.3, f * 0.5 + electric * 0.65);
       rig.group.rotation.z = dmg * 0.05 * (o.id % 2 ? 1 : -1);
       if (o.broken && ELECTRONIC.has(o.type)) {
         o.smokeT -= dt;
