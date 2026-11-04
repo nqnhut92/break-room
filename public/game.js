@@ -958,9 +958,24 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   $('duelApologyBtn').addEventListener('click', () => {
     if (duelActive() && S.duel.target === S.me && performance.now() >= S.duel.apologyAt) {
+      if (performance.now() < (S.duel.apologyPendingUntil || 0)) return;
+      if (S.ws?.readyState !== WebSocket.OPEN) {
+        toast('Mất kết nối, hãy thử xin lỗi lại khi kết nối được khôi phục.');
+        return;
+      }
+      S.duel.apologyPendingUntil = performance.now() + 1500;
+      updateApologyButton();
       send({ t: 'duelApology', version: S.duel.version });
     }
   });
+  function updateApologyButton() {
+    const button = $('duelApologyBtn');
+    const pending = performance.now() < (S.duel?.apologyPendingUntil || 0);
+    button.disabled = pending;
+    button.setAttribute('aria-busy', String(pending));
+    const label = pending ? 'Đang xin lỗi…' : 'Em xin lỗi';
+    if (button.textContent !== label) button.textContent = label;
+  }
   function constrainDuel(p, x, y) {
     if (!duelActive()) return { x, y };
     const r = S.duel.bounds;
@@ -1521,7 +1536,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const settingsEl = $('settingsDlg');
   const settingsMQ = window.matchMedia('(pointer: coarse)');
   // Move the existing controls so state, cooldowns and listeners stay shared.
-  const settingsMoves = ['sideTools', 'copyLink', 'mute', 'resetBtn', 'emotes'].map(id => {
+  const settingsMoves = ['sideTools', 'copyLink', 'mute', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn'].map(id => {
     const el = $(id), slot = document.createComment(id);
     el.before(slot);
     return { el, slot };
@@ -1534,8 +1549,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function settingsLayout() {
     settingsClose(false);
     for (const { el, slot } of settingsMoves) {
-      if (settingsMQ.matches) $(el.id === 'sideTools' ? 'settingsTools' : 'settingsExtras').append(el);
-      else slot.after(el);
+      if (settingsMQ.matches) {
+        const target = el.id === 'skillBtn' || el.id === 'chatBtn' ? 'mobileBottomControls'
+          : el.id === 'sideTools' ? 'settingsTools' : 'settingsExtras';
+        $(target).append(el);
+      } else slot.after(el);
     }
     mmPlace(); sidePlace();
   }
@@ -2164,6 +2182,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     $('duelBanner').hidden = !duelOn;
     $('duelApologyBtn').hidden = !(duelOn && S.duel.target === S.me && !S.players.get(S.me)?.dead && performance.now() >= S.duel.apologyAt);
     $('duelApologyHint').hidden = $('duelApologyBtn').hidden;
+    updateApologyButton();
     if (duelOn) {
       const name = S.players.get(S.duel.target)?.name || 'Đồng nghiệp';
       $('duelText').textContent = (S.duel.target === S.me ? '🪢 Bạn đang đấu 1:1 với VKL' : '🔒 VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';

@@ -281,6 +281,7 @@ canvas {
   pointer-events: none;
 }
 #bottombar > * { pointer-events: auto; }
+#mobileBottomControls { display: none; }
 /* one height for everything in the row, so the emoji strip, the chat box and the buttons line up */
 #bottombar > :not(#smashBtn):not([hidden]) {
   box-sizing: border-box;
@@ -485,6 +486,7 @@ canvas {
   #chatBtn { display: block; }
   /* on touch screens the box only appears when 💬 is tapped, over the bottom bar while the keyboard is up */
   #chatForm { display: none; }
+  #bottombar #chatForm:not(.open) { display: none; }
   #chatForm.open { display: flex; position: fixed; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 25; }
   #chatForm.open #chatInput { flex: 1; width: auto; font-size: 16px; }
 }
@@ -740,9 +742,13 @@ canvas {
   #boardList { display: none; }
   .board-total { font-size: 14px; }
   .board-title { font-size: 10px; }
-  #bottombar { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); width: 220px; padding: 0; gap: 6px; justify-content: flex-end; }
+  #bottombar { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); width: 110px; padding: 0; gap: 6px; justify-content: flex-end; }
   #bottombar .btn { min-height: 44px; padding: 8px 10px; font-size: 12px; }
   #bottombar #smashBtn { width: 90px; min-height: 58px; font-size: 18px; }
+  #mobileBottomControls { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 8px; width: min(340px, calc(100vw - 320px)); }
+  #mobileBottomControls .btn { min-height: 48px; padding: 8px 10px; font-size: 12px; touch-action: manipulation; }
+  #mobileBottomControls #skillBtn { flex: 1; min-width: 0; }
+  #mobileBottomControls #chatBtn { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; }
   #emotes { width: 100%; overflow-x: auto; }
   #emotes button { flex: 0 0 36px; min-height: 36px; padding: 3px; }
   #sideBtns { right: max(12px, env(safe-area-inset-right)); flex-direction: row; gap: 4px; }
@@ -761,15 +767,16 @@ canvas {
 #helpTitle { flex: 0 0 auto; margin: 0; }
 #helpContent { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-right: 8px; }
 #helpClose { flex: 0 0 auto; }
-#duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); max-width: min(440px, 65vw); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: none; }
+#duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: min(440px, 65vw); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: auto; }
 @media (pointer: coarse) and (orientation: landscape) {
   #help .card { padding: 16px; gap: 10px; }
   #duelBanner { top: 56px; max-width: 42vw; padding: 5px 10px; font-size: 12px; }
 }
 
 #duelApologyHint { display: block; margin-top: 8px; font-size: 12px; line-height: 1.4; }
-#duelApologyBtn { pointer-events: auto; display: block; margin: 4px auto 0; min-height: 40px; background: #c62828; border-color: #ef5350; color: #fff; font-weight: 700; }
+#duelApologyBtn { pointer-events: auto; touch-action: manipulation; cursor: pointer; display: block; margin: 4px auto 0; min-width: 140px; min-height: 48px; background: #c62828; border-color: #ef5350; color: #fff; font-weight: 700; }
 #duelApologyBtn:hover { background: #b71c1c; }
+#duelApologyBtn:active { transform: translateY(1px); background: #8e1515; }
 #duelApologyHint[hidden], #duelApologyBtn[hidden] { display: none; }
 
 /* Desktop keeps its toolbar; touch devices open the same controls in a popup. */
