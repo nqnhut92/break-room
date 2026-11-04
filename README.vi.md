@@ -36,7 +36,7 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 
 Trên màn hình cảm ứng (và bút), chạm vào nền thì đi tới đó, chạm vào một món thì đi tới và đập đúng một cú cho mỗi lần chạm (nếu bị bàn hay tường chặn thì dừng lại); giữ nút ĐẬP! để đập liên tục. Với chuột thì canvas bỏ qua cú click: chơi bằng bàn phím.
 
-## Sếp VKL, boss của server
+## VKL, boss của server
 
 Mỗi server có một boss trong phòng server. Bước vào là sếp chạy lại đấm; vòng đỏ dưới sàn báo chỗ nắm đấm sẽ rơi nên né được. Bốn cú đấm (30 mỗi cú) là gục 15 giây, rồi hồi sinh ở sảnh; máu tự hồi chậm khi bạn yên ổn. Một hay hai người không hạ nổi (sếp tự hồi máu), khoảng năm người hạ trong hai phút, sếp ngã thì 500 triệu tiền thưởng vào bảng thiệt hại, chia theo sát thương. 3 đến 5 phút sau sếp quay lại. Luật, các con số và lý do chọn chúng nằm ở [docs/BOSS.vi.md](docs/BOSS.vi.md).
 

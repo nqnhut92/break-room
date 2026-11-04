@@ -824,7 +824,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     else buildNow(w, props, zones);
   }
 
-  // ---- Sếp VKL -----------------------------------------------------------
+  // ---- VKL -----------------------------------------------------------
   // One big character drawn with the same rig as the players (a cloned model with its own skin and a crown), plus
   // the red circle that shows where the next punch will land.
   let bossRig = null;

@@ -1,8 +1,8 @@
-# Sếp VKL, boss của phòng server
+# VKL, boss của phòng server
 
 [English](BOSS.md) · Tiếng Việt · [Kiến trúc](ARCHITECTURE.vi.md)
 
-Mỗi server (BR-1, BR-2) có một boss duy nhất, **Sếp VKL**, đi tuần trong phòng server. Đây là thứ duy nhất trong game làm người chơi bị thương. Trang này nói cách chơi và quan trọng hơn là **vì sao làm thế này**, để sau này sửa không vô tình phá một quyết định đã có lý do.
+Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong phòng server. Đây là thứ duy nhất trong game làm người chơi bị thương. Trang này nói cách chơi và quan trọng hơn là **vì sao làm thế này**, để sau này sửa không vô tình phá một quyết định đã có lý do.
 
 ## Cách chơi
 

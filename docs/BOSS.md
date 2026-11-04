@@ -1,8 +1,8 @@
-# Sếp VKL, the boss of the server room
+# VKL, the boss of the server room
 
 English · [Tiếng Việt](BOSS.vi.md) · [Architecture](ARCHITECTURE.md)
 
-Every server (BR-1, BR-2) has one boss, **Sếp VKL**, who patrols the server room. It is the only thing in the game that can hurt a player. This page says how the fight works and, more importantly, why it was built this way, so a later change does not undo a decision by accident.
+Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. It is the only thing in the game that can hurt a player. This page says how the fight works and, more importantly, why it was built this way, so a later change does not undo a decision by accident.
 
 ## How it plays
 

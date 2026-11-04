@@ -1,6 +1,6 @@
 'use strict';
 
-// Sếp VKL over real WebSockets, one server, in-memory store. The numbers are shrunk through the same options the
+// VKL over real WebSockets, one server, in-memory store. The numbers are shrunk through the same options the
 // production code takes (a tiny boss, quick respawns) so a whole fight fits in a few seconds.
 // The rules themselves are in test/boss.js; running one boss across several instances is in test/shared.js.
 
