@@ -110,8 +110,14 @@ const RUBBLE = {
   toilet: ['#f2f5f8', '#cfd6e0', '#9aa3b2'],
   sink: ['#eef2f6', '#cfd6e0', '#aab4c2'],
   safe: ['#4b5262', '#2b3240', '#c9d1de'],
+  bookcase: ['#d9a066', '#a8743f', '#f0d2a5'],
+  lamp: ['#f2e6b0', '#cfcfcf', '#8a8f99'],
+  trash: ['#8fa3a8', '#5f7377', '#c7d3d6'],
+  coatrack: ['#c89a5e', '#a8743f'],
+  fridge: ['#e6ebf0', '#b9c3cf', '#8a8f99'],
+  speaker: ['#a8743f', '#2b3240', '#5f7377'],
 };
-const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv']);
+const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv', 'fridge', 'speaker']);
 
 // -------------------------------------------------------- Kenney models ----
 // Furniture Kit 2.0 by Kenney (CC0), flat-coloured low-poly .glb files in
@@ -123,10 +129,10 @@ const KENNEY_FILES = {
   desk: 'desk', chair: 'chairDesk', monitor: 'computerScreen', laptop: 'laptop', keyboard: 'computerKeyboard',
   mouse: 'computerMouse', coffee: 'kitchenCoffeeMachine', plant: 'pottedPlant', table: 'table', sofa: 'loungeSofa',
   rug: 'rugRectangle', tv: 'televisionModern', toilet: 'toilet', sink: 'bathroomSink', bookcase: 'bookcaseClosed',
-  lamp: 'lampRoundFloor', trash: 'trashcan', coatrack: 'coatRackStanding',
+  lamp: 'lampRoundFloor', trash: 'trashcan', coatrack: 'coatRackStanding', fridge: 'kitchenFridgeSmall', speaker: 'speaker',
 };
 const KENNEY_WIDTH = { desk: 150, chair: 62, monitor: 50, laptop: 56, keyboard: 30, mouse: 11, coffee: 54, plant: 44, table: 190, sofa: 250, rug: 420,
-  tv: 100, toilet: 44, sink: 46, bookcase: 90, lamp: 34, trash: 30, coatrack: 50 };
+  tv: 100, toilet: 44, sink: 46, bookcase: 90, lamp: 34, trash: 30, coatrack: 50, fridge: 56, speaker: 24 };
 const kenney = {};
 
 function colored(src, color) {
@@ -211,7 +217,7 @@ function buildModel(type, types) {
   const body = [];
   const glow = [];
   let pick = null;
-  const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant', 'tv', 'toilet', 'sink'].includes(type);
+  const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant', 'tv', 'toilet', 'sink', 'bookcase', 'lamp', 'trash', 'coatrack', 'fridge', 'speaker'].includes(type);
   if (type === 'desk') {
     for (const g of kenneyProp({ k: 'desk' }) || deskGeometry()) body.push(g);
     // a mug and a stack of paper so the desks do not look empty
@@ -390,7 +396,6 @@ function kenneyProp(p) {
     ];
   }
   if (p.k === 'sofa' && kenney.sofa) return [kgeo('sofa')];
-  if (p.k === 'deco' && kenney[p.model]) return [kgeo(p.model)];
   if (p.k === 'rug' && kenney.rug) {
     const g = kgeo('rug');
     g.scale(p.w / KENNEY_WIDTH.rug, 1, p.h / kenney.rug.d);
@@ -1501,7 +1506,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- health bars over damaged objects -------------------------------------
   // Green while healthy, orange once half gone, red on the last hit. Undamaged and broken objects show none.
-  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88, desk: 78, tv: 112, toilet: 72, sink: 72, safe: 74 };
+  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88, desk: 78, tv: 112, toilet: 72, sink: 72, safe: 74, bookcase: 200, lamp: 200, trash: 70, coatrack: 150, fridge: 86, speaker: 110 };
   const hpBars = new Map(); // object id -> { el, fill, tone, ratio }
   function hpTone(hp, max) {
     const r = hp / max;
