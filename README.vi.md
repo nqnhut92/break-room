@@ -112,8 +112,9 @@ Mỗi lần build trên Vercel ghi ra `lib/build-info.json` (`scripts/stamp-asse
 
 - **Vào server mới bằng trang cũ**: thông điệp `welcome` mang `build` của server. Nếu khác phiên bản của trang thì người chơi thấy hộp thoại "có bản mới" với nút tải lại.
 - **Đang chơi mà có deploy mới**: instance đầu tiên của bản mới phát `{ v, t }` lên kênh chung `__build`. Các instance bản cũ (còn chạy một lúc, tối đa `maxDuration`) nghe thấy, gửi cho mọi người chơi của mình thông điệp `update` (cùng hộp thoại đó) rồi ngắt kết nối bằng mã **4003** sau 20 giây (`updateGraceMs`). Client không tự kết nối lại khi gặp 4003; nút sẽ tải lại trang.
+- **Trang đang mở tự nhận ra**: bản build còn ghi thêm file tĩnh `public/version.json` (cùng phiên bản). Mỗi trang đang mở lấy file đó mỗi 30 giây và khi tab quay lại phía trước; phiên bản khác nghĩa là vừa có deploy, người chơi thấy hộp thoại ngay, kèm đếm ngược 20 giây, rồi bị ngắt kết nối. Cách này chạy kể cả khi chưa có server nào báo, và không tốn lượt gọi function (chỉ là file tĩnh).
 - **Chỉ phản ứng với bản mới hơn**: instance bỏ qua thông báo của bản cũ hơn hoặc cùng giờ build, nên một instance bản cũ khởi động muộn không đá ai ra. Chạy local (`npm start`) thì phiên bản là `dev` và không có gì trong số này chạy.
-- Bản mới chỉ tự thông báo khi function của nó khởi động, tức là khi có người chơi đầu tiên vào được. Nếu chưa ai vào thì người chơi cũ biết chậm nhất khi kết nối của họ kết thúc và kết nối lại (xem mục trên).
+- Việc server báo cần function mới khởi động, tức là có người chơi đầu tiên vào được; còn cách kiểm tra `version.json` ở trên thì không, nên nó đảm bảo mọi người được báo trong khoảng 30 giây.
 
 ### Giới hạn của bản beta
 

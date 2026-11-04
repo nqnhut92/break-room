@@ -31,6 +31,9 @@ for (const file of ['game.js', 'scene3d.js']) {
 // The server learns its own build from the same version (only for the real build, not when a test stamps a temp folder),
 // so it can tell the players of an older deploy to reload.
 if (!process.argv[2]) {
-  fs.writeFileSync(path.join(__dirname, '..', 'lib', 'build-info.json'), JSON.stringify({ version, builtAt: Date.now() }) + '\n');
+  const info = JSON.stringify({ version, builtAt: Date.now() }) + '\n';
+  fs.writeFileSync(path.join(__dirname, '..', 'lib', 'build-info.json'), info);
+  // also a static file next to the page: open pages poll it, so they notice a deploy without any server involved
+  fs.writeFileSync(path.join(dir, 'version.json'), info);
 }
 console.log('stamped ' + dir + ' with ' + version);

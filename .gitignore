@@ -4,3 +4,4 @@ node_modules/
 .env
 .vercel
 lib/build-info.json
+public/version.json

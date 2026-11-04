@@ -938,15 +938,53 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
   })();
   const updateEl = $('updateDlg');
+  let updateTimer = 0;
   function showUpdate(kicked) {
     S.keys.clear();
     S.smashHeld = false;
-    $('updateNote').textContent = kicked
-      ? 'Game vừa được cập nhật nên bạn đã bị ngắt kết nối. Tải lại trang để vào bản mới, điểm của bạn vẫn được giữ.'
-      : 'Game vừa được cập nhật. Tải lại trang để chơi bản mới, điểm của bạn vẫn được giữ. Bạn sẽ bị ngắt kết nối sau ít giây nữa.';
     updateEl.hidden = false;
+    if (kicked) {
+      clearInterval(updateTimer);
+      updateTimer = 0;
+      $('updateNote').textContent = 'Game vừa được cập nhật nên bạn đã bị ngắt kết nối. Tải lại trang để vào bản mới, điểm của bạn vẫn được giữ.';
+    } else startUpdateCountdown(); // a short countdown, then we disconnect (the server does the same)
   }
   $('updateReload').addEventListener('click', () => location.reload());
+  // The deploy writes /version.json next to the page (see scripts/stamp-assets.js). An open page asks for it every 30 s
+  // and when the tab comes back to the front: a different version means a deploy happened, so this page is out of date.
+  // Whoever is playing gets the notice at once and is disconnected after a short countdown, whether or not any server
+  // has told them. (Locally there is no such file and nothing happens.)
+  function startUpdateCountdown() {
+    if (updateTimer) return;
+    let left = 20;
+    const tick = () => {
+      $('updateNote').textContent = 'Game vừa được cập nhật. Tải lại trang để chơi bản mới, điểm của bạn vẫn được giữ. Bạn sẽ bị ngắt kết nối sau ' + left + ' giây.';
+      if (left-- <= 0) {
+        S.fatal = true; // no reconnecting into an old page
+        S.joined = false;
+        for (const w of [S.pendingWs, S.ws]) if (w) w.close(1000);
+        $('conn').hidden = true;
+        showUpdate(true);
+      }
+    };
+    updateTimer = setInterval(tick, 1000);
+    tick();
+  }
+  async function checkVersion() {
+    if (!MY_BUILD || !updateEl.hidden) return;
+    try {
+      const r = await fetch('/version.json', { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j && typeof j.version === 'string' && j.version && j.version !== 'dev' && j.version !== MY_BUILD) {
+        showUpdate(false);
+      }
+    } catch (e) { /* offline or no file: try again later */ }
+  }
+  setInterval(checkVersion, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkVersion();
+  });
 
   const exitEl = $('exitDlg');
   let exitArmed = true; // false after "Ở lại", until we have walked away from the door
