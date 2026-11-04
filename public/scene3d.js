@@ -75,7 +75,7 @@ const merge = (list) => {
 // gets a soft contact shadow where it meets the ground, for free at runtime.
 // Two hammer orientations: upright in the fist, like a hero holding it at rest (head up, handle straight, leaning a
 // little out and forward), and "along the arm" for the swing, with the head at the far end.
-const _hammerUpright = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0, -0.22));
+const _hammerUpright = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.1, 0, 0.42));
 const _hammerSwing = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI / 2, 0));
 function bakeAO(geo) {
   if (!geo) return geo;
@@ -1269,7 +1269,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.prevSwing = p.swing;
     rig.root.rotation.x = lean;
     rig.armR.rotation.x = a;
-    rig.armR.rotation.z = (armed ? -0.3 : -0.1) - Math.abs(sw) * 0.1;
+    rig.armR.rotation.z = (armed ? -0.55 : -0.1) - Math.abs(sw) * 0.1; // armed: held out to the side, clear of the head
     if (armed) rig.hammer.quaternion.slerpQuaternions(_hammerUpright, _hammerSwing, hk);
 
     // knocked out: lie flat on one side. Sideways rather than backwards, because the camera looks from the south and
