@@ -50,7 +50,7 @@ Redis không bị ghi vô hạn. Mọi thứ đều có hạn dùng hoặc kích
 | --- | --- |
 | Cả phòng (9 key) | `touch` đặt `EXPIRE` bằng `ROOM_TTL_S` (mặc định 1800 giây) ở mỗi lần vào, rời và dọn dẹp. Phòng 30 phút không ai chạm vào thì biến mất hoàn toàn, gồm cả điểm, tên và token |
 | Online (`on`, `own`) | Nhịp tim được làm mới khi dọn dẹp, khoảng mỗi giây (mỗi 2 giây khi chưa có gì vỡ). Người không có nhịp tim quá `PRESENCE_TTL_MS` (20 giây) bị loại, ví dụ khi instance chết |
-| Đồ vật vỡ (`o`) | Dọn dẹp xoá mục sau khi vỡ đủ `RESPAWN_MS` (25 giây); "Gọi IT" xoá cả hash. Món chưa bị đụng không được lưu, nên `o` tối đa chỉ có khoảng 275 món (chỉ lưu món đã bị đập hoặc vỡ, mỗi món khoảng 20 byte; đo thực tế: đập hết cả 274 món trong một phòng chỉ tốn khoảng 6 KB) của văn phòng |
+| Đồ vật vỡ (`o`) | Dọn dẹp xoá mục sau khi vỡ đủ `RESPAWN_MS` (25 giây); "Gọi IT" xoá cả hash. Món chưa bị đụng không được lưu, nên `o` tối đa chỉ có khoảng 285 món (chỉ lưu món đã bị đập hoặc vỡ, mỗi món khoảng 20 byte; đo thực tế: đập hết cả 274 món trong một phòng chỉ tốn khoảng 6 KB) của văn phòng |
 | Lease theo IP | Mỗi lease hết hạn sau 60 giây và được làm mới khi kết nối còn sống |
 | `br:keepalive` | Hạn 3 ngày, ghi lại ở mỗi lần health check sâu |
 

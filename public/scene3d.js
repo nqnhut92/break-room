@@ -116,6 +116,9 @@ const RUBBLE = {
   coatrack: ['#c89a5e', '#a8743f'],
   fridge: ['#e6ebf0', '#b9c3cf', '#8a8f99'],
   speaker: ['#a8743f', '#2b3240', '#5f7377'],
+  sofa: ['#c9706c', '#8a4b49', '#e39a96'],
+  table: ['#d9c7a3', '#8a8f99', '#f0e6d0'],
+  conference: ['#d9c7a3', '#8a8f99', '#f0e6d0'],
 };
 const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv', 'fridge', 'speaker']);
 
@@ -218,7 +221,11 @@ function buildModel(type, types) {
   const glow = [];
   let pick = null;
   const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant', 'tv', 'toilet', 'sink', 'bookcase', 'lamp', 'trash', 'coatrack', 'fridge', 'speaker'].includes(type);
-  if (type === 'desk') {
+  if (type === 'table' || type === 'conference' || type === 'sofa') {
+    const t = types[type];
+    for (const g of kenneyProp({ k: type }) || furnitureFallback(type, t.w, t.h)) body.push(g);
+    pick = [t.w + 10, 90, t.h + 10];
+  } else if (type === 'desk') {
     for (const g of kenneyProp({ k: 'desk' }) || deskGeometry()) body.push(g);
     // a mug and a stack of paper so the desks do not look empty
     body.push(cyl(6, 5.5, 11, '#f2f2ee', -60, DESK_TOP + 5.5, 24, 12));
@@ -371,6 +378,40 @@ function deskGeometry() {
     box(10, 10, 0.5, '#ffd34d', 8, DESK_TOP + 5, -28), // sticky note
   ];
   return g;
+}
+
+// Code-built versions of the big furniture, used when the Kenney file is missing. w/h = footprint.
+function furnitureFallback(type, w, h) {
+  const DT = DESK_TOP;
+  if (type === 'table') {
+    return [
+      box(w, 6, h, '#d9d2c5', 0, DT - 3, 0),
+      box(8, 56, 8, '#8a8f99', -w / 2 + 14, 28, -h / 2 + 14),
+      box(8, 56, 8, '#8a8f99', w / 2 - 14, 28, -h / 2 + 14),
+      box(8, 56, 8, '#8a8f99', -w / 2 + 14, 28, h / 2 - 14),
+      box(8, 56, 8, '#8a8f99', w / 2 - 14, 28, h / 2 - 14),
+      cyl(7, 7, 12, '#e4572e', -20, DT + 6, 6, 10),
+      cyl(5, 5, 8, '#f3f3f3', 40, DT + 4, -10, 10),
+    ];
+  }
+  if (type === 'conference') {
+    return [
+      box(w, 8, h, '#6b4a30', 0, DT + 2, 0),
+      box(w - 14, 2, h - 14, '#7b5738', 0, DT + 7, 0),
+      box(30, 62, h - 50, '#3a2a1c', -w / 3, 31, 0),
+      box(30, 62, h - 50, '#3a2a1c', w / 3, 31, 0),
+      box(60, 3, 40, '#e9edf3', 0, DT + 9, 0),
+      cyl(5, 5, 9, '#ffffff', -150, DT + 11, 20, 10),
+      cyl(5, 5, 9, '#ffffff', 150, DT + 11, -20, 10),
+    ];
+  }
+  return [ // sofa
+    box(w, 28, h, '#3d5a80', 0, 20, 0),
+    box(w, 44, 22, '#34506f', 0, 44, -h / 2 + 11),
+    box(22, 34, h, '#2d4663', -w / 2 + 11, 34, 0),
+    box(22, 34, h, '#2d4663', w / 2 - 11, 34, 0),
+    box(w - 50, 8, h - 28, '#4a6a95', 0, 38, 8),
+  ];
 }
 
 // Static furniture from the Kenney kit; null means "use the code-built version".
@@ -571,40 +612,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         continue;
       }
       if (p.k === 'desk') addAll(deskGeometry(), p.x, p.y);
-      else if (p.k === 'table') {
-        addAll([
-          box(p.w, 6, p.h, '#d9d2c5', 0, DESK_TOP - 3, 0),
-          box(8, 56, 8, '#8a8f99', -p.w / 2 + 14, 28, -p.h / 2 + 14),
-          box(8, 56, 8, '#8a8f99', p.w / 2 - 14, 28, -p.h / 2 + 14),
-          box(8, 56, 8, '#8a8f99', -p.w / 2 + 14, 28, p.h / 2 - 14),
-          box(8, 56, 8, '#8a8f99', p.w / 2 - 14, 28, p.h / 2 - 14),
-          cyl(7, 7, 12, '#e4572e', -20, DESK_TOP + 6, 6, 10),
-          cyl(5, 5, 8, '#f3f3f3', 40, DESK_TOP + 4, -10, 10),
-        ], p.x, p.y);
-      } else if (p.k === 'conference') {
-        addAll([
-          box(p.w, 8, p.h, '#6b4a30', 0, DESK_TOP + 2, 0),
-          box(p.w - 14, 2, p.h - 14, '#7b5738', 0, DESK_TOP + 7, 0),
-          box(30, 62, p.h - 50, '#3a2a1c', -p.w / 3, 31, 0),
-          box(30, 62, p.h - 50, '#3a2a1c', p.w / 3, 31, 0),
-          box(60, 3, 40, '#e9edf3', 0, DESK_TOP + 9, 0),
-          cyl(5, 5, 9, '#ffffff', -150, DESK_TOP + 11, 20, 10),
-          cyl(5, 5, 9, '#ffffff', 150, DESK_TOP + 11, -20, 10),
-        ], p.x, p.y);
-      } else if (p.k === 'sofa') {
-        const sideways = p.rot && Math.abs(Math.sin(p.rot)) > 0.5; // footprint is the world-space one
-        const sw = sideways ? p.h : p.w;
-        const sh = sideways ? p.w : p.h;
-        const parts = [
-          box(sw, 28, sh, '#3d5a80', 0, 20, 0),
-          box(sw, 44, 22, '#34506f', 0, 44, -sh / 2 + 11),
-          box(22, 34, sh, '#2d4663', -sw / 2 + 11, 34, 0),
-          box(22, 34, sh, '#2d4663', sw / 2 - 11, 34, 0),
-          box(sw - 50, 8, sh - 28, '#4a6a95', 0, 38, 8),
-        ];
-        if (p.rot) for (const g of parts) g.rotateY(p.rot);
-        addAll(parts, p.x, p.y);
-      } else if (p.k === 'rug') {
+      else if (p.k === 'rug') {
         addAll([
           box(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
           box(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
@@ -904,10 +912,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   function faceNearestFurniture(group, o, types, all) {
     let best = null;
     let bd = Infinity;
-    // desks are objects (so they can be smashed), not props
-    const dd = types && types.desk;
-    const rects = propList.filter((p) => p.k === 'table' || p.k === 'conference');
-    for (const d of all) if (d.type === 'desk' && dd) rects.push({ x: d.x, y: d.y, w: dd.w, h: dd.h });
+    // desks and tables are objects (so they can be smashed), not props
+    const rects = [];
+    for (const d of all) {
+      const t = types && types[d.type];
+      if (t && (d.type === 'desk' || d.type === 'table' || d.type === 'conference')) rects.push({ x: d.x, y: d.y, w: t.w, h: t.h });
+    }
     for (const p of rects) {
       const nx = Math.max(p.x - p.w / 2, Math.min(p.x + p.w / 2, o.x));
       const ny = Math.max(p.y - p.h / 2, Math.min(p.y + p.h / 2, o.y));
@@ -1506,7 +1516,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- health bars over damaged objects -------------------------------------
   // Green while healthy, orange once half gone, red on the last hit. Undamaged and broken objects show none.
-  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88, desk: 78, tv: 112, toilet: 72, sink: 72, safe: 74, bookcase: 200, lamp: 200, trash: 70, coatrack: 150, fridge: 86, speaker: 110 };
+  const BAR_LIFT = { laptop: 48, monitor: 74, chair: 80, printer: 76, cooler: 122, coffee: 92, server: 168, plant: 88, desk: 78, tv: 112, toilet: 72, sink: 72, safe: 74, bookcase: 200, lamp: 200, trash: 70, coatrack: 150, fridge: 86, speaker: 110, sofa: 80, table: 80, conference: 80 };
   const hpBars = new Map(); // object id -> { el, fill, tone, ratio }
   function hpTone(hp, max) {
     const r = hp / max;

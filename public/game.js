@@ -46,6 +46,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     coatrack: ['#c89a5e', '#a8743f'],
     fridge: ['#e6ebf0', '#b9c3cf', '#8a8f99'],
     speaker: ['#a8743f', '#2b3240', '#5f7377'],
+    sofa: ['#c9706c', '#8a4b49', '#e39a96'],
+    table: ['#d9c7a3', '#8a8f99', '#f0e6d0'],
+    conference: ['#d9c7a3', '#8a8f99', '#f0e6d0'],
   };
   const MOVE_KEYS = {
     arrowleft: 'l', a: 'l',
@@ -1222,8 +1225,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if (k === ' ') {
       e.preventDefault();
       S.keys.add('space');
-    } else if ((k === 'enter' || k === 't' || k === '/') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault(); // so the T or / is not typed into the box that is about to get focus
+    } else if ((k === 'enter' || k === '/') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault(); // so the / is not typed into the box that is about to get focus
       chatOpen();
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
