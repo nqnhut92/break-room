@@ -95,6 +95,14 @@ canvas {
   color: #fff;
 }
 .plabel .bub:empty { display: none; }
+.plabel .hpb { display: block; width: 46px; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); overflow: hidden; }
+.plabel .hpb i { display: block; height: 100%; background: #46d17a; transform-origin: left center; }
+.plabel .hpb i.mid { background: #ffb02e; }
+.plabel .hpb i.low { background: #ff4d3a; }
+.plabel .hpb.boss { width: 120px; height: 9px; border: 1px solid rgba(255, 255, 255, 0.35); }
+.plabel .hpb.boss i { background: #ff4d3a; }
+.plabel.down { opacity: 0.55; }
+.plabel.gone { display: none !important; }
 .plabel .emo { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
 .plabel .emo:empty { display: none; }
 /* mana bar under our own name */
@@ -577,3 +585,46 @@ canvas {
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
 }
+
+/* health: the pill in the top bar, the boss's bar, the knocked-out card and the red flash when a punch lands */
+.pill.hp { display: inline-flex; align-items: center; gap: 6px; }
+.hp-track { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.16); overflow: hidden; }
+.hp-track i { display: block; height: 100%; background: #46d17a; transform-origin: left center; transition: background 0.2s; }
+.hp-track i.mid { background: #ffb02e; }
+.hp-track i.low { background: #ff4d3a; }
+#bossHud {
+  position: fixed;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+  z-index: 6;
+  pointer-events: none;
+  text-align: center;
+}
+#bossHud[hidden] { display: none; }
+.boss-name { font-weight: 800; font-size: 14px; color: #fff; text-shadow: 0 1px 3px #000; margin-bottom: 3px; }
+.boss-name small { font-weight: 600; font-size: 12px; color: #d3dae6; margin-left: 6px; }
+.boss-track { height: 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.35); overflow: hidden; }
+.boss-track i { display: block; height: 100%; background: linear-gradient(180deg, #ff6b5a, #d82c1a); transform-origin: left center; }
+#downOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 22vh;
+  background: rgba(40, 6, 6, 0.38);
+}
+#downOverlay[hidden] { display: none; }
+.down-card { display: flex; flex-direction: column; gap: 6px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 20px; color: #fff; max-width: calc(100vw - 32px); }
+.down-card b { font-size: 18px; }
+.down-card span { font-size: 14px; color: #d3dae6; }
+.down-card em { font-style: normal; font-weight: 800; color: var(--accent-2); }
+#hurt { position: fixed; inset: 0; z-index: 19; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(255, 40, 30, 0) 40%, rgba(255, 40, 30, 0.6) 100%); }
+#hurt.on { animation: hurtflash 0.5s ease-out; }
+@keyframes hurtflash { 0% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-width: 640px) { #bossHud { left: 150px; right: 60px; transform: none; width: auto; } }
+@media (prefers-reduced-motion: reduce) { #hurt.on { animation: none; opacity: 0.35; } }

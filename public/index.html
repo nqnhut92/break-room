@@ -42,6 +42,7 @@
         <span class="pill"><b id="online">1</b> online</span>
         <button id="copyLink" class="pill btn" type="button">Copy link server</button>
         <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh">🔇</button>
+        <span class="pill hp" title="Máu của bạn"><span aria-hidden="true">❤</span><span class="hp-track"><i id="hpFill"></i></span><b id="hpNum">100</b></span>
       </div>
 
       <div id="board">
@@ -80,6 +81,18 @@
         <button id="helpClose" class="btn smash" type="button">Đã hiểu</button>
       </div>
     </div>
+
+    <div id="bossHud" hidden>
+      <div class="boss-name">👔 Sếp Tổng <small id="bossSub"></small></div>
+      <div class="boss-track"><i id="bossFill"></i></div>
+    </div>
+    <div id="downOverlay" hidden>
+      <div class="down-card">
+        <b>💀 Bạn bị Sếp Tổng hạ gục</b>
+        <span>Hồi sinh ở sảnh sau <em id="downSecs">60</em> giây. Vẫn chat được nhé.</span>
+      </div>
+    </div>
+    <div id="hurt"></div>
 
     <div id="ranking" hidden>
       <div class="card" role="dialog" aria-modal="true" aria-labelledby="rankTitle">

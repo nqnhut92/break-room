@@ -164,7 +164,9 @@ async function loadKenney() {
 // Animated characters (Kenney "Animated Characters Survivors", CC0): one rigged mesh with idle/run/jump clips,
 // plus a skin texture per gender. If anything fails to load the players keep the blocky code-built body.
 const CHAR_SCALE = 0.32; // the model is about 376 units tall; players are about 120
-const SKIN_FILES = { m: 'survivorMaleB', f: 'survivorFemaleA' };
+// 'boss' is a recoloured copy (navy suit, red tie, silver hair, no stains) that only Sếp Tổng wears; players can only pick m or f.
+const SKIN_FILES = { m: 'survivorMaleB', f: 'survivorFemaleA', boss: 'survivorBoss' };
+const BOSS_SCALE = 2.1; // the boss is a big man
 let charAsset = null;
 async function loadCharacters() {
   try {
@@ -737,6 +739,56 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     else buildNow(w, props, zones);
   }
 
+  // ---- Sếp Tổng -----------------------------------------------------------
+  // One big character drawn with the same rig as the players (a cloned model with its own skin and a crown), plus
+  // the red circle that shows where the next punch will land.
+  let bossRig = null;
+  let windMesh = null;
+  function updateBoss(dt, S) {
+    const b = S.boss;
+    if (!b || !b.pl || !charAsset) {
+      if (bossRig) bossRig.g.visible = false;
+      if (windMesh) windMesh.visible = false;
+      return;
+    }
+    if (!bossRig) {
+      bossRig = makePlayer(b.pl);
+      bossRig.g.scale.setScalar(BOSS_SCALE);
+      bossRig.hammer.visible = false; // fists, not a hammer
+      bossRig.hpb.classList.add('boss');
+    }
+    bossRig.g.visible = !b.dead;
+    bossRig.label.classList.toggle('gone', !!b.dead);
+    if (!b.dead) updatePlayer(bossRig, b.pl, dt, false, S);
+    // the punch circle: an outline plus a disc that fills up until the fist lands
+    const w = b.wind;
+    if (!w || b.dead) {
+      if (windMesh) windMesh.visible = false;
+      return;
+    }
+    if (!windMesh) {
+      windMesh = new THREE.Group();
+      const outline = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 56), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.9, depthWrite: false }));
+      const base = new THREE.Mesh(new THREE.CircleGeometry(1, 56), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.16, depthWrite: false }));
+      const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 56), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.4, depthWrite: false }));
+      for (const m of [base, fill, outline]) {
+        m.rotation.x = -Math.PI / 2;
+        windMesh.add(m);
+      }
+      windMesh.userData.fill = fill;
+      windMesh.userData.base = base;
+      windMesh.position.y = 1.6;
+      scene.add(windMesh);
+    }
+    const t = Math.max(0, Math.min(1, (performance.now() - w.t0) / w.ms));
+    windMesh.visible = true;
+    windMesh.position.x = w.x;
+    windMesh.position.z = w.y;
+    windMesh.scale.setScalar(w.r);
+    windMesh.userData.fill.scale.setScalar(Math.max(0.02, t));
+    windMesh.userData.fill.material.opacity = 0.3 + 0.35 * t;
+  }
+
   // ---- objects ------------------------------------------------------------
   const models = {};
   const rigs = new Map(); // object id -> rig
@@ -855,7 +907,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const ACCESSORY_SCALE = 1.6; // the cartoon head is big
   function accessoryParts(role) {
     switch (role) {
-      case 'sep': {
+      case 'boss': {
         const g = '#f2c744';
         const parts = [cyl(8.4, 8.4, 3, g, 0, 0, 0, 10)];
         for (let i = 0; i < 5; i++) {
@@ -1059,11 +1111,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     bar.appendChild(fill);
     const rl = document.createElement('span'); // company role under the name
     rl.className = 'rl';
-    label.append(bub, emo, nm, rl, bar);
+    const hpb = document.createElement('span'); // health bar, shown once hurt (always for the boss)
+    hpb.className = 'hpb';
+    const hpf = document.createElement('i');
+    hpb.appendChild(hpf);
+    label.append(bub, emo, nm, rl, hpb, bar);
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, bub, emo, nm, rl, bar, fill, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, hammer, model, ring, label, bub, emo, nm, rl, hpb, hpf, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1092,6 +1148,23 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.armR.rotation.x = a;
     if (rig.model) updateCharacter(rig, p, dt);
 
+    // knocked out: lie flat (the model's own wrapper tilts back; the blocky body tilts its trunk)
+    rig.lie += ((p.dead ? 1 : 0) - rig.lie) * Math.min(1, dt * 8);
+    if (rig.lie > 0.001 || p.dead) {
+      if (rig.model) {
+        rig.model.wrap.rotation.x = -1.5 * rig.lie;
+        rig.model.wrap.position.y = 9 * rig.lie;
+      } else rig.root.rotation.x = -1.4 * rig.lie;
+    }
+    const hf = p.dead ? 0 : p.hpFrac == null ? 1 : p.hpFrac;
+    if (Math.abs(hf - rig.lastHp) > 0.004) {
+      rig.lastHp = hf;
+      rig.hpf.style.transform = 'scaleX(' + Math.max(0, Math.min(1, hf)).toFixed(3) + ')';
+      rig.hpf.className = hf < 0.25 ? 'low' : hf < 0.55 ? 'mid' : '';
+    }
+    rig.hpb.style.display = p.alwaysHp || (!p.dead && hf < 0.999) ? '' : 'none';
+    rig.label.classList.toggle('down', !!p.dead);
+
     rig.ring.visible = isMe;
     if (rig.lastName !== p.name) {
       rig.nm.textContent = p.name;
@@ -1106,7 +1179,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (p.company) parts.push(p.company);
       rig.rl.textContent = parts.join(' · ');
     }
-    const em = p.emoteT > 0 && p.emote ? p.emote : '';
+    const em = p.dead ? '💀' : p.emoteT > 0 && p.emote ? p.emote : '';
     if (em !== rig.lastEmote) {
       rig.emo.textContent = em;
       rig.lastEmote = em;
@@ -1469,12 +1542,20 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         players.delete(id);
       }
     }
+    updateBoss(dt, S);
 
     updateParticles(dt);
     renderer.render(scene, camera);
 
     // DOM overlays (after render so the camera matrices are current)
     updateHealthBars(S);
+    if (bossRig) {
+      const bp = S.boss && S.boss.pl;
+      const pr = bp ? project(bp.x, 132 * BOSS_SCALE + 14, bp.y) : null;
+      const on = !!pr && !S.boss.dead && pr.ok && pr.sx > -120 && pr.sx < W + 120 && pr.sy > -60 && pr.sy < H + 60;
+      bossRig.label.style.display = on ? '' : 'none';
+      if (on) bossRig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
+    }
     for (const [id, rig] of players) {
       const p = S.players.get(id);
       if (!p) continue;

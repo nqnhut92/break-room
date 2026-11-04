@@ -74,6 +74,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     hitRange: 110,
     players: new Map(),
     objects: [],
+    boss: null, // Sếp Tổng of this server (see the boss section)
+    hpCfg: null,
     keys: new Set(),
     target: null,
     attackId: null,
@@ -181,6 +183,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     noise(0.5, 5200, 0.6 * v);
     tone(90, 0.35, 0.45 * v, 'sawtooth', -60);
   }
+  function sfxPunch(v) {
+    noise(0.22, 900, 0.8 * v);
+    tone(70, 0.3, 0.7 * v, 'sine', -40);
+  }
+  function sfxWind(v) {
+    tone(180, 0.6, 0.14 * v, 'sawtooth', 140);
+  }
+  function sfxHurt() {
+    noise(0.16, 1800, 0.45);
+    tone(210, 0.22, 0.35, 'square', -130);
+  }
   function sfxReset() {
     tone(880, 0.15, 0.18, 'sine', 0);
     setTimeout(() => tone(1320, 0.25, 0.18, 'sine', 0), 130);
@@ -216,7 +229,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.players.set(p.id, {
       id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv', company: String(p.company || ''),
       x: p.x, y: p.y, tx: p.x, ty: p.y, d: p.d || 1,
-      swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0, moving: false, heading: 0,
+      swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0,
+      hp: typeof p.hp === 'number' ? p.hp : 100, hpT: performance.now() - (p.hpAgo || 0), hpFrac: 1,
+      dead: (p.deadMs || 0) > 0, deadAt: performance.now() + (p.deadMs || 0), moving: false, heading: 0,
     });
   }
 
@@ -342,10 +357,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.colliders = m.colliders;
         S.hitRange = m.hitRange;
         S.manaCfg = m.mana;
+        S.hpCfg = m.player || { max: 100, regenDelayMs: 4000, regenPerSec: 5 };
         S.mana = { v: m.mana.v, t: performance.now() - m.mana.ago };
         S.players = new Map();
         m.players.forEach(addPlayer);
         S.objects = m.objects.map(makeObject);
+        initBoss(m.boss);
         S.target = null;
         S.attackId = null;
         if (scene) scene.build(m.world, m.props, m.zones);
@@ -392,6 +409,33 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
             p.d = e[3];
           }
         }
+        break;
+      case 'boss':
+        bossMove(m);
+        break;
+      case 'bwind':
+        bossWind(m);
+        break;
+      case 'bstrike':
+        bossStrike(m);
+        break;
+      case 'bhp':
+        bossHit(m);
+        break;
+      case 'bdead':
+        bossDown(m);
+        break;
+      case 'bup':
+        bossBack(m);
+        break;
+      case 'hp':
+        playerHurt(m);
+        break;
+      case 'down':
+        playerDown(m);
+        break;
+      case 'up':
+        playerUp(m);
         break;
       case 'mana':
         if (S.manaCfg) S.mana = { v: m.v, t: performance.now() - m.ago };
@@ -560,6 +604,230 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !rankEl.hidden) rankClose();
   });
+
+  // ------------------------------------------------- Sếp Tổng and health ----
+  // The server runs the boss (walking, noticing people, punching) and every client just draws what it is told:
+  // a position stream, a red circle during the windup, strikes, hit points and the bounty. Health works like
+  // mana: the server sends the stored value plus how long ago it was stored, and each client adds the same
+  // regeneration, so nothing needs to be sent while a bar refills.
+  const BOSS_TARGET = -2; // value of S.attackId while tapping on the boss walks over and swings at it
+  const hurtEl = $('hurt');
+
+  function hpNow(p) {
+    const c = S.hpCfg;
+    if (!c) return 100;
+    if (p.dead) return 0;
+    const fast = Math.max(0, performance.now() - p.hpT - c.regenDelayMs);
+    return Math.min(c.max, p.hp + (fast * c.regenPerSec) / 1000);
+  }
+  function bossHpNow() {
+    const b = S.boss;
+    if (!b) return 0;
+    if (b.dead) return 0;
+    const c = b.cfg;
+    const e = Math.max(0, performance.now() - b.hpT);
+    const fast = Math.max(0, e - c.regenDelayMs);
+    return Math.min(c.maxHp, b.hp + (e * c.baseRegenPerSec + fast * c.regenPerSec) / 1000);
+  }
+  function initBoss(bc) {
+    if (!bc) {
+      S.boss = null;
+      return;
+    }
+    const now = performance.now();
+    S.boss = {
+      cfg: bc,
+      x: bc.x, y: bc.y, tx: bc.x, ty: bc.y,
+      mode: bc.m,
+      eng: bc.e || 0,
+      hp: bc.hp,
+      hpT: now - bc.ago,
+      dead: !!bc.dead,
+      respawnAt: bc.dead ? now + bc.respawnMs : 0,
+      wind: null,
+      pl: {
+        id: -1, name: '👔 ' + bc.name, gender: 'boss', role: 'boss', company: '', hue: 0,
+        x: bc.x, y: bc.y, heading: bc.d || 0, moving: false, swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0,
+        hpFrac: 1, alwaysHp: true, dead: false,
+      },
+    };
+  }
+  function bossObj() {
+    const b = S.boss;
+    return b && !b.dead ? { boss: true, x: b.x, y: b.y, broken: false } : null;
+  }
+  function bossMove(m) {
+    const b = S.boss;
+    if (!b) return;
+    b.tx = m.x;
+    b.ty = m.y;
+    b.mode = m.m;
+    b.eng = m.e || 0;
+    b.pl.heading = m.d;
+  }
+  function bossWind(m) {
+    const b = S.boss;
+    if (!b || b.dead) return;
+    b.wind = { x: m.x, y: m.y, r: m.r, ms: m.ms, t0: performance.now() };
+    sfxWind(volumeAt(b.x, b.y));
+  }
+  function bossStrike(m) {
+    const b = S.boss;
+    if (b) {
+      b.wind = null;
+      b.pl.swing = 1;
+    }
+    const v = volumeAt(m.x, m.y);
+    sfxPunch(v);
+    S.shake = Math.min(1.4, S.shake + 0.55 * v);
+    if (scene) for (let i = 0; i < 6; i++) scene.fx.smoke(m.x + rand(-m.r, m.r) * 0.7, 6, m.y + rand(-m.r, m.r) * 0.7);
+  }
+  function bossHit(m) {
+    const b = S.boss;
+    if (!b) return;
+    b.hp = m.hp;
+    b.hpT = performance.now();
+    const v = volumeAt(b.x, b.y);
+    sfxHit(v);
+    if (scene) {
+      scene.fx.sparks(b.x, 120, b.y, 6);
+      scene.fx.floatText(b.x + rand(-30, 30), 250, b.y, pick(HIT_WORDS), '#ffffff', 16);
+    }
+    if (m.by !== S.me) {
+      const p = S.players.get(m.by);
+      if (p) {
+        p.swing = 1;
+        p.d = b.x >= p.x ? 1 : -1;
+        p.heading = Math.atan2(b.x - p.x, b.y - p.y);
+      }
+    }
+  }
+  function bossDown(m) {
+    const b = S.boss;
+    if (b) {
+      b.dead = true;
+      b.wind = null;
+      b.respawnAt = performance.now() + (m.respawnMs || 0);
+      b.hp = 0;
+      if (scene) {
+        for (let i = 0; i < 10; i++) scene.fx.smoke(b.x + rand(-50, 50), 20 + i * 12, b.y + rand(-50, 50));
+        scene.fx.sparks(b.x, 140, b.y, 30);
+      }
+      sfxBreak(volumeAt(b.x, b.y));
+    }
+    S.shake = Math.min(1.4, S.shake + 0.9);
+    const names = m.shares.map((s) => s.name);
+    toast('🏆 Sếp Tổng đã bị hạ gục! Tiền thưởng ' + fmtMoney(m.bounty) + ' chia theo sát thương');
+    toast(m.shares.slice(0, 3).map((s, i) => i + 1 + '. ' + s.name + ' +' + fmtShort(s.bounty)).join('  ·  '));
+    const mine = m.shares.find((s) => s.id === S.me);
+    if (mine) toast('💰 Bạn nhận ' + fmtMoney(mine.bounty) + ' thưởng (gây ' + mine.dmg + ' sát thương)');
+    else if (names.length) toast('Lần sau nhớ đánh cùng mọi người nhé');
+  }
+  function bossBack(m) {
+    const b = S.boss;
+    if (!b) return;
+    b.dead = false;
+    b.x = b.tx = b.pl.x = m.x;
+    b.y = b.ty = b.pl.y = m.y;
+    b.hp = b.cfg.maxHp;
+    b.hpT = performance.now();
+    b.wind = null;
+    toast('👔 Sếp Tổng đã quay lại phòng server');
+  }
+  function playerHurt(m) {
+    const p = S.players.get(m.id);
+    if (!p) return;
+    p.hp = m.hp;
+    p.hpT = performance.now();
+    if (scene) scene.fx.floatText(p.x, 150, p.y, '-' + m.dmg, '#ff6b5a', 20);
+    if (m.id === S.me) {
+      hurtEl.classList.remove('on');
+      void hurtEl.offsetWidth; // restart the animation
+      hurtEl.classList.add('on');
+      S.shake = Math.min(1.4, S.shake + 0.6);
+      sfxHurt();
+      if (navigator.vibrate) navigator.vibrate(60);
+    }
+  }
+  function playerDown(m) {
+    const p = S.players.get(m.id);
+    if (!p) return;
+    p.dead = true;
+    p.hp = 0;
+    p.deadAt = performance.now() + m.ms;
+    p.moving = false;
+    p.swing = 0;
+    if (scene) scene.fx.floatText(p.x, 150, p.y, '-' + m.dmg, '#ff6b5a', 20);
+    if (m.id === S.me) {
+      S.keys.clear();
+      S.smashHeld = false;
+      S.target = null;
+      S.attackId = null;
+      hurtEl.classList.remove('on');
+      void hurtEl.offsetWidth;
+      hurtEl.classList.add('on');
+      sfxHurt();
+      $('downOverlay').hidden = false;
+    } else toast('💀 ' + p.name + ' bị Sếp Tổng hạ gục');
+  }
+  function playerUp(m) {
+    const p = S.players.get(m.id);
+    if (!p) return;
+    p.dead = false;
+    p.hp = S.hpCfg ? S.hpCfg.max : 100;
+    p.hpT = performance.now();
+    p.x = p.tx = m.x;
+    p.y = p.ty = m.y;
+    if (m.id === S.me) {
+      $('downOverlay').hidden = true;
+      S.target = null;
+      if (scene) scene.cameraTo(m.x, m.y);
+      toast('Bạn đã hồi sinh ở sảnh, nhớ né đòn nhé');
+    }
+  }
+
+  // Per-frame upkeep: bars, the boss's smooth walk, the HUD pieces.
+  function bossTick(dt) {
+    const me = S.players.get(S.me);
+    for (const p of S.players.values()) p.hpFrac = hpNow(p) / (S.hpCfg ? S.hpCfg.max : 100);
+    if (me) {
+      const pct = clamp(me.hpFrac, 0, 1);
+      $('hpFill').style.transform = 'scaleX(' + pct.toFixed(3) + ')';
+      $('hpFill').className = pct < 0.25 ? 'low' : pct < 0.55 ? 'mid' : '';
+      $('hpNum').textContent = String(Math.round(pct * (S.hpCfg ? S.hpCfg.max : 100)));
+      if (me.dead) $('downSecs').textContent = String(Math.max(0, Math.ceil((me.deadAt - performance.now()) / 1000)));
+    }
+    const b = S.boss;
+    const bar = $('bossHud');
+    if (!b || !me) {
+      bar.hidden = true;
+      return;
+    }
+    const k = Math.min(1, dt * 12);
+    const ox = b.x;
+    const oy = b.y;
+    b.x += (b.tx - b.x) * k;
+    b.y += (b.ty - b.y) * k;
+    b.pl.x = b.x;
+    b.pl.y = b.y;
+    b.pl.moving = Math.hypot(b.x - ox, b.y - oy) > 0.15;
+    b.pl.swing = Math.max(0, b.pl.swing - dt * 3);
+    b.pl.dead = false;
+    b.pl.hpFrac = bossHpNow() / b.cfg.maxHp;
+    // the HUD bar shows while we are anywhere near the server room
+    const near = Math.hypot(b.x - me.x, b.y - me.y) < 1400;
+    bar.hidden = !near;
+    if (near) {
+      if (b.dead) {
+        const left = Math.max(0, Math.ceil((b.respawnAt - performance.now()) / 1000));
+        $('bossSub').textContent = 'đang nghỉ phép · quay lại sau ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+        $('bossFill').style.transform = 'scaleX(0)';
+      } else {
+        $('bossSub').textContent = b.eng ? b.eng + ' người trong phòng' : '';
+        $('bossFill').style.transform = 'scaleX(' + clamp(b.pl.hpFrac, 0, 1).toFixed(3) + ')';
+      }
+    }
+  }
 
   // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
   // while in a frame under the system toasts, and each message also shows as a bubble over the speaker for 3 seconds.
@@ -744,6 +1012,15 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.arc(p.x * mm.k, p.y * mm.k, 2.6 * mm.dpr, 0, Math.PI * 2);
       c.fill();
     }
+    if (S.boss && !S.boss.dead) {
+      c.fillStyle = '#ff3b2a';
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.2 * mm.dpr;
+      c.beginPath();
+      c.arc(S.boss.x * mm.k, S.boss.y * mm.k, 4.6 * mm.dpr, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
     const me = S.players.get(S.me);
     if (me) {
       c.fillStyle = '#ffd34d';
@@ -770,7 +1047,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function sidePlace() {
     const board = $('board');
     if (!board) return;
-    $('sideBtns').style.top = Math.max(56, Math.round(board.getBoundingClientRect().bottom) + 8) + 'px';
+    const top = Math.max(56, Math.round(board.getBoundingClientRect().bottom) + 8);
+    $('sideBtns').style.top = top + 'px';
+    const narrow = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    $('bossHud').style.top = narrow ? top + 'px' : '';
   }
   setInterval(() => {
     mmPlace();
@@ -805,6 +1085,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     items.push(
       '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
       'Đồ đã bị đập hiện <b>thanh máu</b>: xanh khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối.',
+      '<b>Sếp Tổng</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
+      'Một mình hay hai người không hạ nổi sếp (sếp tự hồi máu). <b>Từ 5 người</b> đánh cùng nhau thì được, sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 3 đến 5 phút.',
+      'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
@@ -839,6 +1122,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         bestD = d;
       }
     }
+    const bo = bossObj();
+    if (bo && S.boss) {
+      const center = Math.hypot(bo.x - me.x, bo.y - me.y);
+      if (center <= S.boss.cfg.reach - 10 && center - S.boss.cfg.radius <= bestD) best = bo;
+    }
     return best;
   }
 
@@ -854,7 +1142,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   function tryHit(o) {
     const me = S.players.get(S.me);
-    if (!me || !o || o.broken) return false;
+    if (!me || !o || o.broken || me.dead) return false;
     const now = performance.now();
     if (now - S.lastHit < 190) return false;
     if (S.manaCfg && manaNow() < S.manaCfg.cost) {
@@ -865,9 +1153,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       return false;
     }
-    if (Math.hypot(o.x - me.x, o.y - me.y) > S.hitRange - 5) return false;
+    if (Math.hypot(o.x - me.x, o.y - me.y) > (o.boss ? S.boss.cfg.reach - 10 : S.hitRange - 5)) return false;
     S.lastHit = now;
-    send({ t: 'hit', id: o.id });
+    send(o.boss ? { t: 'bhit' } : { t: 'hit', id: o.id });
     me.swing = 1;
     me.d = o.x >= me.x ? 1 : -1;
     return true;
@@ -982,6 +1270,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!hit) return;
     if (hit.objectId !== undefined) {
       S.attackId = hit.objectId;
+      S.target = null;
+    } else if (S.boss && !S.boss.dead && Math.hypot(hit.x - S.boss.x, hit.y - S.boss.y) < 110) {
+      S.attackId = BOSS_TARGET; // tapping on the boss walks over and swings at it
       S.target = null;
     } else {
       S.attackId = null;
@@ -1229,6 +1520,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
     const me = S.players.get(S.me);
     if (me) updateMe(me, dt);
+    bossTick(dt);
 
     for (const p of S.players.values()) {
       if (p.id !== S.me) {
@@ -1253,6 +1545,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   function updateMe(me, dt) {
+    if (me.dead) {
+      me.moving = false;
+      return; // knocked out: no walking, no swinging until the server revives us
+    }
     let dx = 0;
     let dy = 0;
     if (S.keys.has('l')) dx -= 1;
@@ -1264,12 +1560,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       S.target = null;
       S.attackId = null;
     } else if (S.attackId !== null) {
-      const o = S.objects[S.attackId];
+      const o = S.attackId === BOSS_TARGET ? bossObj() : S.objects[S.attackId];
       if (!o || o.broken) {
         S.attackId = null;
       } else {
         const dist = Math.hypot(o.x - me.x, o.y - me.y);
-        if (dist <= S.hitRange - 15) {
+        if (dist <= (o.boss ? S.boss.cfg.reach - 25 : S.hitRange - 15)) {
           if (tryHit(o)) S.attackId = null; // one tap, one smash
         } else {
           dx = (o.x - me.x) / dist;
