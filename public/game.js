@@ -823,7 +823,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (!rows.length) {
         const li = document.createElement('li');
         li.className = 'empty';
-        li.textContent = 'Chưa ai ngủm. Đi gặp sếp đi 😈';
+        li.textContent = 'Chưa ai bị sa thải. Đi gặp sếp đi 😈';
         list.appendChild(li);
       }
     }
@@ -845,7 +845,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       const sc = document.createElement('span');
       sc.className = 'sc';
-      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
+      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần bị sa thải' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
       li.append(who, sc);
       list.appendChild(li);
     }
