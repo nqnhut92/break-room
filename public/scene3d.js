@@ -81,6 +81,8 @@ const _hammerAlongArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math
 const _hammerHeld = new THREE.Quaternion()
   .setFromEuler(new THREE.Euler(0.04, 0, 0.06))
   .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2));
+const _heldCup = new THREE.Quaternion(); // the cup stays upright
+const _heldTaser = new THREE.Quaternion().setFromEuler(new THREE.Euler(1.3, 0, 0)); // the gun's barrel points forward and a little up
 const _qa = new THREE.Quaternion();
 const _qb = new THREE.Quaternion();
 const _qc = new THREE.Quaternion();
@@ -1272,6 +1274,34 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     hammer.quaternion.copy(_hammerHeld);
     hammer.scale.setScalar(0.82);
     foreR.add(hammer);
+    // A bubble tea cup (for the milk tea throw) and a stun gun (for the electric skill) in the same fist, shown instead
+    // of the hammer when that skill is chosen. Origin = where the fist holds them, "up" = the cup's / the gun's barrel.
+    const cup = new THREE.Group();
+    cup.position.set(0, -17, 0);
+    cup.add(mk(merge([
+      cyl(6.8, 4.9, 15, '#f3d7a9', 0, 0, 0, 18),
+      cyl(6.1, 5.4, 5, '#e8648a', 0, -0.5, 0, 18),
+      cyl(7.4, 7.4, 2.2, '#ffffff', 0, 8.6, 0, 18),
+      ell(6.1, 2.6, 6.1, '#ffffff', 0, 10.4, 0),
+      pill(0.7, 13, '#ff6fa5', 1.6, 17, 0, 0, 0, -0.1),
+    ])));
+    cup.visible = false;
+    foreR.add(cup);
+    const taser = new THREE.Group();
+    taser.position.set(0, -17, 0);
+    taser.add(mk(merge([
+      box(6, 12, 8, '#2b3240', 0, 0, 0),
+      box(8, 12, 10, '#3a4252', 0, 10, 0),
+      box(10, 8, 11, '#e5483a', 0, 18, 0),
+      box(2, 3, 2, '#ffd34d', 0, 6, 4.6),
+      pill(1.1, 9, '#c9d1dd', -3.2, 26, 0),
+      pill(1.1, 9, '#c9d1dd', 3.2, 26, 0),
+      ell(3.6, 0.9, 0.9, '#8fe9ff', 0, 31, 0),
+      ell(1.7, 1.7, 1.7, '#cdf7ff', -3.2, 31.5, 0),
+      ell(1.7, 1.7, 1.7, '#cdf7ff', 3.2, 31.5, 0),
+    ])));
+    taser.visible = false;
+    foreR.add(taser);
     root.add(armL, armR);
 
     const blob = new THREE.Mesh(
@@ -1320,7 +1350,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, cup, taser, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1367,7 +1397,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const eo = (t) => 1 - (1 - t) * (1 - t);
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
-    if (S.players.has(p.id)) rig.hammer.visible = !['milkTea', 'electric'].includes(isMe ? S.skill : p.skill);
+    const skill = isBoss ? 'boss' : (isMe ? S.skill : p.skill) === 'milkTea' ? 'milkTea' : (isMe ? S.skill : p.skill) === 'electric' ? 'electric' : 'hammer';
+    if (!isBoss) rig.hammer.visible = skill === 'hammer';
     const armed = rig.hammer.visible;
     const CARRY = -0.12; // at rest: the arm hangs naturally at the side
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
@@ -1408,6 +1439,73 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // Elbow: a relaxed bend at rest, straight for the swing. The hammer's own rotation cancels the arm's, so it stays
     // "held up" in the body's frame whatever the arm does, and blends to "along the arm" for the swing.
     rig.foreR.rotation.x = armed ? lerp(-0.8, -0.2, hk) : -0.2;
+    if (skill === 'milkTea' || skill === 'electric') {
+      // Other skills hold something else in the same fist. The cup is carried up in front of the chest; a throw winds
+      // up over the shoulder, snaps forward and lets go (the cup that flies is drawn by the effect, so the one in the
+      // hand disappears for a moment). The stun gun points forward and jabs straight out.
+      const ph = p.swing > 0 ? 1 - p.swing : -1; // -1 = not swinging
+      let bend;
+      let q;
+      if (skill === 'milkTea') {
+        a = -0.7;
+        bend = -1.9;
+        lean = 0.1 * mv;
+        if (ph >= 0) {
+          if (ph < 0.3) {
+            const t = eo(ph / 0.3);
+            a = lerp(-0.7, -2.9, t);
+            bend = lerp(-1.9, -0.7, t);
+            lean += -0.2 * t;
+          } else if (ph < 0.45) {
+            const t = ei((ph - 0.3) / 0.15);
+            a = lerp(-2.9, -1.3, t);
+            bend = lerp(-0.7, -0.1, t);
+            lean += lerp(-0.2, 0.25, t);
+          } else {
+            const t = eo((ph - 0.45) / 0.55);
+            a = lerp(-1.3, -0.7, t);
+            bend = lerp(-0.1, -1.9, t);
+            lean += 0.25 * (1 - t);
+          }
+        }
+        rig.cup.visible = ph < 0 || ph < 0.42 || ph > 0.8; // released at the snap, a fresh cup in hand a moment later
+        q = _heldCup;
+      } else {
+        a = -0.5;
+        bend = -1.5;
+        lean = 0.1 * mv;
+        if (ph >= 0) {
+          if (ph < 0.25) {
+            const t = eo(ph / 0.25);
+            a = lerp(-0.5, -0.2, t);
+            bend = lerp(-1.5, -2.1, t); // pull the gun back
+          } else if (ph < 0.45) {
+            const t = ei((ph - 0.25) / 0.2);
+            a = lerp(-0.2, -1.45, t);
+            bend = lerp(-2.1, -0.1, t); // jab it straight out
+            lean += 0.2 * t;
+          } else {
+            const t = eo((ph - 0.45) / 0.55);
+            a = lerp(-1.45, -0.5, t);
+            bend = lerp(-0.1, -1.5, t);
+            lean += 0.2 * (1 - t);
+          }
+        }
+        q = _heldTaser;
+      }
+      rig.cup.visible = skill === 'milkTea' && rig.cup.visible;
+      rig.taser.visible = skill === 'electric';
+      rig.root.rotation.x = lean;
+      rig.armR.rotation.x = a;
+      rig.armR.rotation.z = -0.3;
+      rig.foreR.rotation.x = bend;
+      const item = skill === 'milkTea' ? rig.cup : rig.taser;
+      _qa.copy(rig.armR.quaternion).multiply(rig.foreR.quaternion);
+      item.quaternion.copy(_qa.invert()).multiply(q); // stays "up" (cup) or "forward" (gun) in the body's frame
+    } else {
+      rig.cup.visible = false;
+      rig.taser.visible = false;
+    }
     if (armed) {
       _qa.copy(rig.armR.quaternion).multiply(rig.foreR.quaternion);
       _qb.copy(_qa).multiply(_hammerAlongArm);

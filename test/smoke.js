@@ -17,6 +17,7 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const server = require('../server.js');
+const { RANGED_DAMAGE_MULTIPLIER: RANGED } = require('../lib/realtime.js'); // a ranged (milk tea) hit does half damage
 const h = require('./helpers.js');
 const world = require('../lib/world.js');
 
@@ -116,7 +117,7 @@ async function main() {
     .reduce((best, o) => (dist(A, o) < dist(A, best) ? o : best));
   const info = server.TYPES[target.type];
 
-  await step('milk tea reaches beyond hammer range and damages the object for everyone', async () => {
+  await step('milk tea reaches beyond hammer range and does half the damage of a hammer hit, for everyone', async () => {
     await walkTo(A, target, 160);
     assert.ok(dist(A, target) > server.HIT_RANGE);
     assert.ok(dist(A, target) < server.HIT_RANGE * 2);
@@ -127,8 +128,9 @@ async function main() {
     send(A, { t: 'hit', id: target.id, skill: 'milkTea' });
     const hitA = await take(A, (m) => m.t === 'hit' && m.id === target.id);
     const hitB = await take(B, (m) => m.t === 'hit' && m.id === target.id);
-    assert.strictEqual(hitA.hp, info.hp - 1);
-    assert.strictEqual(hitB.hp, info.hp - 1);
+    assert.strictEqual(RANGED, 0.5);
+    assert.strictEqual(hitA.hp, info.hp - RANGED);
+    assert.strictEqual(hitB.hp, info.hp - RANGED);
     assert.strictEqual(hitB.by, A.id);
     assert.strictEqual(hitA.skill, 'milkTea');
     assert.strictEqual(hitB.skill, 'milkTea');
@@ -142,7 +144,7 @@ async function main() {
     await sleep(120);
     const hits = A.msgs.filter((m) => !m._used && m.t === 'hit' && m.id === target.id);
     assert.strictEqual(hits.length, 1);
-    assert.strictEqual(hits[0].hp, info.hp - 2);
+    assert.strictEqual(hits[0].hp, info.hp - RANGED - 1);
     assert.strictEqual(hits[0].skill, 'electric');
     const otherHit = await take(B, m => m.t === 'hit' && m.id === target.id && m.skill === 'electric');
     assert.strictEqual(otherHit.hp, hits[0].hp);
@@ -150,7 +152,7 @@ async function main() {
   });
 
   await step('object breaks at zero hp, cost is scored and broadcast', async () => {
-    let hpLeft = info.hp - 2;
+    let hpLeft = info.hp - RANGED - 1;
     while (hpLeft > 0) {
       await sleep(220);
       send(A, { t: 'hit', id: target.id });
@@ -225,6 +227,19 @@ async function main() {
     send(B, { t: 'swing', h: 0.5, skill: 'electric' });
     const electric = await take(A, m => m.t === 'swing' && m.id === B.id && m.skill === 'electric');
     assert.strictEqual(electric.h, 0.5);
+  });
+
+  await step('choosing a skill is relayed to the room, unknown skills become the hammer', async () => {
+    send(B, { t: 'skill', skill: 'milkTea' });
+    const s1 = await take(A, (m) => m.t === 'skill' && m.id === B.id);
+    assert.strictEqual(s1.skill, 'milkTea');
+    await sleep(200);
+    send(B, { t: 'skill', skill: 'rm -rf' });
+    const s2 = await take(A, (m) => m.t === 'skill' && m.id === B.id && m.skill === 'hammer');
+    assert.strictEqual(s2.skill, 'hammer');
+    await sleep(200);
+    send(B, { t: 'skill', skill: 'electric' });
+    assert.strictEqual((await take(A, (m) => m.t === 'skill' && m.id === B.id && m.skill === 'electric')).skill, 'electric');
   });
 
   await step('garbage input does not break the server', async () => {

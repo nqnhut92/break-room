@@ -270,7 +270,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.players.set(p.id, {
       id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv', company: String(p.company || ''),
       x: p.x, y: p.y, tx: p.x, ty: p.y, d: p.d || 1,
-      swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0,
+      swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0, skill: 'hammer',
       hp: typeof p.hp === 'number' ? p.hp : 100, hpT: performance.now() - (p.hpAgo || 0), hpFrac: 1,
       dead: (p.deadMs || 0) > 0, deadAt: performance.now() + (p.deadMs || 0), moving: false, heading: 0,
     });
@@ -501,6 +501,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'update':
         showUpdate(false);
         break;
+      case 'skill': {
+        if (m.id !== S.me) {
+          const p = S.players.get(m.id);
+          if (p && SKILLS.some((s) => s.id === m.skill)) p.skill = m.skill;
+        }
+        break;
+      }
       case 'swing': {
         const swinger = S.players.get(m.id);
         if (swinger && m.id !== S.me) showSkill(swinger, m.skill);
@@ -1486,6 +1493,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.skill = next.id;
     $('skillBtn').textContent = next.label;
     $('smashBtn').textContent = next.action;
+    send({ t: 'skill', skill: next.id }); // so the others see what is in your hand
     toast(next.label + ' · Space để dùng · phím 1-3 đổi skill');
   }
   $('skillBtn').addEventListener('click', () => setSkill(skillIndex() + 1));

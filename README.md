@@ -27,7 +27,7 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | --- | --- |
 | Move | WASD / arrow keys, or tap the floor |
 | Smash | Space (hold to keep smashing; with nothing in reach it still swings the hammer, for free), the SMASH! button, or tap an object (touch screens) |
-| Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (or use the Skill button) |
+| Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (or use the Skill button); the chosen one is in your hand (a hammer, a bubble tea cup, a stun gun) and the others see it. The milk tea throw reaches twice as far but does **half the damage** of a hammer hit, on objects and on the boss |
 | Call IT | I, or the Call IT button: replaces everything with new stuff (shared cooldown) |
 | Emoji | Shift + keys 1 to 8 or the emoji buttons |
 | Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a phone it fades after 3 seconds |

@@ -27,7 +27,7 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | --- | --- |
 | Di chuyển | WASD / phím mũi tên, hoặc chạm vào nền |
 | Đập | Space (giữ để đập liên tục; không có gì trong tầm vẫn vung búa, miễn phí), nút ĐẬP!, hoặc chạm vào đồ vật (màn hình cảm ứng) |
-| Skill | Phím 1, 2, 3 chọn búa, trà sữa hoặc điện (hoặc nút Skill) |
+| Skill | Phím 1, 2, 3 chọn búa, trà sữa hoặc điện (hoặc nút Skill); skill đang chọn nằm trên tay (cây búa, ly trà sữa, đồ chích điện) và người khác cũng thấy. Ném ly trà sữa tầm xa gấp đôi nhưng **chỉ bằng một nửa sát thương** của một cú búa, cả với đồ vật lẫn sếp |
 | Gọi IT | Phím I, hoặc nút Gọi IT: thay hết đồ mới (chung thời gian chờ) |
 | Thả emoji | Shift + phím 1 đến 8 hoặc bấm các nút emoji |
 | Chat | Enter hoặc `/`, hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game, Esc để huỷ. Khung chat luôn hiện trên máy tính; trên điện thoại nó mờ đi sau 3 giây |

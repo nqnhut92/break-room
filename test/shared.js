@@ -268,6 +268,20 @@ async function contract(label, makeStore) {
     assert.ok(snap.objects[5].brokenAt > 0);
   });
 
+  await step(label + ': a hit can do half damage: two of them break a one-hit object, and the hp stays readable', async () => {
+    const r5 = 'half-' + label + Date.now();
+    const pl = await store.join(r5, { ...base, max: 10, token: T(40), connId: 'h1', name: 'Halfer' });
+    const NOW2 = Date.now();
+    const h1 = await store.hit(r5, { objId: 7, defaultHp: 1, cost: 2, playerId: pl.id, now: NOW2, dmg: 0.5 });
+    assert.deepStrictEqual({ state: h1.state, hp: h1.hp }, { state: 'hit', hp: 0.5 });
+    const snap1 = await store.read(r5, { now: NOW2, ttlMs: 60000 });
+    assert.strictEqual(snap1.objects[7].hp, 0.5, 'the snapshot reads the fractional hp');
+    const h2 = await store.hit(r5, { objId: 7, defaultHp: 1, cost: 2, playerId: pl.id, now: NOW2, dmg: 0.5 });
+    assert.strictEqual(h2.state, 'broke');
+    const h3 = await store.hit(r5, { objId: 8, defaultHp: 3, cost: 2, playerId: pl.id, now: NOW2 }); // a normal hit still takes 1
+    assert.deepStrictEqual({ state: h3.state, hp: h3.hp }, { state: 'hit', hp: 2 });
+  });
+
   await step(label + ': housekeeping respawns broken objects and prunes dead players', async () => {
     const r3 = room + '-hk';
     await store.hit(r3, { objId: 1, defaultHp: 1, cost: 2, playerId: 1, now: NOW });
