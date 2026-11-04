@@ -46,12 +46,11 @@ The floor is 4800×3000 and the camera follows the player (a mini map in the cor
 
 The 3D art comes from two sources:
 
-- **[Kenney](https://kenney.nl) Furniture Kit 2.0** (CC0, free to use, licence in `public/assets/kenney/License.txt`): desks, office chairs, monitors, laptops, keyboards, mice, coffee machine, plants, tables, sofas, rugs, televisions, toilets, sinks, bookcases, floor lamps, bins, a coat rack. Only the `.glb` files in use are copied (about 250 KB). Each is merged into one vertex-coloured mesh, set on the floor and scaled to the wanted size (`KENNEY_WIDTH` in `scene3d.js`). If a file fails to load, the game falls back to the hand-built version of that object.
 - **Textures** (ambientCG, CC0, `public/assets/textures/`, licence note in `License.txt`): wood, carpet, tile and diamond-plate floors, colour and normal maps at 512 px (about 0.7 MB), tinted in `FLOOR_FILES` in `scene3d.js`. If a file is missing the old canvas-drawn floor is used.
 - **Characters are built in code** (`makePlayer` in `scene3d.js`): round "chibi" bodies made of spheres and capsules, four hairstyles, a role hat, and the boss in a navy suit with silver hair and a crown. They are animated by code (breathing, bobbing, leaning, squash and stretch, the hammer swing), with no model files.
-- **Built in code** (boxes, cylinders, spheres): the fallback body, printers, the water cooler, server racks (not in Kenney's kit), glass walls, the debris when something breaks, and the effects.
+- **Everything else is built in code** (`public/scene3d.js`) from rounded boxes, ellipsoids, capsules and cylinders: furniture, characters, glass walls, the debris and the effects. There are no model files, so nothing to license and nothing to download. `box()` rounds the edges, `sbox()` keeps them sharp (walls).
 
-Three.js is vendored in `public/vendor/` (MIT, licence included), not loaded from a CDN. To upgrade: `npm install three@<version> --save-dev`, then copy `three.module.min.js` (from `build`) plus `BufferGeometryUtils.js` and `GLTFLoader.js` (from `examples/jsm`) into `public/vendor/`. The last two import each other, so change the import line in `GLTFLoader.js` to `./BufferGeometryUtils.js`.
+Three.js is vendored in `public/vendor/` (MIT, licence included), not loaded from a CDN. To upgrade: `npm install three@<version> --save-dev`, then copy `three.module.min.js` (from `build`) plus `BufferGeometryUtils.js` (from `examples/jsm/utils`) into `public/vendor/`, and `RoundedBoxGeometry.js` and `RoomEnvironment.js` (from `examples/jsm/geometries` and `examples/jsm/environments`) into `public/vendor/jsm/` under the same folder names.
 
 A browser with WebGL is required. Weak phones may stutter; on touch screens the game lowers resolution and shadows by itself.
 
@@ -155,7 +154,7 @@ lib/config.js        picks the store from environment variables
 server.js            local run: static files + WebSocket at /api/ws
 public/              index.html, style.css, game.js (network, input, HUD, WebAudio sound),
                      scene3d.js (all the three.js code), vendor/ (vendored three.js),
-                     assets/kenney/ (Kenney .glb models, CC0)
+                     assets/textures/ (floor textures, CC0)
 test/                world.js (layout, paths), smoke.js (end-to-end, RAM), shared.js (real Redis, two instances)
 vercel.json          static directory and maxDuration
 docs/                ARCHITECTURE.md (English) and ARCHITECTURE.vi.md: what Redis does, cleanup, limits

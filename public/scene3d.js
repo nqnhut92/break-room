@@ -5,10 +5,9 @@
 // code (no model or texture files), merged per type with vertex colours.
 
 import * as THREE from 'three';
-import { mergeGeometries, toCreasedNormals } from './vendor/BufferGeometryUtils.js';
+import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { ROLE_BY_ID } from './roles.js';
 
 // ------------------------------------------------------------- geometry ----
@@ -61,8 +60,7 @@ const ell = (a, b, c, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
 };
 const pill = (r, len, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) =>
   place(paint(new THREE.CapsuleGeometry(r, len, 5, 12), hex), x, y, z, rx, ry, rz);
-// Kenney models arrive non-indexed with no UVs, the code-built ones are indexed
-// with UVs; bring both to the same shape so they can share one merged mesh.
+// Models have indexed geometry with UVs; bring every part to the same shape so they can share one merged mesh.
 const merge = (list) => {
   if (!list.length) return null;
   const flat = list.map((g) => {
@@ -104,7 +102,7 @@ function shade(hex, k) {
 // ----------------------------------------------------- breakable models ----
 // Origin = centre of the footprint at floor level. `lift` is how high above
 // the floor the thing stands (things on desks stand on the desk top).
-let DESK_TOP = 62; // set from the Kenney desk once it has loaded
+const DESK_TOP = 62; // height of the desk and table tops; screens and laptops are lifted by it
 const lift = (type) => (type === 'monitor' || type === 'laptop' ? DESK_TOP : 0);
 const PICK = { // invisible pick box, bigger than the model so small things are easy to click: [w, h, d]
   laptop: [56, 40, 40], monitor: [56, 66, 36], chair: [44, 66, 44], printer: [72, 50, 56],
@@ -137,73 +135,6 @@ const RUBBLE = {
 };
 const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv', 'fridge', 'speaker']);
 
-// -------------------------------------------------------- Kenney models ----
-// Furniture Kit 2.0 by Kenney (CC0), flat-coloured low-poly .glb files in
-// public/assets/kenney. Each is flattened into one vertex-coloured geometry,
-// centred on the floor and scaled to a target width, because the files carry
-// their own node transforms and use different units from the game. If a file
-// fails to load the code-built model is used instead.
-const KENNEY_FILES = {
-  desk: 'desk', chair: 'chairDesk', monitor: 'computerScreen', laptop: 'laptop', keyboard: 'computerKeyboard',
-  mouse: 'computerMouse', coffee: 'kitchenCoffeeMachine', plant: 'pottedPlant', table: 'table', sofa: 'loungeSofa',
-  rug: 'rugRectangle', tv: 'televisionModern', toilet: 'toilet', sink: 'bathroomSink', bookcase: 'bookcaseClosed',
-  lamp: 'lampRoundFloor', trash: 'trashcan', coatrack: 'coatRackStanding', fridge: 'kitchenFridgeSmall', speaker: 'speaker',
-};
-const KENNEY_WIDTH = { desk: 150, chair: 62, monitor: 50, laptop: 56, keyboard: 30, mouse: 11, coffee: 54, plant: 44, table: 190, sofa: 250, rug: 420,
-  tv: 100, toilet: 44, sink: 46, bookcase: 90, lamp: 34, trash: 30, coatrack: 50, fridge: 56, speaker: 24 };
-const kenney = {};
-
-function colored(src, color) {
-  const g = src.index ? src.toNonIndexed() : src.clone();
-  const out = new THREE.BufferGeometry();
-  out.setAttribute('position', g.attributes.position);
-  out.setAttribute('normal', g.attributes.normal);
-  const n = g.attributes.position.count;
-  const a = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    a[i * 3] = color.r;
-    a[i * 3 + 1] = color.g;
-    a[i * 3 + 2] = color.b;
-  }
-  out.setAttribute('color', new THREE.BufferAttribute(a, 3));
-  return out;
-}
-
-const SOFT_ANGLE = Math.PI * 0.42; // about 75 degrees
-function fitKenney(root, width) {
-  root.updateMatrixWorld(true);
-  const parts = [];
-  root.traverse((o) => {
-    if (!o.isMesh) return;
-    const g = colored(o.geometry, o.material.color || new THREE.Color(0xcccccc));
-    g.applyMatrix4(o.matrixWorld);
-    parts.push(g);
-  });
-  const merged = mergeGeometries(parts, false);
-  const geo = toCreasedNormals(merged, SOFT_ANGLE); // soft shading: edges below this angle are smoothed over
-  geo.computeBoundingBox();
-  const b = geo.boundingBox;
-  geo.translate(-(b.min.x + b.max.x) / 2, -b.min.y, -(b.min.z + b.max.z) / 2);
-  geo.scale(width / (b.max.x - b.min.x), width / (b.max.x - b.min.x), width / (b.max.x - b.min.x));
-  geo.computeBoundingBox();
-  const sz = geo.boundingBox.getSize(new THREE.Vector3());
-  return { geo, w: sz.x, h: sz.y, d: sz.z };
-}
-
-async function loadKenney() {
-  const loader = new GLTFLoader();
-  await Promise.all(
-    Object.entries(KENNEY_FILES).map(async ([key, file]) => {
-      try {
-        const gltf = await loader.loadAsync('./assets/kenney/' + file + '.glb');
-        kenney[key] = fitKenney(gltf.scene, KENNEY_WIDTH[key]);
-      } catch (e) {
-        /* keep the code-built fallback for this one */
-      }
-    }),
-  );
-  if (kenney.desk) DESK_TOP = kenney.desk.h;
-}
 const BOSS_SCALE = 2.1; // the boss is a big man
 
 // Floor textures (ambientCG, CC0): colour + normal map per floor kind, tinted to the office palette. If a file is
@@ -225,34 +156,22 @@ async function loadFloorTextures() {
   }));
 }
 
-const kgeo = (name) => (kenney[name] ? kenney[name].geo.clone() : null);
-
 function buildModel(type, types) {
   const body = [];
   const glow = [];
   let pick = null;
-  const useKenney = kenney[type] && ['monitor', 'laptop', 'coffee', 'plant', 'tv', 'toilet', 'sink', 'bookcase', 'lamp', 'trash', 'coatrack', 'fridge', 'speaker'].includes(type);
   if (type === 'table' || type === 'conference' || type === 'sofa') {
     const t = types[type];
-    // the sofa is code-built from soft shapes; tables use the Kenney model
-    for (const g of (type !== 'sofa' && kenneyProp({ k: type })) || furnitureFallback(type, t.w, t.h)) body.push(g);
+    for (const g of furnitureFallback(type, t.w, t.h)) body.push(g);
     pick = [t.w + 10, 90, t.h + 10];
   } else if (type === 'desk') {
-    for (const g of kenneyProp({ k: 'desk' }) || deskGeometry()) body.push(g);
+    for (const g of deskGeometry()) body.push(g);
     // a mug and a stack of paper so the desks do not look empty
-    body.push(cyl(6, 5.5, 11, '#f2f2ee', -60, DESK_TOP + 5.5, 24, 12));
-    body.push(cyl(4.6, 4.6, 1, '#4b2e1d', -60, DESK_TOP + 10.6, 24, 12));
+    body.push(cyl(6, 5.5, 11, '#f2f2ee', -60, DESK_TOP + 5.5, 24, 14));
+    body.push(cyl(4.6, 4.6, 1, '#4b2e1d', -60, DESK_TOP + 10.6, 24, 14));
     body.push(box(26, 3, 34, '#f4f1e8', 58, DESK_TOP + 1.5, -34, 0, 0.12));
     body.push(box(26, 2, 34, '#e3dfd2', 57, DESK_TOP + 4, -33, 0, -0.08));
     pick = [170, 80, 120];
-  } else if (useKenney) {
-    const k = kenney[type];
-    body.push(k.geo.clone());
-    if (type === 'tv') {
-      glow.push(box(k.w * 0.9, k.h * 0.72, 0.8, '#4aa8ff', 0, k.h * 0.58, k.d / 2 + 0.2));
-      glow.push(box(k.w * 0.6, 3, 0.9, '#bfe3ff', 0, k.h * 0.85, k.d / 2 + 0.4));
-    }
-    pick = [Math.max(40, k.w + 10), Math.max(40, k.h + 10), Math.max(40, k.d + 10)];
   } else switch (type) {
     case 'monitor':
       body.push(cyl(11, 13, 3, '#2b3240', 0, 1.5, 0));
@@ -291,6 +210,51 @@ function buildModel(type, types) {
       }
       break;
     }
+    case 'bookcase': {
+      const FR = '#c8925c';
+      const IN = '#a8743f';
+      body.push(box(5, 172, 38, FR, -42.5, 86, 0), box(5, 172, 38, FR, 42.5, 86, 0), box(90, 6, 40, FR, 0, 172, 0), box(86, 8, 36, IN, 0, 5, 0), box(84, 162, 3, IN, 0, 86, -17));
+      const rnd = seeded(7);
+      const BOOK = ['#d9534f', '#4a7fd0', '#e8b84a', '#4fae7b', '#8a64c8', '#e07fa0', '#f2f2ee'];
+      for (const y of [34, 68, 102, 136]) {
+        body.push(box(82, 3.5, 34, FR, 0, y, 0));
+        let x = -37;
+        while (x < 32) {
+          const bw = 4 + rnd() * 4;
+          const bh = 17 + rnd() * 9;
+          body.push(box(bw, bh, 22, BOOK[Math.floor(rnd() * BOOK.length)], x + bw / 2, y + 1.8 + bh / 2, -3, 0, 0, (rnd() - 0.5) * 0.12));
+          x += bw + 0.6 + (rnd() < 0.18 ? 6 : 0);
+        }
+      }
+      pick = [100, 176, 50];
+      break;
+    }
+    case 'lamp':
+      body.push(cyl(13, 15, 4, '#3a4252', 0, 2, 0, 20), pill(1.7, 160, '#6b7585', 0, 84, 0), cyl(11, 17, 26, '#f6e6b4', 0, 170, 0, 22), cyl(11.6, 11.6, 1.5, '#e3cf94', 0, 183, 0, 22));
+      glow.push(ell(7, 7, 7, '#fff1b8', 0, 164, 0));
+      pick = [40, 205, 40];
+      break;
+    case 'trash':
+      body.push(cyl(13.5, 11, 52, '#8fa3a8', 0, 26, 0, 22), cyl(14.8, 14.8, 3.5, '#6c8187', 0, 53, 0, 22), cyl(11, 11, 1.5, '#2b3a3e', 0, 52, 0, 22));
+      pick = [40, 62, 40];
+      break;
+    case 'coatrack':
+      body.push(cyl(16, 18, 4, '#6b4a2c', 0, 2, 0, 22), pill(2.2, 124, '#8a5a30', 0, 66, 0));
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        body.push(pill(1.7, 12, '#8a5a30', Math.sin(a) * 8, 128, Math.cos(a) * 8, Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9), sph(2.7, '#c0392b', Math.sin(a) * 14, 134, Math.cos(a) * 14));
+      }
+      pick = [46, 150, 46];
+      break;
+    case 'fridge':
+      body.push(box(56, 76, 40, '#eef2f6', 0, 40, 0), box(55, 1.6, 1, '#b9c3cf', 0, 52, 20.2), pill(1.5, 14, '#8a8f99', 21, 66, 22.5), pill(1.5, 18, '#8a8f99', 21, 33, 22.5));
+      body.push(sph(2.5, '#8a8f99', -20, 1.5, 15), sph(2.5, '#8a8f99', 20, 1.5, 15));
+      pick = [64, 82, 48];
+      break;
+    case 'speaker':
+      body.push(box(24, 100, 22, '#a8743f', 0, 50, 0), box(20, 92, 2, '#2b3240', 0, 50, 11.2), ell(8.5, 8.5, 3, '#5f6b7d', 0, 34, 12), ell(5, 5, 3, '#5f6b7d', 0, 68, 12), ell(2.2, 2.2, 2, '#9aa6b8', 0, 34, 14), ell(1.6, 1.6, 2, '#9aa6b8', 0, 68, 14));
+      pick = [34, 106, 34];
+      break;
     case 'printer':
       body.push(box(64, 28, 46, '#cfd6e0', 0, 14, 0));
       body.push(box(60, 6, 40, '#b4bcc9', 0, 31, 0));
@@ -346,18 +310,12 @@ function buildModel(type, types) {
       glow.push(box(60, 4, 0.9, '#bfe3ff', 0, 90, 2.9));
       break;
     case 'toilet':
-      body.push(box(30, 26, 38, '#f2f5f8', 0, 13, 6));
-      body.push(cyl(17, 15, 6, '#e6ebf0', 0, 29, 7, 12));
-      body.push(box(32, 36, 14, '#e8edf3', 0, 36, -16));
-      body.push(box(34, 4, 16, '#cfd6e0', 0, 56, -16));
-      body.push(box(8, 3, 4, '#aab4c2', 0, 58, -16));
+      body.push(ell(14, 11, 19, '#f4f6f9', 0, 12, 6), ell(16.5, 5, 21.5, '#fbfcfd', 0, 24, 7), ell(11, 2.4, 16, '#cfe3f5', 0, 26.8, 7));
+      body.push(box(30, 34, 14, '#eef1f5', 0, 35, -16), box(32, 4, 16, '#e0e6ee', 0, 54, -16), pill(1.8, 4, '#aab4c2', 0, 57, -16, 0, 0, Math.PI / 2));
       break;
     case 'sink':
-      body.push(cyl(7, 9, 46, '#eef2f6', 0, 23, 0, 8));
-      body.push(box(46, 10, 36, '#f6f8fb', 0, 51, 0));
-      body.push(box(34, 2, 24, '#cfe3f5', 0, 56.5, 0));
-      body.push(box(4, 12, 4, '#aab4c2', 0, 62, -12));
-      body.push(box(4, 3, 10, '#aab4c2', 0, 68, -8));
+      body.push(cyl(7, 9, 44, '#eef2f6', 0, 22, 0, 18), ell(24, 9, 19, '#f8fafc', 0, 52, 0), ell(19, 1.4, 14, '#cfe3f5', 0, 58.5, 0));
+      body.push(pill(1.5, 10, '#aab4c2', 0, 64, -13), pill(1.3, 8, '#aab4c2', 0, 71, -9, Math.PI / 2));
       break;
     case 'safe':
       body.push(box(54, 62, 50, '#4b5262', 0, 31, 0));
@@ -388,45 +346,39 @@ function buildModel(type, types) {
 
 // ------------------------------------------------------- static scenery ----
 function deskGeometry() {
-  const g = [
-    box(170, 6, 70, '#9c7e5a', 0, DESK_TOP - 3, 0),
-    box(170, 2, 70, '#b08f66', 0, DESK_TOP - 0.5, 0),
-    box(6, 56, 66, '#7d6347', -80, 28, 0),
-    box(6, 56, 66, '#7d6347', 80, 28, 0),
-    box(160, 30, 4, '#7d6347', 0, 44, -31),
-    box(40, 40, 58, '#8b6f4e', -55, 36, 3),
-    box(36, 2, 12, '#222a38', -34, DESK_TOP + 1.5, 12), // keyboard
-    box(5, 2, 8, '#222a38', -8, DESK_TOP + 1.5, 12), // mouse
-    box(12, 1.5, 16, '#f3f1ea', 62, DESK_TOP + 1, 14), // paper
-    cyl(4.5, 4.5, 10, '#e4572e', 62, DESK_TOP + 5, 2, 10), // mug
-    box(10, 10, 0.5, '#ffd34d', 8, DESK_TOP + 5, -28), // sticky note
+  const DT = DESK_TOP;
+  const TOP = '#dcbc92';
+  const BODY = '#c29d72';
+  return [
+    box(158, 6, 76, TOP, 0, DT - 3, 0),
+    box(6, DT - 6, 70, BODY, -72, (DT - 6) / 2, 0),
+    box(6, DT - 6, 70, BODY, 72, (DT - 6) / 2, 0),
+    box(142, 30, 4, '#a98156', 0, DT - 24, -32),
+    box(38, 44, 64, BODY, 52, 28, 2),
+    pill(1.5, 14, '#8a8f99', 52, 38, 35, 0, 0, Math.PI / 2),
+    box(36, 2.6, 12, '#2f3646', -34, DT + 1.3, 16), // keyboard
+    ell(3.2, 1.8, 4.8, '#2f3646', -8, DT + 1, 16), // mouse
+    cyl(4.8, 4.4, 10, '#e4572e', 58, DT + 5, -34, 14), // mug
   ];
-  return g;
 }
 
-// Code-built versions of the big furniture, used when the Kenney file is missing. w/h = footprint.
+// Big furniture built from soft shapes. w/h = footprint.
 function furnitureFallback(type, w, h) {
   const DT = DESK_TOP;
   if (type === 'table') {
-    return [
-      box(w, 6, h, '#d9d2c5', 0, DT - 3, 0),
-      box(8, 56, 8, '#8a8f99', -w / 2 + 14, 28, -h / 2 + 14),
-      box(8, 56, 8, '#8a8f99', w / 2 - 14, 28, -h / 2 + 14),
-      box(8, 56, 8, '#8a8f99', -w / 2 + 14, 28, h / 2 - 14),
-      box(8, 56, 8, '#8a8f99', w / 2 - 14, 28, h / 2 - 14),
-      cyl(7, 7, 12, '#e4572e', -20, DT + 6, 6, 10),
-      cyl(5, 5, 8, '#f3f3f3', 40, DT + 4, -10, 10),
-    ];
+    const legs = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => pill(3.2, DT - 14, '#8a8f99', sx * (w / 2 - 16), (DT - 6) / 2, sz * (h / 2 - 14))));
+    return [box(w, 6, h, '#eadfc9', 0, DT - 3, 0), ...legs, cyl(5.5, 5, 9, '#e4572e', -30, DT + 4.5, 8, 14), cyl(4.5, 4.5, 7, '#f3f3f3', 40, DT + 3.5, -12, 14)];
   }
   if (type === 'conference') {
     return [
-      box(w, 8, h, '#6b4a30', 0, DT + 2, 0),
-      box(w - 14, 2, h - 14, '#7b5738', 0, DT + 7, 0),
-      box(30, 62, h - 50, '#3a2a1c', -w / 3, 31, 0),
-      box(30, 62, h - 50, '#3a2a1c', w / 3, 31, 0),
-      box(60, 3, 40, '#e9edf3', 0, DT + 9, 0),
-      cyl(5, 5, 9, '#ffffff', -150, DT + 11, 20, 10),
-      cyl(5, 5, 9, '#ffffff', 150, DT + 11, -20, 10),
+      box(w - 8, 8, h - 6, '#8a5a36', 0, DT - 4, 0),
+      box(w - 24, 2, h - 22, '#9a6a44', 0, DT + 0.5, 0),
+      box(26, DT - 8, h - 30, '#5a3a22', -w / 3, (DT - 8) / 2, 0),
+      box(26, DT - 8, h - 30, '#5a3a22', w / 3, (DT - 8) / 2, 0),
+      ell(14, 3, 9, '#eef0f4', 0, DT + 2.5, 0),
+      cyl(4.6, 4.2, 9, '#ffffff', -150, DT + 5, 20, 14),
+      cyl(4.6, 4.2, 9, '#ffffff', 150, DT + 5, -20, 14),
+      cyl(4.6, 4.2, 9, '#ffffff', 70, DT + 5, 24, 14),
     ];
   }
   // sofa: a rounded base, a big back, round arms and three puffy seat cushions
@@ -442,39 +394,6 @@ function furnitureFallback(type, w, h) {
     ...[-1, 1].map((sx) => cyl(3, 3, 8, '#5a4636', sx * (w / 2 - 16), 4, h / 2 - 14, 10)),
     ...[-1, 1].map((sx) => cyl(3, 3, 8, '#5a4636', sx * (w / 2 - 16), 4, -h / 2 + 14, 10)),
   ];
-}
-
-// Static furniture from the Kenney kit; null means "use the code-built version".
-function kenneyProp(p) {
-  const DT = DESK_TOP;
-  if (p.k === 'desk' && kenney.desk) {
-    const g = [kgeo('desk'), cyl(4.5, 4.5, 10, '#e4572e', 58, DT + 5, -34, 10)];
-    if (kenney.keyboard) g.push(kgeo('keyboard').translate(-32, DT, 18));
-    if (kenney.mouse) g.push(kgeo('mouse').translate(-4, DT, 18));
-    return g;
-  }
-  if (p.k === 'table' && kenney.table) {
-    const TH = kenney.table.h;
-    return [kgeo('table'), cyl(7, 7, 12, '#e4572e', -30, TH + 6, 8, 10), cyl(5, 5, 8, '#f3f3f3', 40, TH + 4, -12, 10)];
-  }
-  if (p.k === 'conference' && kenney.table) {
-    const TH = kenney.table.h;
-    return [
-      ...[-190, 0, 190].map((dx) => kgeo('table').translate(dx, 0, 0)),
-      box(60, 2, 40, '#e9edf3', 0, TH + 1, 0),
-      cyl(5, 5, 9, '#ffffff', -150, TH + 4.5, 20, 10),
-      cyl(5, 5, 9, '#ffffff', 150, TH + 4.5, -20, 10),
-    ];
-  }
-  if (p.k === 'sofa' && kenney.sofa) return [kgeo('sofa')];
-  if (p.k === 'rug' && kenney.rug) {
-    const g = kgeo('rug');
-    g.scale(p.w / KENNEY_WIDTH.rug, 1, p.h / kenney.rug.d);
-    const c = g.attributes.color; // the kit's salmon is loud next to the dark office; tone it down
-    for (let i = 0; i < c.array.length; i++) c.array[i] *= 0.55;
-    return [g];
-  }
-  return null;
 }
 
 function makeCanvasTexture(w, h, draw, repeatX = 1, repeatY = 1) {
@@ -639,14 +558,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     propList = props;
     for (const p of props) {
-      const kl = kenneyProp(p);
-      if (kl) {
-        if (p.rot) for (const g of kl) g.rotateY(p.rot);
-        addAll(kl, p.x, p.y);
-        continue;
-      }
-      if (p.k === 'desk') addAll(deskGeometry(), p.x, p.y);
-      else if (p.k === 'rug') {
+      if (p.k === 'rug') {
         addAll([
           sbox(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
           sbox(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
@@ -884,7 +796,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     staticGroup.add(clockMesh);
   }
 
-  const ready = Promise.all([loadKenney().catch(() => {}), loadFloorTextures()])
+  const ready = loadFloorTextures()
     .then(() => {
       loaded = true;
       if (pendingBuild) {

@@ -46,12 +46,11 @@ Phòng rộng 4800×3000, camera bám theo người chơi (bản đồ nhỏ ở
 
 Hình 3D gồm hai nguồn:
 
-- **Bộ Furniture Kit 2.0 của [Kenney](https://kenney.nl)** (CC0, dùng tự do, giấy phép nằm ở `public/assets/kenney/License.txt`): bàn, ghế xoay, màn hình, laptop, bàn phím, chuột, máy pha cà phê, cây, bàn, sofa, thảm. Chỉ chép những file `.glb` đang dùng (khoảng 140 KB). Mỗi file được gộp thành một mesh tô màu theo đỉnh, đặt chân xuống sàn và co giãn về kích thước mong muốn (`KENNEY_WIDTH` trong `scene3d.js`). Nếu một file không tải được thì game tự dùng bản dựng bằng code của món đó.
 - **Texture** (ambientCG, CC0, `public/assets/textures/`, ghi chú giấy phép trong `License.txt`): sàn gỗ, thảm, gạch và tấm kim loại, bản đồ màu và pháp tuyến 512 px (khoảng 0,7 MB), nhuộm màu trong `FLOOR_FILES` ở `scene3d.js`. Thiếu file thì dùng lại sàn vẽ bằng canvas như cũ.
 - **Nhân vật dựng bằng code** (`makePlayer` trong `scene3d.js`): thân "chibi" tròn làm từ hình cầu và viên nang, bốn kiểu tóc, mũ theo vai trò, sếp mặc vest xanh navy tóc bạc đội vương miện. Chuyển động cũng do code (thở, nhún, nghiêng, giãn co, vung búa), không dùng file model.
-- **Dựng bằng code** (khối hộp, trụ, cầu): thân hình dự phòng, máy in, bình nước, tủ server (Kenney không có), tường kính, đống đổ nát khi vỡ và các hiệu ứng.
+- **Mọi thứ còn lại dựng bằng code** (`public/scene3d.js`) từ khối hộp bo góc, hình elip, viên nang và trụ: đồ đạc, nhân vật, tường kính, mảnh vỡ và hiệu ứng. Không có file model nên không cần giấy phép hay tải gì. `box()` bo góc, `sbox()` giữ góc vuông (tường).
 
-Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` và `GLTFLoader.js` (thư mục `examples/jsm`) vào `public/vendor/`. Hai file sau import lẫn nhau, nên sửa dòng import trong `GLTFLoader.js` thành `./BufferGeometryUtils.js`.
+Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` (từ `examples/jsm/utils`) vào `public/vendor/`, và `RoundedBoxGeometry.js`, `RoomEnvironment.js` (từ `examples/jsm/geometries` và `examples/jsm/environments`) vào `public/vendor/jsm/` với cùng tên thư mục.
 
 Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, game tự giảm độ phân giải và bóng đổ trên màn hình cảm ứng.
 
@@ -153,7 +152,7 @@ lib/config.js        chọn store theo biến môi trường
 server.js            chạy local: file tĩnh + WebSocket ở /api/ws
 public/              index.html, style.css, game.js (mạng, input, HUD, âm thanh WebAudio),
                      scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn),
-                     assets/kenney/ (model .glb của Kenney, CC0)
+                     assets/textures/ (texture sàn, CC0)
 test/                world.js (bố cục, đường đi), smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
 vercel.json          thư mục tĩnh và maxDuration
 docs/                ARCHITECTURE.md (tiếng Anh) và ARCHITECTURE.vi.md: Redis làm gì, dọn dẹp, giới hạn
