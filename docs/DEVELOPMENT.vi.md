@@ -72,3 +72,5 @@ Geometry rig người chơi được cấp riêng; `ownedMaterials` chỉ chứa
 Xem [kết quả điều tra và kiểm tra máy thật](PERFORMANCE.vi.md), [ADR 0005](adr/0005-safe-mode-shadows.md). Capture/probe chẩn đoán ban đầu vẫn giữ local; regression test WebGL ở `test/renderer.cjs` đã nằm trong repo.
 
 Kiểm tra nhắc xoay màn hình bằng `npm run test:orientation` sau khi cài Chromium như trên (hỗ trợ `CHROMIUM_PATH`). Test giữ HTML/CSS, logic game/viewport và WebSocket thật, chỉ stub WebGL; kiểm tra reload trước khi vào phòng, auto-rejoin, ngắt kết nối và API xoay/toàn màn hình bị từ chối. Xem [Mobile](MOBILE.md#orientation-regression-checks).
+
+Kiểm tra vòng đời joystick bằng `npm run test:joystick` (Chromium/`CHROMIUM_PATH`). Test kết hợp touch thật trong Chromium và sự kiện bị mất được mô phỏng để kiểm tra hướng, giữ ngón, vừa đi vừa đánh, mất capture và focus chat. Đây không phải tái hiện chắc chắn lỗi Safari trên iPhone; xem [Mobile](MOBILE.md#joystick-recovery) và kiểm tra tiếp trên máy thật.

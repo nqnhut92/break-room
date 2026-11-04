@@ -40,3 +40,13 @@ The iPhone 17 Pro Max stutter report is still open. See [Performance](PERFORMANC
 ## Orientation regression checks
 
 `node test/viewport.js` checks native sizing and early prompt visibility. After installing Chromium with `npx playwright install chromium`, run `npm run test:orientation` (or set `CHROMIUM_PATH`). It uses real HTML/CSS, viewport/game logic and WebSockets while stubbing WebGL. Checks cover blocked game-module initialization, locked/unsupported fullscreen APIs, reload, auto-rejoin, inactivity disconnect, native landscape and desktop portrait. These browser checks do not simulate the actual iPhone OS rotation lock.
+
+## Joystick recovery
+
+Joystick ownership is a pointer id plus pointer type. Move/up/cancel are observed at window capture phase so a terminal event delivered outside the pad still clears movement. Native touchend/touchcancel provide a fallback when no touch originating on the pad remains, even if an attack finger is still down. A new primary touch can replace stale ownership; a secondary finger cannot steal a valid capture. Before movement, a pointer that no longer owns capture is returned to neutral. Capture/release failures also clear state, and a delayed lost-capture event is ignored if capture is currently active.
+
+There is no inactivity timeout on a stationary held thumb. Chat focus, window blur, rotation and visibility changes retain their existing reset paths. The iPhone report (a direction sometimes sticks until opening/closing chat) suggests stale input state but does not establish which native event Safari lost.
+
+Run `npm run test:joystick` with Chromium installed (or set `CHROMIUM_PATH`). The test uses native Chromium touch input, real game/UI/socket logic, and a stub renderer. It exercises direction changes, stationary holds, simultaneous attack, terminal events outside the pad, missing pointer-end fallbacks, delayed capture loss, capture/release exceptions, stale ids and chat recovery. Missing-event cases are fault injection, not a reproduction of the exact iPhone failure.
+
+On the actual iPhone, test repeated drags/lifts including off-pad release, joystick plus attack, opening/closing chat, app switching and native rotation. Releasing and touching the pad again should recover without opening chat; a continuously held thumb should not stop just because it stays still.

@@ -10,7 +10,8 @@
     "check:store": "node scripts/check-store.js",
     "test:redis": "bash scripts/test-with-redis.sh",
     "test:renderer": "node test/renderer.cjs",
-    "test:orientation": "node test/orientation.cjs"
+    "test:orientation": "node test/orientation.cjs",
+    "test:joystick": "node test/joystick.cjs"
   },
   "engines": {
     "node": ">=18"

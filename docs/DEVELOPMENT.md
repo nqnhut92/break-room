@@ -72,3 +72,5 @@ Player rig geometry is allocated per rig; `ownedMaterials` lists the private gro
 See [the investigation and hardware acceptance plan](PERFORMANCE.md), [ADR 0005](adr/0005-safe-mode-shadows.md). Original diagnostic probes/captures remain local; the WebGL regression test is distributed in `test/renderer.cjs`.
 
 Run `npm run test:orientation` after installing Chromium as above (or set `CHROMIUM_PATH`) to check the rotation prompt. This keeps real HTML/CSS, game/viewport logic and WebSockets, stubbing only WebGL; it covers pre-join reload, auto-rejoin, disconnects and rejected orientation/fullscreen APIs. See [Mobile](MOBILE.md#orientation-regression-checks).
+
+Run `npm run test:joystick` (Chromium/`CHROMIUM_PATH`) for joystick lifecycle checks. It combines native Chromium touch input with fault-injected missing events to check direction, held touches, simultaneous attack, capture loss and chat focus. This does not establish the exact Safari failure; see [Mobile](MOBILE.md#joystick-recovery) and repeat on hardware.

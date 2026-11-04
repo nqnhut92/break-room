@@ -125,7 +125,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     target: null,
     attackId: null,
     smashHeld: false,
-    joystick: { x: 0, y: 0, pointerId: null },
+    joystick: { x: 0, y: 0, pointerId: null, pointerType: null },
     skill: 'hammer',
     lastAir: 0,
     lastSend: 0,
@@ -1872,9 +1872,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const j = S.joystick, id = j.pointerId;
     j.x = j.y = 0;
     j.pointerId = null;
+    j.pointerType = null;
     $('joystickKnob').style.transform = '';
     $('joystick').classList.remove('active');
-    if (id !== null && $('joystick').hasPointerCapture(id)) $('joystick').releasePointerCapture(id);
+    // Clear our state first: capture may already have vanished during a native cancel.
+    try {
+      if (id !== null && $('joystick').hasPointerCapture(id)) $('joystick').releasePointerCapture(id);
+    } catch (err) { /* a stale native pointer must not prevent resetting the control */ }
   }
   async function requestLandscape() {
     if (!coarseUi) return;
@@ -1933,17 +1937,41 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   joystick.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || S.joystick.pointerId !== null) return;
-    S.joystick.pointerId = e.pointerId;
-    joystick.setPointerCapture(e.pointerId);
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    const j = S.joystick;
+    // A new primary touch starts a fresh gesture. A stale id must not lock out
+    // that gesture; a second thumb must not steal a still-captured joystick.
+    if (j.pointerId !== null && (!joystick.hasPointerCapture(j.pointerId) || (e.pointerType === 'touch' && e.isPrimary))) resetJoystick();
+    if (j.pointerId !== null) return;
+    try {
+      joystick.setPointerCapture(e.pointerId);
+    } catch (err) {
+      resetJoystick();
+      return;
+    }
+    j.pointerId = e.pointerId;
+    j.pointerType = e.pointerType;
     joystick.classList.add('active');
     moveJoystick(e);
   });
-  joystick.addEventListener('pointermove', moveJoystick);
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-    joystick.addEventListener(type, (e) => {
+  // Native cancellation can route terminal events away from the original element.
+  // Observe the owned pointer at window capture phase, wherever it is delivered.
+  window.addEventListener('pointermove', moveJoystick, { capture: true });
+  for (const type of ['pointerup', 'pointercancel']) {
+    window.addEventListener(type, e => {
       if (e.pointerId === S.joystick.pointerId) resetJoystick();
-    });
+    }, { capture: true });
+  }
+  joystick.addEventListener('lostpointercapture', e => {
+    // Ignore a delayed loss from an earlier gesture if a new capture is active.
+    if (e.pointerId === S.joystick.pointerId && !joystick.hasPointerCapture(e.pointerId)) resetJoystick();
+  });
+  for (const type of ['touchend', 'touchcancel']) {
+    window.addEventListener(type, e => {
+      if (S.joystick.pointerType !== 'touch' || !e.touches) return;
+      const stillHeld = Array.from(e.touches).some(t => t.target && joystick.contains(t.target));
+      if (!stillHeld) resetJoystick(); // fallback when Safari omits a pointer terminal event
+    }, { capture: true, passive: true });
   }
 
   // Two fingers on the canvas pinch to zoom (out as well as in); the zoom buttons do the same in steps.
@@ -2306,6 +2334,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       me.moving = false;
       return;
     }
+    // Recover even if capture disappeared without a lostpointercapture event.
+    if (S.joystick.pointerId !== null && !joystick.hasPointerCapture(S.joystick.pointerId)) resetJoystick();
     let dx = S.joystick.x;
     let dy = S.joystick.y;
     if (S.keys.has('l')) dx -= 1;
