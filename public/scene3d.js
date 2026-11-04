@@ -1198,12 +1198,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
 
     const legL = new THREE.Group();
-    legL.position.set(-8, 38, 0);
+    legL.position.set(boss ? 0 : -8, 38, 0); // the boss has one leg only, right under him
     legL.add(mk(legGeo()));
     const legR = new THREE.Group();
     legR.position.set(8, 38, 0);
     legR.add(mk(legGeo()));
-    g.add(legL, legR);
+    if (boss) g.add(legL);
+    else g.add(legL, legR); // VKL hops on a single leg
 
     // The model faces +z, towards the camera, so its own right hand is on the -x side (the viewer's left).
     // Arms have an elbow: an upper arm from the shoulder and a forearm with the hand, so the right arm can hold the
@@ -1335,7 +1336,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.mv = (rig.mv || 0) + ((p.moving ? 1 : 0) - (rig.mv || 0)) * Math.min(1, dt * 9);
     const mv = rig.mv;
     const idle = 1 - mv;
-    if (p.moving) rig.walk += dt * 11;
+    const isBoss = p.gender === 'boss';
+    if (p.moving) rig.walk += dt * (isBoss ? 6.5 : 11); // the boss lurches along slowly
     const wp = rig.walk;
     const sw = Math.sin(wp) * 1.0 * mv;
     const breathe = Math.sin(rig.t * 2.3) * idle;
@@ -1343,8 +1345,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.legR.rotation.x = -sw;
     rig.legL.position.y = 38 + Math.max(0, -Math.sin(wp)) * 3 * mv; // the stepping foot lifts
     rig.legR.position.y = 38 + Math.max(0, Math.sin(wp)) * 3 * mv;
-    const bob = Math.abs(Math.sin(wp)) * 5 * mv;
+    const bob = Math.abs(Math.sin(wp)) * (isBoss ? 13 : 5) * mv; // one leg: every step is a hop
     rig.root.position.y = bob;
+    if (isBoss) {
+      // limping: he rolls from side to side on the one leg and the body drifts with each hop
+      rig.root.rotation.z = Math.sin(wp) * 0.15 * mv;
+      rig.root.position.x = Math.sin(wp + 1.2) * 5 * mv;
+    }
     const sy = 1 + breathe * 0.018 + (0.5 - Math.abs(Math.sin(wp))) * 0.07 * mv; // squash and stretch
     rig.root.scale.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy));
     rig.torsoM.rotation.y = Math.sin(wp) * 0.2 * mv + Math.sin(rig.t * 0.9) * 0.03 * idle;
