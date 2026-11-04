@@ -1148,13 +1148,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.armR.rotation.x = a;
     if (rig.model) updateCharacter(rig, p, dt);
 
-    // knocked out: lie flat (the model's own wrapper tilts back; the blocky body tilts its trunk)
+    // knocked out: lie flat on one side. Sideways rather than backwards, because the camera looks from the south and
+    // a body lying north-south would just look like it is still standing.
     rig.lie += ((p.dead ? 1 : 0) - rig.lie) * Math.min(1, dt * 8);
     if (rig.lie > 0.001 || p.dead) {
       if (rig.model) {
-        rig.model.wrap.rotation.x = -1.5 * rig.lie;
+        rig.model.wrap.rotation.z = 1.55 * rig.lie;
         rig.model.wrap.position.y = 9 * rig.lie;
-      } else rig.root.rotation.x = -1.4 * rig.lie;
+        rig.model.wrap.position.x = -22 * rig.lie; // the body pivots about its feet: slide it so it lies where it fell
+      } else rig.root.rotation.z = 1.5 * rig.lie;
     }
     const hf = p.dead ? 0 : p.hpFrac == null ? 1 : p.hpFrac;
     if (Math.abs(hf - rig.lastHp) > 0.004) {

@@ -27,16 +27,18 @@ Redis  (single source of truth for each server's state)
 | `o` | hash | object id → `hp:brokenAt` (absent = full health) |
 | `sc` | hash | player id → score |
 | `bk` | hash | player id → number of objects broken |
-| `nm` | hash | player id → display name; field `g<id>` → gender (`m` or `f`), `r<id>` → role, `c<id>` → company name |
+| `nm` | hash | player id → display name; field `g<id>` → gender (`m` or `f`), `r<id>` → role, `c<id>` → company name, `h<id>` → `hp|storedAt|knockedOutUntil` |
 | `tok` | hash | client token → player id (lets a reconnect keep id and score) |
 | `meta` | hash | `nextid`, `total` damage, `lastReset` |
 | `on` | zset | player id → last heartbeat (ms); this is "who is online" |
 | `own` | hash | player id → id of the connection that owns the slot |
 | `pos` | hash | player id → last persisted `x,y,d` |
 
+The boss uses four more keys of the same room, each with the same expiry: `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: player id → damage dealt to the current boss), `blk` (the lease of the instance that runs the boss). They are not part of the nine-key set above; their scripts take only the keys they need. See [BOSS.md](BOSS.md).
+
 Per-IP connection leases (one zset per IP) and the `br:keepalive` health key live outside the room.
 
-**2. Atomic operations.** Join, leave, hit, housekeeping, snapshot and reset are single Lua scripts. Two players hitting one object from two instances break it exactly once and the score is credited once. Name checks happen inside the join script, so two players cannot claim one name at the same instant.
+**2. Atomic operations.** Join, leave, hit, housekeeping, snapshot, reset and the boss's hit, respawn and lease are single Lua scripts. Two players hitting one object from two instances break it exactly once and the score is credited once. Name checks happen inside the join script, so two players cannot claim one name at the same instant.
 
 **3. Pub/sub.** An instance that receives an action (smash, emote, chat, position, join/leave) publishes it on the room's channel; every instance holding players of that room forwards it to its own clients. Pub/sub is transient and costs no storage. Delivery is not guaranteed; clients resynchronise on their next join. When every player of a room is on one instance, positions stay in-process and are not published.
 

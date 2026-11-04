@@ -363,6 +363,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         m.players.forEach(addPlayer);
         S.objects = m.objects.map(makeObject);
         initBoss(m.boss);
+        const meNow = S.players.get(S.me);
+        $('downOverlay').hidden = !(meNow && meNow.dead); // refreshing while knocked out keeps the countdown
         S.target = null;
         S.attackId = null;
         if (scene) scene.build(m.world, m.props, m.zones);

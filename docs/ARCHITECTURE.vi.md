@@ -27,12 +27,14 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 | `o` | hash | id đồ vật → `hp:brokenAt` (không có = còn nguyên) |
 | `sc` | hash | id người chơi → điểm |
 | `bk` | hash | id người chơi → số món đã đập vỡ |
-| `nm` | hash | id người chơi → tên hiển thị; field `g<id>` → giới tính (`m` hoặc `f`) |
+| `nm` | hash | id người chơi → tên hiển thị; field `g<id>` → giới tính (`m` hoặc `f`), `r<id>` → vai trò, `c<id>` → tên công ty, `h<id>` → `máu|lúc lưu|ngất đến khi` |
 | `tok` | hash | token client → id người chơi (để reconnect giữ id và điểm) |
 | `meta` | hash | `nextid`, `total` thiệt hại, `lastReset` |
 | `on` | zset | id người chơi → nhịp tim cuối (ms); đây chính là "ai đang online" |
 | `own` | hash | id người chơi → id kết nối đang giữ chỗ |
 | `pos` | hash | id người chơi → vị trí đã lưu `x,y,d` |
+
+Sếp Tổng dùng thêm bốn key của cùng phòng (cùng hạn sống): `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: id người chơi → sát thương đã gây cho sếp hiện tại) và `blk` (hợp đồng của instance đang điều khiển sếp). Chúng không nằm trong bộ chín key ở trên; script của chúng chỉ nhận key cần dùng. Xem [BOSS.vi.md](BOSS.vi.md).
 
 Lease kết nối theo IP (mỗi IP một zset) và key `br:keepalive` của health check nằm ngoài phòng.
 
