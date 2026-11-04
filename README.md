@@ -25,8 +25,8 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 
 | Action | How |
 | --- | --- |
-| Move | WASD / arrow keys, or tap the floor |
-| Smash | Space (hold to keep smashing; with nothing in reach it still swings the hammer, for free), the SMASH! button, or tap an object (touch screens) |
+| Move | WASD / arrow keys, or the left joystick on touch screens |
+| Smash | Space (hold to keep smashing; with nothing in reach it still swings the hammer, for free), or the SMASH! button |
 | Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (or use the Skill button); the chosen one is in your hand (a hammer, a bubble tea cup, a stun gun) and the others see it. The milk tea throw reaches twice as far but does **half the damage** of a hammer hit, on objects and on the boss |
 | Call IT | I, or the Call IT button: replaces everything with new stuff (shared cooldown) |
 | Emoji | Shift + keys 1 to 8 or the emoji buttons |
@@ -36,7 +36,9 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 
 **Mana.** Every smash costs 5 mana out of 100 (the blue bar under your name). Mana comes back at 3/s at first and 12/s once you have gone 2 seconds without smashing (so the walk between two far-apart objects only gives a little back), so you can burst about 20 hits, then you need roughly 10 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
 
-On touch screens (and with a pen), tapping the floor walks there and tapping an object walks to it and smashes it once per tap (it stops if a desk or wall is in the way); hold the SMASH! button to keep smashing. With a mouse the canvas ignores clicks: use the keyboard.
+On touch screens, use the left joystick to move and hold the action button on the right to attack. Tapping the floor or an object does not move or attack. Pinching on the game zooms the camera; it does not zoom the page. With a mouse, use the keyboard.
+
+Phones can keep portrait orientation lock enabled: the game rotates its own view to landscape. If the browser actually rotates to landscape, the game removes its extra rotation. The native keyboard still follows the device orientation. In Safari, use Share → Add to Home Screen (enable Open as Web App if offered) to launch without browser toolbars. Existing Home Screen shortcuts may need to be removed and added again to pick up the app settings.
 
 ## VKL, the boss
 

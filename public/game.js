@@ -7,6 +7,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   const $ = (id) => document.getElementById(id);
   renderIcons();
+  const viewport = window.GameViewport;
 
   // The join button is only usable with a name, and not while a join is in flight.
   let joinBusy = false;
@@ -478,7 +479,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           S.welcomed = true;
           const hint = $('hint');
           const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-          if (touch) hint.textContent = 'Kéo núm trái để đi · chạm vào nền để đi · chạm vào đồ vật để đập · giữ nút ĐẬP! để đập liên tục';
+          if (touch) hint.textContent = 'Kéo núm trái để đi · giữ nút ĐẬP! để đập liên tục · chụm hai ngón để zoom';
           hint.classList.remove('fade'); // the hint stays on screen, kept subtle by its style
         }
         break;
@@ -1461,14 +1462,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       return;
     }
     const board = $('board');
-    const bottom = board ? board.getBoundingClientRect().bottom : 0;
+    const bottom = board ? viewport.rect(board).bottom : 0;
     mm.cv.style.top = Math.max(56, Math.round(bottom) + 8) + 'px';
   }
   // the side buttons sit in the top-right corner, right under the damage board
   function sidePlace() {
     const board = $('board');
     if (!board) return;
-    const top = Math.max(56, Math.round(board.getBoundingClientRect().bottom) + 8);
+    const top = Math.max(56, Math.round(viewport.rect(board).bottom) + 8);
     $('sideBtns').style.top = top + 'px';
   }
   setInterval(() => {
@@ -1491,10 +1492,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     const items = touch
       ? [
-          '<b>Kéo núm bên trái</b> để di chuyển. <b>Chạm vào nền</b> để đi tới đó, <b>chạm vào đồ vật</b> để đi tới và đập một cú.',
+          '<b>Kéo núm bên trái</b> để di chuyển. Đến gần mục tiêu rồi dùng nút ra đòn bên phải.',
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
           '<b>Bấm 💬</b> để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
-          '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
+          '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
+          'Có thể giữ khóa xoay và cầm máy ngang để chơi. Trong Safari, chọn <b>Chia sẻ → Thêm vào Màn hình chính</b> (bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
@@ -1736,7 +1738,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   window.addEventListener('keydown', (e) => {
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden) return;
     const k = e.key.toLowerCase();
     if (MOVE_KEYS[k]) {
       e.preventDefault();
@@ -1784,52 +1786,37 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     $('joystick').classList.remove('active');
     if (id !== null && $('joystick').hasPointerCapture(id)) $('joystick').releasePointerCapture(id);
   }
-  function mobilePortrait() {
-    return coarseUi && window.matchMedia('(orientation: portrait)').matches;
+  async function requestLandscape() {
+    if (!coarseUi) return;
+    // Native fullscreen is optional: CSS landscape also works when either API is denied.
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+    } catch (err) { /* continue with the browser viewport */ }
+    try {
+      await screen.orientation?.lock?.('landscape');
+    } catch (err) { /* the game rotates its own view instead */ }
   }
-  function syncOrientation() {
-    $('rotateOverlay').hidden = !mobilePortrait();
+  function resetControls() {
     resetJoystick();
     S.keys.clear();
     S.smashHeld = false;
     S.target = null;
     S.attackId = null;
+    fingers.clear();
+    pinchLast = 0;
   }
-  let lockingLandscape = false;
-  async function requestLandscape() {
-    if (!coarseUi || lockingLandscape) return;
-    lockingLandscape = true;
-    try {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      }
-      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
-    } catch (err) {
-      // Unsupported/denied: the portrait overlay still requires the phone to be turned.
-    } finally {
-      lockingLandscape = false;
-      syncOrientation();
-    }
-  }
-  $('landscapeBtn').addEventListener('click', requestLandscape);
-  window.addEventListener('resize', syncOrientation);
+  window.addEventListener('gameviewportchange', resetControls);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      resetJoystick();
-      S.keys.clear();
-      S.smashHeld = false;
-      S.target = null;
-      S.attackId = null;
-    }
+    if (document.hidden) resetControls();
   });
-  syncOrientation();
   const joystick = $('joystick');
   function moveJoystick(e) {
     if (e.pointerId !== S.joystick.pointerId) return;
-    const rect = joystick.getBoundingClientRect();
+    const rect = viewport.rect(joystick);
+    const point = viewport.point(e.clientX, e.clientY);
     const radius = rect.width * 0.3;
-    const dx = e.clientX - rect.left - rect.width / 2;
-    const dy = e.clientY - rect.top - rect.height / 2;
+    const dx = point.x - rect.left - rect.width / 2;
+    const dy = point.y - rect.top - rect.height / 2;
     const distance = Math.hypot(dx, dy);
     const scale = distance > radius ? radius / distance : 1;
     $('joystickKnob').style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
@@ -1841,7 +1828,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   joystick.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || S.joystick.pointerId !== null) return;
+    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden || S.joystick.pointerId !== null) return;
     S.joystick.pointerId = e.pointerId;
     joystick.setPointerCapture(e.pointerId);
     joystick.classList.add('active');
@@ -1864,7 +1851,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   canvas.addEventListener('pointermove', (e) => {
     if (!fingers.has(e.pointerId)) return;
     fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (fingers.size === 2 && scene) {
+    if (fingers.size === 2 && scene && !typing()) {
       const d = fingerDist();
       if (pinchLast > 0 && d > 0) scene.zoom(pinchLast / d - 1); // fingers apart: closer; together: further
       pinchLast = d;
@@ -1880,36 +1867,15 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   $('zoomOut').addEventListener('click', () => scene && scene.zoom(0.25));
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'touch') {
-      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (fingers.size >= 2) {
-        S.target = null; // a second finger means pinching, not walking
-        S.attackId = null;
-        pinchLast = fingerDist();
-        return;
-      }
-    }
-    if (!S.joined || !scene || mobilePortrait() || S.joystick.pointerId !== null) return;
-    // Tap-to-walk and tap-to-smash are for touch screens (and pens). With a mouse, play with the keyboard.
-    if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
-    const hit = scene.pick(e.clientX, e.clientY);
-    if (!hit) return;
-    if (hit.snakeId !== undefined) {
-      S.attackId = 's:' + hit.snakeId;
-      S.target = null;
-    } else if (hit.playerId !== undefined) {
-      S.attackId = 'p:' + hit.playerId;
-      S.target = null;
-    } else if (hit.objectId !== undefined) {
-      S.attackId = hit.objectId;
-      S.target = null;
-    } else if (S.boss && !S.boss.dead && Math.hypot(hit.x - S.boss.x, hit.y - S.boss.y) < 110) {
-      S.attackId = BOSS_TARGET; // tapping on the boss walks over and swings at it
-      S.target = null;
-    } else {
-      S.attackId = null;
-      S.target = { x: clamp(hit.x, 20, S.world.w - 20), y: clamp(hit.y, 20, S.world.h - 20) };
-    }
+    if (e.pointerType !== 'touch' || !S.joined || typing()) return;
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pinchLast = fingers.size === 2 ? fingerDist() : 0;
+  });
+  canvas.addEventListener('lostpointercapture', (e) => {
+    fingers.delete(e.pointerId);
+    pinchLast = 0;
   });
 
   canvas.addEventListener(
@@ -1924,7 +1890,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const smashBtn = $('smashBtn');
   smashBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || typing() || !exitEl.hidden || !updateEl.hidden) return;
     smashBtn.setPointerCapture(e.pointerId);
     S.smashHeld = true;
     tryHit(nearest());
@@ -2229,7 +2195,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       me.moving = false;
       return; // knocked out: no walking, no swinging until the server revives us
     }
-    if (mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) {
+    if (typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) {
       resetJoystick();
       me.moving = false;
       return;
@@ -2328,9 +2294,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // --------------------------------------------------------------- render ----
   function resize() {
-    if (scene) scene.resize(window.innerWidth, window.innerHeight);
+    if (scene) scene.resize(viewport.width, viewport.height);
   }
-  window.addEventListener('resize', resize);
+  window.addEventListener('gameviewportchange', resize);
   resize();
 
   // ----------------------------------------------------------------- loop ----

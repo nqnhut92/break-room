@@ -1,3 +1,39 @@
+/* Viewport variables also work on desktop, where the browser keeps its normal layout. */
+:root {
+  --game-vw: 1vw;
+  --game-vh: 1vh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+#app { position: fixed; inset: 0; }
+.mobile-landscape #app {
+  inset: auto;
+  left: 0;
+  top: 0;
+  width: var(--game-width);
+  height: var(--game-height);
+  transform-origin: 0 0;
+  transform: translate(var(--game-left), var(--game-top)) rotate(var(--game-rotation));
+  touch-action: pan-y;
+}
+.game-rotated {
+  --safe-top: env(safe-area-inset-right, 0px);
+  --safe-right: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: env(safe-area-inset-left, 0px);
+  --safe-left: env(safe-area-inset-top, 0px);
+}
+/* Only game gestures zoom the camera. Dialogs can still scroll normally. */
+@media (pointer: coarse) {
+  #app :is(button, input, select, textarea) { touch-action: pan-y; }
+  #app #joystick, #app #smashBtn { touch-action: none; }
+  #app :is(#overlay, #settingsDlg .card, #helpContent, #help ul, #rankList, #chatLog, .roomlist) {
+    touch-action: pan-y;
+  }
+  #nameInput, #roleSelect { font-size: 16px; }
+}
+
 :root {
   --bg: #0d1017;
   --panel: rgba(18, 22, 31, 0.82);
@@ -217,7 +253,7 @@ canvas {
    S.top in game.js), so it never covers the plants or the clock. */
 #topbar {
   position: fixed;
-  top: max(8px, env(safe-area-inset-top));
+  top: max(8px, var(--safe-top));
   left: 10px;
   right: 10px;
   display: flex;
@@ -271,7 +307,7 @@ canvas {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: max(10px, env(safe-area-inset-bottom));
+  bottom: max(10px, var(--safe-bottom));
   display: flex;
   justify-content: center;
   align-items: center;
@@ -371,14 +407,14 @@ canvas {
 #help li b { color: var(--accent-2); }
 /* The how-to-play list is long. On a phone the card fits the screen and only the list scrolls (the title and the button stay
    put); on a wide screen the dialog is stretched and the list runs in two columns, so nothing needs to scroll. */
-#help .card { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); }
+#help .card { max-height: calc(calc(100 * var(--game-vh)) - 32px); }
 @media (min-width: 900px) {
   #help .card { width: min(1000px, 100%); overflow-y: auto; }
   #help ul { display: block; column-count: 2; column-gap: 36px; overflow: visible; }
   #help li { break-inside: avoid; margin-bottom: 10px; }
 }
 
-#rankList { margin: 0; padding: 0; list-style: none; counter-reset: rank; display: flex; flex-direction: column; gap: 4px; max-height: min(60vh, 420px); overflow-y: auto; }
+#rankList { margin: 0; padding: 0; list-style: none; counter-reset: rank; display: flex; flex-direction: column; gap: 4px; max-height: min(calc(60 * var(--game-vh)), 420px); overflow-y: auto; }
 #rankList li { counter-increment: rank; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); font-size: 14px; }
 #rankList li::before { content: counter(rank); min-width: 22px; color: var(--muted); font-weight: 700; text-align: right; }
 #rankList li.me { background: rgba(255, 211, 77, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 211, 77, 0.45); }
@@ -396,7 +432,7 @@ canvas {
   bottom: 66px;
   transform: translateX(-50%);
   width: max-content;
-  max-width: calc(100vw - 24px);
+  max-width: calc(calc(100 * var(--game-vw)) - 24px);
   box-sizing: border-box;
   padding: 6px 14px;
   text-align: center;
@@ -422,7 +458,7 @@ canvas {
   flex-direction: column;
   gap: 6px;
   pointer-events: none;
-  max-width: min(360px, calc(100vw - 20px));
+  max-width: min(360px, calc(calc(100 * var(--game-vw)) - 20px));
 }
 #toasts { display: flex; flex-direction: column; gap: 6px; }
 /* one continuous frame, always there once you are in: the last messages scroll inside it */
@@ -430,7 +466,7 @@ canvas {
   list-style: none;
   margin: 0;
   padding: 6px 4px 6px 10px;
-  width: min(320px, calc(100vw - 20px));
+  width: min(320px, calc(calc(100 * var(--game-vw)) - 20px));
   height: 118px;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -487,7 +523,7 @@ canvas {
   /* on touch screens the box only appears when 💬 is tapped, over the bottom bar while the keyboard is up */
   #chatForm { display: none; }
   #bottombar #chatForm:not(.open) { display: none; }
-  #chatForm.open { display: flex; position: fixed; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 25; }
+  #chatForm.open { display: flex; position: fixed; left: 10px; right: 10px; bottom: max(10px, var(--safe-bottom)); z-index: 25; }
   #chatForm.open #chatInput { flex: 1; width: auto; font-size: 16px; }
 }
 .toast {
@@ -679,11 +715,11 @@ canvas {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 22vh;
+  padding-top: calc(22 * var(--game-vh));
   background: rgba(40, 6, 6, 0.38);
 }
 #downOverlay[hidden] { display: none; }
-.down-card { display: flex; flex-direction: column; gap: 6px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 20px; color: #fff; max-width: calc(100vw - 32px); }
+.down-card { display: flex; flex-direction: column; gap: 6px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 20px; color: #fff; max-width: calc(calc(100 * var(--game-vw)) - 32px); }
 .down-card b { font-size: 18px; }
 .down-card span { font-size: 14px; color: #d3dae6; }
 .down-card em { font-style: normal; font-weight: 800; color: var(--accent-2); }
@@ -695,29 +731,14 @@ canvas {
 .btn.drink { background: #1a7354; border-color: #7df3ba; color: #fff; font-weight: 800; box-shadow: 0 0 20px #7df3ba55; }
 
 #joystick { display: none; }
-#rotateOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: max(20px, env(safe-area-inset-top)) 20px;
-  background: var(--bg);
-  overflow-y: auto;
-}
-#rotateOverlay .card { text-align: center; margin: auto; }
-#rotateOverlay p { color: var(--muted); line-height: 1.5; }
-#rotateNote { font-size: 13px; }
-.rotate-icon { font-size: 56px; color: var(--accent-2); }
-
-@media (pointer: coarse) and (orientation: landscape) {
+@media (pointer: coarse) {
   #joystick {
     display: grid;
     place-items: center;
     position: fixed;
-    left: max(20px, env(safe-area-inset-left));
-    bottom: max(20px, env(safe-area-inset-bottom));
-    width: clamp(104px, 27vh, 136px);
+    left: max(20px, var(--safe-left));
+    bottom: max(20px, var(--safe-bottom));
+    width: clamp(104px, calc(27 * var(--game-vh)), 136px);
     aspect-ratio: 1;
     border: 2px solid rgba(255, 255, 255, 0.22);
     border-radius: 50%;
@@ -734,28 +755,28 @@ canvas {
     box-shadow: 0 3px 12px #0006;
     pointer-events: none;
   }
-  #topbar { left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); flex-wrap: nowrap; align-items: flex-start; }
+  #topbar { left: max(10px, var(--safe-left)); right: max(10px, var(--safe-right)); flex-wrap: nowrap; align-items: flex-start; }
   #topLeft { gap: 5px; flex-wrap: nowrap; }
   .wide-only, .pill.hp, #hint { display: none; }
   .narrow-only { display: inline; }
-  #board { width: auto; max-width: 45vw; padding: 4px 8px; font-size: 11px; }
+  #board { width: auto; max-width: calc(45 * var(--game-vw)); padding: 4px 8px; font-size: 11px; }
   #boardList { display: none; }
   .board-total { font-size: 14px; }
   .board-title { font-size: 10px; }
-  #bottombar { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); width: 110px; padding: 0; gap: 6px; justify-content: flex-end; }
+  #bottombar { left: auto; right: max(12px, var(--safe-right)); bottom: max(16px, var(--safe-bottom)); width: 110px; padding: 0; gap: 6px; justify-content: flex-end; }
   #bottombar .btn { min-height: 44px; padding: 8px 10px; font-size: 12px; }
   #bottombar #smashBtn { width: 90px; min-height: 58px; font-size: 18px; }
-  #mobileBottomControls { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 8px; width: min(340px, calc(100vw - 320px)); }
+  #mobileBottomControls { position: fixed; left: 50%; bottom: max(16px, var(--safe-bottom)); transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 8px; width: min(340px, calc(calc(100 * var(--game-vw)) - 320px)); }
   #mobileBottomControls .btn { min-height: 48px; padding: 8px 10px; font-size: 12px; touch-action: manipulation; }
   #mobileBottomControls #skillBtn { flex: 1; min-width: 0; }
   #mobileBottomControls #chatBtn { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; }
   #emotes { width: 100%; overflow-x: auto; }
   #emotes button { flex: 0 0 36px; min-height: 36px; padding: 3px; }
-  #sideBtns { right: max(12px, env(safe-area-inset-right)); flex-direction: row; gap: 4px; }
+  #sideBtns { right: max(12px, var(--safe-right)); flex-direction: row; gap: 4px; }
   #sideBtns .btn { width: 36px; height: 36px; font-size: 18px; }
   #zoomBtns { flex-direction: row; gap: 4px; }
-  #minimap { left: max(10px, env(safe-area-inset-left)); width: 112px; height: 70px; }
-  #leftCol { left: max(10px, env(safe-area-inset-left)); bottom: max(164px, calc(env(safe-area-inset-bottom) + 148px)); max-width: 220px; }
+  #minimap { left: max(10px, var(--safe-left)); width: 112px; height: 70px; }
+  #leftCol { left: max(10px, var(--safe-left)); bottom: max(164px, calc(var(--safe-bottom) + 148px)); max-width: 220px; }
   #chatLog { width: 220px; height: 58px; }
   #toasts { gap: 3px; }
   .toast { padding: 4px 8px; font-size: 11px; }
@@ -763,14 +784,14 @@ canvas {
 
 /* Keep the help heading and close action in view; only the instructions scroll. */
 #help { overflow: hidden; }
-#help .card { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); min-height: 0; overflow: hidden; }
+#help .card { max-height: calc(calc(100 * var(--game-vh)) - 32px); min-height: 0; overflow: hidden; }
 #helpTitle { flex: 0 0 auto; margin: 0; }
 #helpContent { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-right: 8px; }
 #helpClose { flex: 0 0 auto; }
-#duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: min(440px, 65vw); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: auto; }
-@media (pointer: coarse) and (orientation: landscape) {
+#duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: min(440px, calc(65 * var(--game-vw))); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: auto; }
+@media (pointer: coarse) {
   #help .card { padding: 16px; gap: 10px; }
-  #duelBanner { top: 56px; max-width: 42vw; padding: 5px 10px; font-size: 12px; }
+  #duelBanner { top: 56px; max-width: calc(42 * var(--game-vw)); padding: 5px 10px; font-size: 12px; }
 }
 
 #duelApologyHint { display: block; margin-top: 8px; font-size: 12px; line-height: 1.4; }
@@ -784,7 +805,7 @@ canvas {
 #sideTools { display: flex; flex-direction: column; gap: 8px; }
 #settingsDlg { position: fixed; inset: 0; z-index: 29; display: flex; padding: 12px; background: rgba(6, 8, 12, 0.72); overflow-y: auto; }
 #settingsDlg[hidden] { display: none; }
-#settingsDlg .card { margin: auto; width: min(480px, 100%); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+#settingsDlg .card { margin: auto; width: min(480px, 100%); max-height: calc(calc(100 * var(--game-vh)) - 24px); overflow-y: auto; overscroll-behavior: contain; }
 .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .settings-head h2 { margin: 0; font-size: 18px; }
 #settingsClose { min-width: 44px; min-height: 44px; }

@@ -121,7 +121,7 @@ step('stamp-assets puts one version on every module URL and can run twice', () =
   run('bbb222');
   const read = (f) => fs.readFileSync(path.join(tmp, f), 'utf8');
   const html = read('index.html');
-  for (const f of ['game.js', 'scene3d.js', 'style.css']) assert.ok(html.includes(f + '?v=bbb222'), f + ' stamped in index.html');
+  for (const f of ['game.js', 'scene3d.js', 'viewport.js', 'style.css']) assert.ok(html.includes(f + '?v=bbb222'), f + ' stamped in index.html');
   assert.ok(!/aaa111/.test(html + read('game.js') + read('scene3d.js')), 'the old stamp is replaced, not stacked');
   assert.ok(read('game.js').includes("from './scene3d.js?v=bbb222'") && read('game.js').includes("from './roles.js?v=bbb222'"));
   assert.ok(read('scene3d.js').includes("from './roles.js?v=bbb222'"), 'scene3d and game.js import roles.js by the same URL');

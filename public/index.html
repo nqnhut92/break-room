@@ -9,7 +9,12 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Break Room">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="style.css">
   <!-- the import map must come before any module or modulepreload that imports "three" -->
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
@@ -42,6 +47,7 @@
   </script>
 </head>
 <body>
+  <div id="app">
   <canvas id="c"></canvas>
   <div id="labels"></div>
 
@@ -189,22 +195,14 @@
     </form>
   </div>
 
-  <div id="rotateOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rotateTitle">
-    <div class="card">
-      <span class="rotate-icon" data-icon="rotate-ccw"></span>
-      <h2 id="rotateTitle">Xoay ngang điện thoại</h2>
-      <p>Chơi ở màn hình ngang để di chuyển bằng núm bên trái và đập bằng tay phải.</p>
-      <button id="landscapeBtn" class="btn smash" type="button">Chơi toàn màn hình</button>
-      <p id="rotateNote">Nếu màn hình chưa xoay, hãy tắt khóa xoay và xoay ngang điện thoại.</p>
-    </div>
-  </div>
-
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
   <div id="leftCol">
     <div id="toasts" aria-live="polite"></div>
     <ol id="chatLog" aria-label="Tin nhắn trong phòng" hidden></ol>
   </div>
 
+  </div>
+  <script src="viewport.js"></script>
   <script type="module" src="game.js"></script>
 </body>
 </html>
