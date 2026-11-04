@@ -963,6 +963,26 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     syncMapBtn();
   });
   syncMapBtn();
+  // graphics quality: high (bloom) by default on desktop, low on touch devices; the choice is remembered
+  {
+    const coarseGfx = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    let q = coarseGfx ? 'low' : 'high';
+    try {
+      q = localStorage.getItem('br-gfx') || q;
+    } catch (e) { /* ignore */ }
+    const applyGfx = () => {
+      $('gfxBtn').setAttribute('aria-pressed', String(q === 'high'));
+      if (scene && scene.setQuality) scene.setQuality(q);
+    };
+    $('gfxBtn').addEventListener('click', () => {
+      q = q === 'high' ? 'low' : 'high';
+      try {
+        localStorage.setItem('br-gfx', q);
+      } catch (e) { /* ignore */ }
+      applyGfx();
+    });
+    applyGfx();
+  }
   // the static part: floor zones and walls/furniture, drawn once per welcome into an offscreen canvas
   function mmBuild(world, props, zones) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);

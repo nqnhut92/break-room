@@ -58,6 +58,21 @@ const merge = (list) => {
   return mergeGeometries(flat, false);
 };
 
+// Cheap baked ambient occlusion: vertex colours fade darker towards the floor, so every piece of furniture
+// gets a soft contact shadow where it meets the ground, for free at runtime.
+function bakeAO(geo) {
+  if (!geo) return geo;
+  const pos = geo.attributes.position;
+  const col = geo.attributes.color;
+  if (!col) return geo;
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, Math.max(0, pos.getY(i) / 46));
+    const k = 0.7 + 0.3 * t * t * (3 - 2 * t);
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * k);
+  }
+  return geo;
+}
+
 function seeded(seed) {
   let s = (Math.abs(seed) % 2147483646) + 1;
   return () => {
@@ -197,6 +212,11 @@ function buildModel(type, types) {
   const useKenney = kenney[type] && ['monitor', 'laptop', 'chair', 'coffee', 'plant'].includes(type);
   if (type === 'desk') {
     for (const g of kenneyProp({ k: 'desk' }) || deskGeometry()) body.push(g);
+    // a mug and a stack of paper so the desks do not look empty
+    body.push(cyl(6, 5.5, 11, '#f2f2ee', -60, DESK_TOP + 5.5, 24, 12));
+    body.push(cyl(4.6, 4.6, 1, '#4b2e1d', -60, DESK_TOP + 10.6, 24, 12));
+    body.push(box(26, 3, 34, '#f4f1e8', 58, DESK_TOP + 1.5, -34, 0, 0.12));
+    body.push(box(26, 2, 34, '#e3dfd2', 57, DESK_TOP + 4, -33, 0, -0.08));
     pick = [170, 80, 120];
   } else if (useKenney) {
     const k = kenney[type];
@@ -320,7 +340,7 @@ function buildModel(type, types) {
         (rnd() - 0.5) * 1.2, rnd() * 3, (rnd() - 0.5) * 1.2),
     );
   }
-  return { body: merge(body), glow: merge(glow), wreck: merge(wreck), pick };
+  return { body: bakeAO(merge(body)), glow: merge(glow), wreck: bakeAO(merge(wreck)), pick };
 }
 
 // ------------------------------------------------------- static scenery ----
@@ -460,6 +480,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
 
   const scene = new THREE.Scene();
   const BG = 0x0d1017;
@@ -472,8 +494,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const cam = { x: 0, z: 0, dist: 820, pitch: 0.97, ready: false };
   let shadowR = 900;
 
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x59606e, 1.05));
-  const sun = new THREE.DirectionalLight(0xfff0d8, 1.7);
+  scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x6a5f58, 1.0));
+  // a cool fill from the opposite side (no shadows) so the shaded faces keep some colour
+  const fill = new THREE.DirectionalLight(0x8fb4ff, 0.45);
+  fill.position.set(900, 700, -600);
+  scene.add(fill);
+  const sun = new THREE.DirectionalLight(0xffe6c4, 1.9);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
   const sc = sun.shadow.camera;
@@ -636,7 +662,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     for (const b of buckets.values()) {
       const parts = [
-        [merge(b.body), bodyMat, true],
+        [bakeAO(merge(b.body)), bodyMat, true],
         [merge(b.glow), glowMat, false],
         [merge(b.glass), glassMat, false],
       ];
@@ -685,6 +711,62 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       mat.rotation.x = -Math.PI / 2;
       mat.position.set((m.x0 + m.x1) / 2, 0.8, (m.y0 + m.y1) / 2);
       staticGroup.add(mat);
+    }
+
+    // sunlight from the north windows falling on the floor, and posters between the windows
+    {
+      const pool = makeCanvasTexture(128, 128, (ctx, w, h) => {
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, 'rgba(255,236,190,.5)');
+        g.addColorStop(1, 'rgba(255,236,190,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+        // feather the left and right edges so the patch has no hard border
+        ctx.globalCompositeOperation = 'destination-in';
+        const e = ctx.createLinearGradient(0, 0, w, 0);
+        e.addColorStop(0, 'rgba(0,0,0,0)');
+        e.addColorStop(0.3, 'rgba(0,0,0,1)');
+        e.addColorStop(0.7, 'rgba(0,0,0,1)');
+        e.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = e;
+        ctx.fillRect(0, 0, w, h);
+      });
+      const poolMat = new THREE.MeshBasicMaterial({ map: pool, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.4 });
+      const posters = [
+        ['DEADLINE', 'LÀ HÔM NAY', '#c0392b'],
+        ['KPI', '▂▃▅▇ +120%', '#2d7d5a'],
+        ['TEAM', 'WORK ♥', '#2f5f9e'],
+        ['HỌP', 'LÚC 8:00', '#8a5a1f'],
+      ];
+      let n = 0;
+      for (let x = 220; x < W; x += 480) {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(250, 330), poolMat);
+        m.rotation.x = -Math.PI / 2;
+        m.position.set(x, 0.9, 175);
+        m.renderOrder = 1;
+        staticGroup.add(m);
+        const [t1, t2, col] = posters[n++ % posters.length];
+        const tex = makeCanvasTexture(128, 176, (ctx, w, h) => {
+          ctx.fillStyle = '#f3efe4';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = col;
+          ctx.fillRect(8, 8, w - 16, 70);
+          ctx.fillStyle = '#fff';
+          ctx.font = '800 30px ' + UI_FONT;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(t1, w / 2, 44);
+          ctx.fillStyle = '#2b3240';
+          ctx.font = '700 17px ' + UI_FONT;
+          ctx.fillText(t2, w / 2, 112);
+          ctx.fillRect(24, 140, w - 48, 4);
+          ctx.fillRect(24, 152, w - 70, 4);
+        });
+        const poster = new THREE.Mesh(new THREE.PlaneGeometry(76, 104), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+        poster.position.set(x + 240, 160, 1.5);
+        poster.receiveShadow = true;
+        staticGroup.add(poster);
+      }
     }
 
     // wall sign and clock
@@ -1558,7 +1640,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     updateBoss(dt, S);
 
     updateParticles(dt);
-    renderer.render(scene, camera);
+    if (composer) composer.render();
+    else renderer.render(scene, camera);
 
     // DOM overlays (after render so the camera matrices are current)
     updateHealthBars(S);
@@ -1608,10 +1691,44 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return null;
   }
 
+  // ---- quality: 'high' adds bloom (glowing screens) through a post-processing chain, 'low' renders directly ----
+  let composer = null;
+  let quality = 'low';
+  let postLoad = null;
+  async function setQuality(q) {
+    quality = q === 'high' ? 'high' : 'low';
+    glowMat.color.setScalar(quality === 'high' ? 1.9 : 1); // HDR values are what the bloom picks up
+    if (quality === 'low') {
+      composer = null;
+      return;
+    }
+    try {
+      postLoad = postLoad || Promise.all([
+        import('./vendor/jsm/postprocessing/EffectComposer.js'),
+        import('./vendor/jsm/postprocessing/RenderPass.js'),
+        import('./vendor/jsm/postprocessing/UnrealBloomPass.js'),
+        import('./vendor/jsm/postprocessing/OutputPass.js'),
+      ]);
+      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await postLoad;
+      if (quality !== 'high') return; // switched back while loading
+      const target = new THREE.WebGLRenderTarget(W || 800, H || 600, { type: THREE.HalfFloatType, samples: 4 });
+      const c = new EffectComposer(renderer, target);
+      c.setPixelRatio(renderer.getPixelRatio());
+      c.setSize(W || 800, H || 600);
+      c.addPass(new RenderPass(scene, camera));
+      c.addPass(new UnrealBloomPass(new THREE.Vector2((W || 800) / 2, (H || 600) / 2), 0.35, 0.5, 0.9));
+      c.addPass(new OutputPass());
+      composer = c;
+    } catch (e) {
+      composer = null; // keep the plain renderer if anything fails to load
+    }
+  }
+
   function resize(w, h) {
     W = w;
     H = h;
     renderer.setSize(w, h, false);
+    if (composer) composer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
@@ -1632,7 +1749,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, zoom, zoomLimits, cameraTo, ready,
+    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
     fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
