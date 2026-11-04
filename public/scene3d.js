@@ -945,6 +945,25 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     else if (o.rot) group.rotation.y = o.rot + CHAIR_FRONT;
   }
 
+  // A soft additive halo over lit screens: a cheap "bloom" made of sprites, so there is no post-processing chain to
+  // flicker. One shared material; it is hidden when the screen is smashed.
+  const HALO = { monitor: [24, 80, 0.45], laptop: [22, 80, 0.4], tv: [40, 170, 0.5] }; // [height of the screen centre, size, opacity]
+  let haloMat = null;
+  function makeHalo(type) {
+    const h = HALO[type];
+    if (!h) return null;
+    if (!haloMat) {
+      const tex = makeCanvasTexture(128, 128, (ctx, w, hh) => soft(ctx, w, hh, [[0, 'rgba(120,190,255,1)'], [0.35, 'rgba(90,160,255,.45)'], [1, 'rgba(60,120,255,0)']]));
+      haloMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 1 });
+    }
+    const sp = new THREE.Sprite(haloMat.clone());
+    sp.material.opacity = h[2];
+    sp.scale.set(h[1], h[1] * 0.7, 1);
+    sp.position.set(0, h[0], 8);
+    sp.raycast = () => {}; // never picked: it must not block clicks on the object
+    return sp;
+  }
+
   function objectRig(o, types, all) {
     let rig = rigs.get(o.id);
     if (rig) return rig;
@@ -976,8 +995,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     proxies.push(proxy);
     if (o.type === 'chair') faceNearestFurniture(group, o, types, all);
     else if (o.rot) group.rotation.y = o.rot;
+    const halo = makeHalo(o.type);
+    if (halo) group.add(halo);
     scene.add(group);
-    rig = { group, body, glow, wreck, mat, proxy, o, popPrev: 0, shown: null };
+    rig = { group, body, glow, halo, wreck, mat, proxy, o, popPrev: 0, shown: null };
     rigs.set(o.id, rig);
     return rig;
   }
@@ -1635,6 +1656,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig.shown = o.broken;
         rig.body.visible = !o.broken;
         if (rig.glow) rig.glow.visible = !o.broken;
+        if (rig.halo) rig.halo.visible = !o.broken;
         rig.wreck.visible = o.broken;
         rig.proxy.userData.broken = o.broken;
       }
