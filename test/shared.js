@@ -381,7 +381,10 @@ async function contract(label, makeStore) {
 async function twoInstances(url) {
   const quiet = () => {};
   const mk = () =>
-    server.createApp({ store: createRedisStore(url, { log: quiet }), presenceTtlMs: 2500, log: quiet });
+    server.createApp({
+      store: createRedisStore(url, { log: quiet }), presenceTtlMs: 2500, log: quiet,
+      bossMaxHp: 60, bossRespawnMs: 1500, playerRespawnMs: 1500, // a tiny boss for the boss step below
+    });
   const app1 = mk();
   const app2 = mk();
   // spawn next to the pantry so the walk-and-hit steps are short
@@ -540,6 +543,45 @@ async function twoInstances(url) {
     assert.strictEqual(code, 1013);
     socks.forEach((s) => s.close());
     await sleep(500);
+  });
+
+  await step('redis: one boss per room across two instances: a punch hurts players on both, both can hit it, one bounty', async () => {
+    const r = room + '-boss';
+    world.WORLD.spawn = { x: 3300, y: 1640, rx: 0, ry: 0 };
+    const A = await h.client(p1, 'An', r);
+    const B = await h.client(p2, 'Binh', r);
+    const winds = [];
+    for (const c of [A, B]) c.ws.on('message', (d) => { if (JSON.parse(d.toString()).t === 'bwind') winds.push(Date.now()); });
+    // the same strike hurts each player on their own instance, and each sees the other's health change
+    await take(A, (m) => m.t === 'bstrike', 8000);
+    await take(A, (m) => (m.t === 'hp' || m.t === 'down') && m.id === A.id, 3000);
+    await take(A, (m) => (m.t === 'hp' || m.t === 'down') && m.id === B.id, 3000);
+    await take(B, (m) => (m.t === 'hp' || m.t === 'down') && m.id === B.id, 3000);
+    // only one instance runs the boss: windups are never closer together than a windup plus a recovery
+    await sleep(3500);
+    assert.ok(winds.length >= 2, 'it kept fighting: ' + winds.length);
+    const sorted = winds.slice().sort((x, y) => x - y);
+    for (let i = 1; i < sorted.length; i++) {
+      // each client hears each windup once; the same one twice (A and B) is less than 200 ms apart
+      if (sorted[i] - sorted[i - 1] > 200) assert.ok(sorted[i] - sorted[i - 1] >= 1000, 'two runners? windups ' + (sorted[i] - sorted[i - 1]) + 'ms apart');
+    }
+    // players from both instances hit it; it falls exactly once and the bounty is shared
+    let dead = null;
+    for (let i = 0; i < 50 && !dead; i++) {
+      send(A, { t: 'bhit' });
+      send(B, { t: 'bhit' });
+      await sleep(200);
+      dead = A.msgs.find((m) => m.t === 'bdead') || null;
+    }
+    dead = dead || (await take(A, (m) => m.t === 'bdead', 3000));
+    await sleep(500);
+    for (const c of [A, B]) assert.strictEqual(c.msgs.filter((m) => m.t === 'bdead').length, 1, 'one kill, heard once by ' + c.name);
+    assert.ok(Math.abs(dead.shares.reduce((n, s) => n + s.bounty, 0) - 500) < 0.2);
+    const last = A.msgs.filter((m) => m.t === 'board').pop();
+    assert.strictEqual(last.total, 500, 'the bounty is paid once, not once per instance');
+    await take(B, (m) => m.t === 'bup', 6000);
+    closeAll(A, B);
+    await sleep(300);
   });
 
   await step('redis: if an instance dies without cleaning up, the others drop its players', async () => {
