@@ -1236,8 +1236,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
-      'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc <b>Q / E</b> để lướt qua, hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
-      'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',
+      'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
+      'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> (phím <b>I</b>) để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
     $('helpList').innerHTML = items.map((t) => '<li>' + t + '</li>').join('');
@@ -1381,8 +1381,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if ((k === 'enter' || k === '/') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault(); // so the / is not typed into the box that is about to get focus
       chatOpen();
-    } else if ((k === 'q' || k === 'e') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      setSkill(skillIndex() + (k === 'e' ? 1 : -1));
+    } else if (k === 'i' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      $('resetBtn').click(); // call IT (replace everything with new stuff): the same as the button, with the same cooldown
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
     } else if (/^(Digit|Numpad)[1-9]$/.test(e.code) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1479,7 +1479,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     })
   );
 
-  // skills: the button cycles forward; on a keyboard Q goes to the previous skill and E to the next one
+  // skills: the button cycles forward; on a keyboard the keys 1, 2, 3 pick one directly
   const skillIndex = () => SKILLS.findIndex((s) => s.id === S.skill);
   function setSkill(i) {
     const next = SKILLS[(i + SKILLS.length) % SKILLS.length];

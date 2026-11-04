@@ -27,7 +27,8 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | --- | --- |
 | Move | WASD / arrow keys, or tap the floor |
 | Smash | Space (hold to keep smashing; with nothing in reach it still swings the hammer, for free), the SMASH! button, or tap an object (touch screens) |
-| Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (Q / E cycle through them, or use the Skill button) |
+| Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (or use the Skill button) |
+| Call IT | I, or the Call IT button: replaces everything with new stuff (shared cooldown) |
 | Emoji | Shift + keys 1 to 8 or the emoji buttons |
 | Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a phone it fades after 3 seconds |
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
