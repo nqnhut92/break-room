@@ -7,7 +7,7 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **Sếp VKL**, đi tuần t
 ## Cách chơi
 
 - Sếp đi một vòng trong phòng server. Khi có người **ở trong phòng** (hoặc đứng ở khoảng sân ngay trước cửa) sếp chạy lại người gần nhất, giơ nắm đấm lên (0,7 giây, **vòng đỏ** dưới sàn báo chỗ nắm đấm sẽ rơi) rồi đấm. Ai đang trong vòng lúc nắm đấm rơi thì mất 30 máu. Chạy ra khỏi vòng kịp lúc là né được.
-- Người chơi có 100 máu (thanh máu trên đầu khi bị thương, và một ô ở thanh trên cùng). Bốn cú đấm là gục. Nằm **một phút**, vẫn chat được, rồi hồi sinh ở **sảnh**, không bao giờ hồi sinh ngay chỗ ngã.
+- Người chơi có 100 máu (thanh máu trên đầu khi bị thương, và một ô ở thanh trên cùng). Bốn cú đấm là gục. Nằm **15 giây**, vẫn chat được, rồi hồi sinh ở **sảnh**, không bao giờ hồi sinh ngay chỗ ngã.
 - Máu hồi chậm: 4 giây đầu sau cú đấm không hồi gì, sau đó 5 máu mỗi giây (đầy lại khoảng 24 giây sau cú cuối). Ra khỏi phòng chờ một chút là lựa chọn thật sự.
 - Sếp có 3.600 máu, một cú búa gây 10 (tức 360 cú) và sếp tự hồi máu (xem bảng). **Một hay hai người không hạ nổi, khoảng năm người hạ trong hai phút, đông người cũng không dễ.**
 - Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 3 đến 5 phút sau (ngẫu nhiên) sếp quay lại chỗ cũ với đầy máu.
@@ -25,7 +25,7 @@ Tất cả nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js), 
 | Máu sếp | 3.600, mỗi cú búa 10 | Chỉnh theo mô phỏng bên dưới. |
 | Hồi máu sếp | luôn 5/giây, thêm 20/giây sau 5 giây không bị đánh | Xem "Vì sao sếp tự hồi máu". |
 | Hồi máu người chơi | 5/giây sau 4 giây | Vừa phải: không "không bao giờ", không "ngay lập tức". |
-| Người chơi hồi sinh | 60 giây, ở sảnh | Theo yêu cầu. |
+| Người chơi hồi sinh | 15 giây, ở sảnh | Trước là 60 giây; người chơi thấy một phút là quá lâu. |
 | Sếp hồi sinh | ngẫu nhiên 3 đến 5 phút | Theo yêu cầu. |
 | Tiền thưởng | 500 triệu, chia theo sát thương | Xem "Vì sao chia theo sát thương". |
 | Tầm búa | 150 tính từ giữa người sếp, và không bị vật cản | Sếp to; tường và tủ chắn được cú đập. |
@@ -98,6 +98,6 @@ Test: `test/boss.js` (luật, cân bằng), `test/boss-net.js` (cả một trậ
 ## Giới hạn đã biết và ý tưởng
 
 - Người bỏ danh tính cũ sẽ có đầy máu. Chấp nhận được với game này; bước sau là thời gian chờ theo IP.
-- Ai đứng yên trong phòng server là mục tiêu dễ: bị gục và chờ một phút.
+- Ai đứng yên trong phòng server là mục tiêu dễ: bị gục và chờ 15 giây.
 - Chưa có đẩy lùi: cú đấm chỉ gây sát thương và rung màn hình. Thêm thì server phải dời người chơi và báo client.
 - Chưa có bảng riêng cho số lần hạ sếp; tiền thưởng vào bảng thiệt hại chung.

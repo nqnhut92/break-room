@@ -7,7 +7,7 @@ Every server (BR-1, BR-2) has one boss, **Sếp VKL**, who patrols the server ro
 ## How it plays
 
 - The boss walks a loop inside the server room. When a player is **inside the room** (or standing in the doorway apron) it runs at the nearest one, raises its fist (0.7 s, a **red circle** on the floor shows where it will land) and punches. Anyone inside the circle when the fist lands takes 30 damage. Running out of the circle in time dodges it.
-- Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **one minute**, can still chat, and then come back at the **lobby**, never where they fell.
+- Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **15 seconds**, can still chat, and then come back at the **lobby**, never where they fell.
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.
 - The boss has 3,600 health, a hammer hit does 10 (that is 360 hits), and it heals by itself (see the numbers). **One or two players cannot beat it, about five can in two minutes, and a crowd is not a walkover.**
 - When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back 3 to 5 minutes later (random), at its starting spot, with full health.
@@ -25,7 +25,7 @@ All of them live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); noth
 | Boss health | 3,600, hit = 10 | Tuned with the simulation below. |
 | Regeneration | 5 per second always, +20 per second after 5 s without being hit | See "Why it heals". |
 | Player regeneration | 5 per second after 4 s | Moderate: not "never", not "instantly". |
-| Player respawn | 60 s, at the lobby | As asked. |
+| Player respawn | 15 s, at the lobby | Was 60 s; players found a minute too long. |
 | Boss respawn | random 3 to 5 min | As asked. |
 | Bounty | 500 million, split by damage | See "Why the bounty is split by damage". |
 | Hammer reach | 150 from the boss's centre, and a clear line | The boss is big; walls and racks block the swing. |
@@ -98,6 +98,6 @@ Tests: `test/boss.js` (rules, balance), `test/boss-net.js` (a whole fight over W
 ## Known limits and ideas
 
 - A player who throws away their identity gets full health. Fine for this game; a per-IP cool-down would be the next step.
-- Someone idle in the server room is an easy target: they are knocked out and wait a minute.
+- Someone idle in the server room is an easy target: they are knocked out and wait 15 seconds.
 - No knockback: the punch is damage and screen shake only. Adding it needs the server to move the player and tell the client.
 - A damage board of boss kills is not kept; bounties go into the normal damage board.

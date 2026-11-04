@@ -38,7 +38,7 @@ On touch screens (and with a pen), tapping the floor walks there and tapping an 
 
 ## Sếp VKL, the boss
 
-Every server has a boss in the server room. Step in and it runs at you; a red circle on the floor shows where its fist will land, so you can dodge. Four punches (30 each) knock you out for a minute, then you come back at the lobby; your health regenerates slowly when you are left alone. One or two players cannot beat it (it heals), about five can in two minutes, and when it falls a 500 million bounty goes to the damage board, split by damage dealt. It returns 3 to 5 minutes later. The rules, the numbers and the reasons behind them are in [docs/BOSS.md](docs/BOSS.md).
+Every server has a boss in the server room. Step in and it runs at you; a red circle on the floor shows where its fist will land, so you can dodge. Four punches (30 each) knock you out for 15 seconds, then you come back at the lobby; your health regenerates slowly when you are left alone. One or two players cannot beat it (it heals), about five can in two minutes, and when it falls a 500 million bounty goes to the damage board, split by damage dealt. It returns 3 to 5 minutes later. The rules, the numbers and the reasons behind them are in [docs/BOSS.md](docs/BOSS.md).
 
 ## The office
 
