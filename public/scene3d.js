@@ -73,6 +73,10 @@ const merge = (list) => {
 
 // Cheap baked ambient occlusion: vertex colours fade darker towards the floor, so every piece of furniture
 // gets a soft contact shadow where it meets the ground, for free at runtime.
+// Two hammer orientations: upright in the fist, like a hero holding it at rest (head up, handle straight, leaning a
+// little out and forward), and "along the arm" for the swing, with the head at the far end.
+const _hammerUpright = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0, -0.22));
+const _hammerSwing = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI / 2, 0));
 function bakeAO(geo) {
   if (!geo) return geo;
   const pos = geo.attributes.position;
@@ -1144,7 +1148,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // The handle continues the arm and the head sits at the far end, with its long side along the swing, so raising the
     // arm lifts the hammer and swinging it down brings the head onto whatever is in front.
     hammer.position.set(0, -30, 0);
-    hammer.rotation.set(Math.PI, Math.PI / 2, 0);
+    hammer.quaternion.copy(_hammerUpright); // updatePlayer blends it towards the swing orientation
     hammer.scale.setScalar(0.82);
     armR.add(hammer);
     root.add(armL, armR);
@@ -1230,12 +1234,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
     const armed = rig.hammer.visible;
-    const CARRY = -0.45; // relaxed: the hammer hangs low in front, head just above the floor
+    const CARRY = -0.5; // at rest: the arm hangs a little forward and out, the hammer stands upright in the fist
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
     let lean = 0.1 * mv;
+    let hk = 0; // 0 hammer upright, 1 hammer along the arm
     if (p.swing > 0) {
       const ph = 1 - p.swing; // 0..1 over the swing
       if (armed) {
+        hk = ph < 0.2 ? eo(ph / 0.2) : ph < 0.5 ? 1 : 1 - eo((ph - 0.5) / 0.5);
         if (ph < 0.25) {
           a = lerp(CARRY, -3.1, eo(ph / 0.25)); // wind up: the hammer goes high and back
           lean += -0.25 * (ph / 0.25);
@@ -1263,7 +1269,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.prevSwing = p.swing;
     rig.root.rotation.x = lean;
     rig.armR.rotation.x = a;
-    rig.armR.rotation.z = -0.1 - Math.abs(sw) * 0.1;
+    rig.armR.rotation.z = (armed ? -0.3 : -0.1) - Math.abs(sw) * 0.1;
+    if (armed) rig.hammer.quaternion.slerpQuaternions(_hammerUpright, _hammerSwing, hk);
 
     // knocked out: lie flat on one side. Sideways rather than backwards, because the camera looks from the south and
     // a body lying north-south would just look like it is still standing.
