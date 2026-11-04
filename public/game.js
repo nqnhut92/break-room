@@ -533,7 +533,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         break;
       case 'ult': {
         const who = S.players.get(m.id);
-        if (who) { who.swing = 1; who.skill = 'hammer'; who.heading = Math.atan2(m.x - who.x, m.y - who.y); }
+        if (who) {
+          who.swing = 1;
+          who.ultUntil = performance.now() + 900;
+          if (SKILLS.some((s) => s.id === m.skill)) who.skill = m.skill;
+          who.heading = Math.atan2(m.x - who.x, m.y - who.y);
+          showSkill(who, who.skill, { x: m.x, y: m.y });
+        }
         if (scene) {
           scene.fx.sparks(m.x, 80, m.y, 30);
           scene.fx.floatText(m.x, 190, m.y, m.target === 'boss' ? 'ULTI! -' + m.dmg : 'ULTI!', '#ffd24a', 28);
@@ -1644,7 +1650,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if (k === 'i' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       $('resetBtn').click(); // call IT (replace everything with new stuff): the same as the button, with the same cooldown
     } else if (k === 'r' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      if (!$('ultBtn').hidden) send({ t: 'ult' });
+      if (!$('ultBtn').hidden) send({ t: 'ult', skill: S.skill });
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
     } else if (/^(Digit|Numpad)[1-9]$/.test(e.code) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1842,7 +1848,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   $('skillBtn').addEventListener('click', () => setSkill(skillIndex() + 1));
 
   $('resetBtn').addEventListener('click', () => send({ t: 'reset' }));
-  $('ultBtn').addEventListener('click', () => send({ t: 'ult' }));
+  $('ultBtn').addEventListener('click', () => send({ t: 'ult', skill: S.skill }));
 
   const emoteBox = $('emotes');
   EMOTES.forEach((em, i) => {

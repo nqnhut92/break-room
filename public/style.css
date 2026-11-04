@@ -774,4 +774,4 @@ canvas {
 .pill.rage.full #rageFill { background: #ffd24a; }
 .btn.ult { font-weight: 800; color: #1a1205; background: linear-gradient(180deg, #ffd24a, #ff8a3d); border-color: #ffd24a; animation: ultPulse 0.9s ease-in-out infinite; }
 @keyframes ultPulse { 50% { box-shadow: 0 0 16px rgba(255, 190, 60, 0.9); transform: scale(1.04); } }
-@media (max-width: 640px) { .pill.rage { display: none; } }
+@media (max-width: 640px) { .pill.rage .hp-track { width: 44px; } } /* the phone keeps the bar, only shorter */

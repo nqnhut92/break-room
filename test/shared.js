@@ -286,6 +286,14 @@ async function contract(label, makeStore) {
     assert.strictEqual((await store.snakeList(r, { now: NOW + 1000 })).length, 0);
   });
 
+  await step(label + ': the ultimate bar is remembered per player', async () => {
+    const r = room + '-rage';
+    assert.strictEqual(await store.rageGet(r, 5), 0);
+    await store.rageSet(r, 5, 42.5, NOW);
+    assert.strictEqual(await store.rageGet(r, 5), 42.5);
+    assert.strictEqual(await store.rageGet(r, 6), 0);
+  });
+
   await step(label + ': a mole is secret until hit, dies once and pays its bounty to the one who killed it', async () => {
     const r = room + '-mole';
     await store.moleAdd(r, 7, { hp: 8, conn: 'c7', now: NOW });
