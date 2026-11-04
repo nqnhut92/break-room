@@ -70,7 +70,8 @@ function staticHandler(req, res, roomList) {
     const ext = path.extname(filePath).toLowerCase();
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
+      // code and markup are always revalidated (a stale module next to a fresh one breaks the game); models and images can be cached
+      'Cache-Control': ['.html', '.js', '.css'].includes(ext) ? 'no-cache' : 'public, max-age=3600',
     });
     res.end(req.method === 'HEAD' ? undefined : data);
   });
