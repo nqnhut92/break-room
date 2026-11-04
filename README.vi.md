@@ -164,7 +164,7 @@ docs/                ARCHITECTURE.md (tiếng Anh) và ARCHITECTURE.vi.md: Redis
 npm test
 ```
 
-`test/world.js` kiểm tra bố cục và đường đi. `test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM (gồm AFK, giới hạn kết nối/phòng và công tắc tắt khẩn cấp). `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`.
+`test/world.js` kiểm tra bố cục và đường đi. `test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM (gồm AFK, giới hạn kết nối/phòng và công tắc tắt khẩn cấp). `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`. Máy không có `redis-server`? Chạy `npm run test:redis`: lệnh này bật một container Redis tạm bằng podman hoặc docker (`scripts/test-with-redis.sh`), chạy đủ bộ test rồi xóa container; lần đầu sẽ kéo image `redis:7-alpine`.
 
 ## Ghi chú thiết kế
 

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node test/world.js && node test/boss.js && node test/smoke.js && node test/boss-net.js && node test/shared.js",
-    "check:store": "node scripts/check-store.js"
+    "check:store": "node scripts/check-store.js",
+    "test:redis": "bash scripts/test-with-redis.sh"
   },
   "engines": {
     "node": ">=18"

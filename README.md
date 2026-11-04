@@ -166,7 +166,7 @@ docs/                ARCHITECTURE.md (English) and ARCHITECTURE.vi.md: what Redi
 npm test
 ```
 
-`test/world.js` checks the layout and paths. `test/smoke.js` runs a real server with real WebSockets and the RAM store (including AFK, connection/room limits, name rules and the kill switch). `test/shared.js` runs one store contract against both the RAM and Redis stores, then starts two servers sharing one Redis to play across instances (smash one object from two instances, reconnect to another instance, cross-instance IP limit, sudden instance death). It starts a temporary `redis-server` on a free port by itself; if the machine has no `redis-server`, the Redis part is skipped with a `SKIP` line. Point it at an existing Redis with `TEST_REDIS_URL`.
+`test/world.js` checks the layout and paths. `test/smoke.js` runs a real server with real WebSockets and the RAM store (including AFK, connection/room limits, name rules and the kill switch). `test/shared.js` runs one store contract against both the RAM and Redis stores, then starts two servers sharing one Redis to play across instances (smash one object from two instances, reconnect to another instance, cross-instance IP limit, sudden instance death). It starts a temporary `redis-server` on a free port by itself; if the machine has no `redis-server`, the Redis part is skipped with a `SKIP` line. Point it at an existing Redis with `TEST_REDIS_URL`. No `redis-server` installed? `npm run test:redis` starts a throwaway Redis container with podman or docker (`scripts/test-with-redis.sh`), runs the full suite and removes the container; the first run pulls `redis:7-alpine`.
 
 ## Design notes
 
