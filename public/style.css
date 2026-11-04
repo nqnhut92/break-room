@@ -358,13 +358,21 @@ canvas {
 
 #hint {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
   bottom: 66px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  padding: 6px 14px;
   text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-  opacity: 0.75;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #e8edf5;
+  background: rgba(10, 13, 20, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
   text-shadow: 0 1px 2px #000;
   pointer-events: none;
   transition: opacity 1s;
@@ -524,6 +532,17 @@ canvas {
 .roomcard:disabled { opacity: 0.5; cursor: not-allowed; }
 .roomcard .rn { font-weight: 700; font-size: 15px; }
 .roomcard .rc { font-size: 12px; color: var(--muted); min-height: 1.2em; font-weight: 600; }
+.roomcard .rc:not(:empty)::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
 .roomcard .rc.cool { color: #3ddc84; }
 .roomcard .rc.warm { color: #ffb02e; }
 .roomcard .rc.hot { color: #ff5d4a; }

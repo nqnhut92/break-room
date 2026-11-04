@@ -40,6 +40,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     toilet: ['#f2f5f8', '#cfd6e0', '#9aa3b2'],
     sink: ['#eef2f6', '#cfd6e0', '#aab4c2'],
     safe: ['#4b5262', '#2b3240', '#c9d1de'],
+    bookcase: ['#d9a066', '#a8743f', '#f0d2a5'],
+    lamp: ['#f2e6b0', '#cfcfcf', '#8a8f99'],
+    trash: ['#8fa3a8', '#5f7377', '#c7d3d6'],
+    coatrack: ['#c89a5e', '#a8743f'],
+    fridge: ['#e6ebf0', '#b9c3cf', '#8a8f99'],
+    speaker: ['#a8743f', '#2b3240', '#5f7377'],
   };
   const MOVE_KEYS = {
     arrowleft: 'l', a: 'l',
@@ -993,7 +999,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.fillRect(z.x0 * mm.k, z.y0 * mm.k, (z.x1 - z.x0) * mm.k, (z.y1 - z.y0) * mm.k);
     }
     for (const p of props) {
-      if (p.k === 'rug' || p.k === 'deco') continue;
+      if (p.k === 'rug') continue;
       c.fillStyle = p.k === 'wall' ? (p.opaque ? '#aab4c4' : '#9fd4ff') : p.k === 'sofa' ? '#3d5a80' : '#d9d2c5';
       const w = Math.max(1.5, p.w * mm.k);
       const h = Math.max(1.5, p.h * mm.k);
@@ -1216,8 +1222,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if (k === ' ') {
       e.preventDefault();
       S.keys.add('space');
-    } else if (k === 'enter' && !e.repeat) {
-      e.preventDefault();
+    } else if ((k === 'enter' || k === 't' || k === '/') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault(); // so the T or / is not typed into the box that is about to get focus
       chatOpen();
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
