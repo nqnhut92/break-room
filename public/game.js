@@ -14,7 +14,31 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function setJoinBusy(b) {
     joinBusy = b;
     syncJoin();
+    if (!b) document.documentElement.classList.remove('autojoin');
   }
+  // Reloading the page (F5, or the "new version" button) should put you straight back in the office, not at the join
+  // form. The tab remembers that it was in a game; leaving on purpose, being kicked for inactivity, being replaced by
+  // another tab or a refused join clears it, and a new tab always starts at the form.
+  const autoJoin = {
+    set() {
+      try {
+        sessionStorage.setItem('br-auto', '1');
+      } catch (e) { /* ignore */ }
+    },
+    clear() {
+      try {
+        sessionStorage.removeItem('br-auto');
+      } catch (e) { /* ignore */ }
+      document.documentElement.classList.remove('autojoin');
+    },
+    on() {
+      try {
+        return sessionStorage.getItem('br-auto') === '1';
+      } catch (e) {
+        return false;
+      }
+    },
+  };
   const canvas = $('c');
   let scene = null;
   try {
@@ -332,6 +356,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (S.pendingWs) return; // a replacement is already joining; it takes over
       if (ev && ev.code === 4002) {
         // kicked for inactivity: do not reconnect on our own, that would defeat the purpose
+        autoJoin.clear();
         S.fatal = true;
         S.joined = false;
         S.keys.clear();
@@ -352,6 +377,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         return;
       }
       if (ev && ev.code === 4001) {
+        autoJoin.clear();
         S.fatal = true;
         S.joined = false;
         $('conn').textContent = 'Server này đang mở ở tab khác. Đóng tab kia hoặc tải lại trang.';
@@ -398,6 +424,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         if (scene) scene.build(m.world, m.props, m.zones);
         mmBuild(m.world, m.props, m.zones);
         S.joined = true;
+        autoJoin.set();
+        document.documentElement.classList.remove('autojoin');
         $('overlay').classList.add('gone');
         $('hud').hidden = false;
         if (chatLog.hidden) {
@@ -562,6 +590,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         renderBoard(m);
         break;
       case 'err':
+        if (m.code === 'name' || !S.joined) autoJoin.clear(); // a refused join (name taken, room full...) shows the form with the reason
         if (m.code === 'name') {
           // name missing or taken (also if someone took it while we were reconnecting): back to the join form
           S.fatal = true;
@@ -894,13 +923,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       p.chatT = CHAT_BUBBLE_S;
     }
   }
-  // The frame fades out after 3 seconds without a new message, and comes back with the next one, when the box is
-  // focused (Enter or 💬) or while the pointer rests on it.
+  // On a computer the chat frame stays on screen. On a phone, where room is scarce, it fades out after 3 seconds without
+  // a new message, and comes back with the next one, when the box is focused (💬) or while a finger rests on it.
   const CHAT_IDLE_MS = 3000;
   let chatIdleTimer = 0;
   function chatWake() {
     chatLog.classList.remove('idle');
     clearTimeout(chatIdleTimer);
+    if (!coarseUi) return; // on a computer the chat frame is always there; only a phone, short of room, fades it
     chatIdleTimer = setTimeout(() => {
       if (document.activeElement !== chatInput && !chatLog.matches(':hover')) chatLog.classList.add('idle');
       else chatWake();
@@ -1014,6 +1044,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (me && S.world && S.world.exit) S.target = { x: S.world.exit.x1 + 140, y: me.y }; // step back into the room
   }
   function exitLeave() {
+    autoJoin.clear();
     exitEl.hidden = true;
     S.fatal = true; // no auto-reconnect
     S.joined = false;
@@ -1627,7 +1658,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     preselect();
     render();
-    refresh(true);
+    refresh(true).then(() => {
+      // back into the office straight away after a reload (see autoJoin); the form stays hidden meanwhile
+      if (autoJoin.on() && $('nameInput').value.trim() && scene && !S.started) {
+        document.documentElement.classList.add('autojoin');
+        setTimeout(() => document.documentElement.classList.remove('autojoin'), 8000); // never leave the form hidden
+        $('joinForm').dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
     setInterval(() => {
       if (!$('overlay').classList.contains('gone')) refresh();
     }, 15000);

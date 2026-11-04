@@ -616,6 +616,9 @@ canvas {
   z-index: 20;
 }
 
+/* reloading puts you straight back in the office: the join form stays out of sight while that happens */
+.autojoin #joinForm { visibility: hidden; }
+
 /* on a phone the top row is compact: [BR-1] [dot + number] [copy] [sound]; health moves onto the character */
 .narrow-only { display: none; }
 @media (max-width: 640px) {
