@@ -604,19 +604,6 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           sbox(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
           sbox(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
         ], p.x, p.y);
-      } else if (p.k === 'roomSign') {
-        const tex = makeCanvasTexture(256, 64, (ctx, w, h) => {
-          ctx.fillStyle = '#233d42';
-          ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = '#e4fff1';
-          ctx.font = '800 36px ' + UI_FONT;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(p.text, w / 2, h / 2);
-        });
-        const sign = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
-        sign.position.set(p.x, 150, p.y);
-        staticGroup.add(sign);
       } else if (p.k === 'stallDoor') {
         const frame = [
           sbox(7, 180, 10, '#2f384a', -p.w / 2 - 3.5, 90),

@@ -50,3 +50,9 @@ There is no inactivity timeout on a stationary held thumb. Chat focus, window bl
 Run `npm run test:joystick` with Chromium installed (or set `CHROMIUM_PATH`). The test uses native Chromium touch input, real game/UI/socket logic, and a stub renderer. It exercises direction changes, stationary holds, simultaneous attack, terminal events outside the pad, missing pointer-end fallbacks, delayed capture loss, capture/release exceptions, stale ids and chat recovery. Missing-event cases are fault injection, not a reproduction of the exact iPhone failure.
 
 On the actual iPhone, test repeated drags/lifts including off-pad release, joystick plus attack, opening/closing chat, app switching and native rotation. Releasing and touching the pad again should recover without opening chat; a continuously held thumb should not stop just because it stays still.
+
+## Settings layout
+
+Touch settings contains five actions in one grid: Help/Map on the first row, High graphics/Copy server link on the second, and Call IT across the final row. Existing button elements are moved rather than recreated, preserving their listeners and state. Zoom stays at the right edge; skill/chat/emoji stay at the bottom; sound stays in the header. Desktop controls return to their original toolbar positions. [Current panel screenshot](../artifacts/settings-mobile.png).
+
+Run `npm run test:settings` with Chromium installed (or `CHROMIUM_PATH`) for alignment, action behavior and desktop placement at the 740×320, 844×390 and 956×440 touch layouts. `SETTINGS_REAL_RENDERER=1` runs the 844×390 smoke check with actual WebGL instead of the UI-only renderer stub; `SETTINGS_SCREENSHOT=/path/image.png` saves the open panel.

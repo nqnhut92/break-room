@@ -50,7 +50,7 @@ Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, màn hì
 
 ## Chỉnh map và đồ họa
 
-Bố cục, cửa và tường dùng chung nằm trong `FLOOR_ROOMS` ở `lib/world.js`; đổi tên phòng chơi trong `ROOMS`. `rot`: 0 hướng nam, PI/2 đông, PI bắc, -PI/2 tây. Giữ ID và loại đồ vật ổn định vì state Redis được lưu theo ID. Khi đổi map, kiểm tra đường tới đồ vật, cửa đi được và vách kín; xem [ADR 0004](adr/0004-static-world.md).
+Bố cục, cửa và tường dùng chung nằm trong `FLOOR_ROOMS` ở `lib/world.js`; đổi tên phòng chơi trong `ROOMS`. `rot`: 0 hướng nam, PI/2 đông, PI bắc, -PI/2 tây. Các zone sàn cùng độ cao chỉ được chạm cạnh, không chồng diện tích: sàn trùng nhau có thể chớp khi camera di chuyển ở cả hai mức đồ họa. Kiểm tra này nằm trong `test/world.js`. Biển tên phòng lơ lửng đã được bỏ khỏi props/renderer; tên phòng vẫn là metadata cho bố cục. Giữ ID và loại đồ vật ổn định vì state Redis được lưu theo ID. Khi đổi map, kiểm tra đường tới đồ vật, cửa đi được và vách kín; xem [ADR 0004](adr/0004-static-world.md).
 
 Vai trò ở `public/roles.js` phải khớp `ROLE_IDS` trong `lib/world.js`. Mana nằm ở `MANA` trong `lib/realtime.js`.
 
@@ -74,3 +74,5 @@ Xem [kết quả điều tra và kiểm tra máy thật](PERFORMANCE.vi.md), [AD
 Kiểm tra nhắc xoay màn hình bằng `npm run test:orientation` sau khi cài Chromium như trên (hỗ trợ `CHROMIUM_PATH`). Test giữ HTML/CSS, logic game/viewport và WebSocket thật, chỉ stub WebGL; kiểm tra reload trước khi vào phòng, auto-rejoin, ngắt kết nối và API xoay/toàn màn hình bị từ chối. Xem [Mobile](MOBILE.md#orientation-regression-checks).
 
 Kiểm tra vòng đời joystick bằng `npm run test:joystick` (Chromium/`CHROMIUM_PATH`). Test kết hợp touch thật trong Chromium và sự kiện bị mất được mô phỏng để kiểm tra hướng, giữ ngón, vừa đi vừa đánh, mất capture và focus chat. Đây không phải tái hiện chắc chắn lỗi Safari trên iPhone; xem [Mobile](MOBILE.md#joystick-recovery) và kiểm tra tiếp trên máy thật.
+
+Kiểm tra lưới cài đặt bằng `npm run test:settings` (Chromium/`CHROMIUM_PATH`): bố cục các cặp nút, Gọi IT toàn hàng, listener/trạng thái được giữ và toolbar desktop. `SETTINGS_REAL_RENDERER=1` chạy smoke test có WebGL thật; xem [Mobile](MOBILE.md#settings-layout). Renderer test cũng đi camera qua ranh giới sàn cũ ở cả safe/high; kiểm tra máy thật khi di chuyển vẫn cần thiết.

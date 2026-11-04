@@ -11,7 +11,8 @@
     "test:redis": "bash scripts/test-with-redis.sh",
     "test:renderer": "node test/renderer.cjs",
     "test:orientation": "node test/orientation.cjs",
-    "test:joystick": "node test/joystick.cjs"
+    "test:joystick": "node test/joystick.cjs",
+    "test:settings": "node test/settings.cjs"
   },
   "engines": {
     "node": ">=18"

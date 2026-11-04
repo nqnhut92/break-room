@@ -42,3 +42,5 @@ Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn I
 Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Bản đồ nhỏ hiển thị bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ.
 
 [Xem map hiện tại](../artifacts/map-overview.png).
+
+Tên phòng trong ảnh là chú thích bố cục; game không còn biển tên phòng lơ lửng.

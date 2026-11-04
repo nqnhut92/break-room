@@ -1618,7 +1618,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const settingsEl = $('settingsDlg');
   const settingsMQ = window.matchMedia('(pointer: coarse)');
   // Move the existing controls so state, cooldowns and listeners stay shared.
-  const settingsMoves = ['sideTools', 'copyLink', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn', 'zoomBtns'].map(id => {
+  const settingsMoves = ['helpBtn', 'mapBtn', 'gfxBtn', 'copyLink', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn', 'zoomBtns'].map(id => {
     const el = $(id), slot = document.createComment(id);
     el.before(slot);
     return { el, slot };
@@ -1638,10 +1638,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (settingsMQ.matches) {
         const target = el.id === 'zoomBtns' ? 'sideBtns' : el.id === 'emotes' ? 'emoteTray'
           : el.id === 'skillBtn' || el.id === 'chatBtn' ? 'mobileBottomControls'
-          : el.id === 'sideTools' ? 'settingsTools' : 'settingsExtras';
+          : 'settingsActions';
         $(target).append(el);
       } else slot.after(el);
     }
+    $('sideTools').hidden = settingsMQ.matches;
     mmPlace(); sidePlace();
   }
   $('settingsBtn').addEventListener('click', () => {

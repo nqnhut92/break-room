@@ -89,6 +89,17 @@ async function main() {
       S.players.delete(2);frame();
       check(app.renderer.getContext().getError()===app.renderer.getContext().NO_ERROR, 'quality changes and cleanup leave no WebGL error');
       metrics.lifecycle={baseline,counts,after:app.renderer.info.memory.geometries};
+      const me=S.players.get(S.me), home={x:me.x,y:me.y};
+      let motionErrors=0;
+      for(const quality of ['low','high']) {
+        app.setQuality(quality);
+        for(let i=0;i<16;i++) {
+          me.x=1920;me.y=1380+i*10;me.moving=true;app.cameraTo(me.x,me.y);frame();
+          if(app.renderer.getContext().getError()!==app.renderer.getContext().NO_ERROR)motionErrors++;
+        }
+      }
+      Object.assign(me,home,{moving:false});app.cameraTo(me.x,me.y);app.setQuality('low');frame();
+      check(motionErrors===0,'camera movement across the former floor-overlap strip works in safe and high modes without WebGL errors');
       return {checks,metrics};
     });
     assert.deepStrictEqual(errors, [], 'no browser page errors');

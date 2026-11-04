@@ -64,6 +64,15 @@ step('hall screen is enlarged with a matching server collision footprint', () =>
   assert.ok(W.COLLIDERS.some(([x,y,hw,hh]) => x === tv.x && y === tv.y && hw === W.TYPES.tv.h / 2 && hh === 92 * tv.screenScale / 2));
 });
 
+step('floor overlays never overlap at the shared render height', () => {
+  for (let i = 0; i < W.ZONES.length; i++) for (let j = i + 1; j < W.ZONES.length; j++) {
+    const a = W.ZONES[i], b = W.ZONES[j];
+    const width = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+    const height = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+    assert.ok(width <= 0 || height <= 0, 'coplanar floor overlap between zones ' + i + ' and ' + j);
+  }
+});
+
 step('spawn area is open floor', () => {
   const s = W.WORLD.spawn;
   for (const [dx, dy] of [[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
@@ -156,7 +165,7 @@ step('stamp-assets puts one version on every module URL and can run twice', () =
 step('exit door: a free spot in the lobby, reachable from the spawn', () => {
   const e = W.WORLD.exit;
   assert.ok(e && e.x1 > e.x0 && e.y1 > e.y0);
-  const lobby = W.ZONES.find((z) => z.k === 'wood' && z.x0 === 0 && z.y0 === 1420);
+  const lobby = W.ZONES.find(z => z.k === 'wood' && z.x0 <= e.x0 && z.x1 >= e.x1 && z.y0 <= e.y0 && z.y1 >= e.y1);
   assert.ok(e.y0 >= lobby.y0 && e.y1 <= lobby.y1, 'inside the lobby');
   for (let x = e.x0; x <= e.x1; x += 10) for (let y = e.y0; y <= e.y1; y += 10) assert.ok(free(x, y), 'free at ' + x + ',' + y);
   const mx = (e.x0 + e.x1) / 2;

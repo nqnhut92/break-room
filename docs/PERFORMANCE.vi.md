@@ -14,9 +14,15 @@ Người dùng đã xác nhận giật ngay từ phiên mới. Thiếu cleanup s
 
 [Regression test WebGL](../test/renderer.cjs) kiểm tra cleanup thực tế, không chèn patch sửa hành vi. Ở fixture cảm ứng có một người đội phụ kiện dev, safe là **52 draw calls / 27.140 tam giác**, high là **304 / 813.964**, tính cả bóng. Qua tám lượt vào/rời, geometry giữ **92 → 92**. Fixture khác baseline cũ một phụ kiện, vì vậy so safe/high trong cùng lượt này thay vì trừ số giữa hai fixture.
 
-Bộ kiểm tra hoàn tất **17 checks** trên mỗi cấu hình cảm ứng và desktop, không có page error hay WebGL error; việc chuyển high/safe cũng không giữ lại shadow texture.
+Lượt kiểm tra cleanup/bóng ban đầu hoàn tất **17 checks** trên mỗi cấu hình cảm ứng và desktop, không có page error hay WebGL error; việc chuyển high/safe cũng không giữ lại shadow texture.
 
 Đây là giảm tải gửi hình học đo trên SwiftShader, chưa phải cải thiện FPS đã đo trên iPhone. Xem [ADR 0005](adr/0005-safe-mode-shadows.md) và [cách chạy test](DEVELOPMENT.vi.md#kiểm-tra-renderer-và-hiệu-năng-mobile). Các đề xuất còn lại phía dưới vẫn chưa triển khai.
+
+## Vạch chớp khi di chuyển
+
+Báo cáo tiếp theo từ iPhone cho biết cả safe/high đã hết lag nhưng xuất hiện vạch ngang chớp khi di chuyển. Kiểm tra map phát hiện hai zone hành lang chồng sàn sảnh tại `y=1420..1460`, phủ tổng `x=0..2880`; chúng đều được vẽ ở cùng độ cao. Đây là lỗi coplanar/z-fighting cụ thể trong layout, dùng chung ở cả hai chế độ; chưa phải tái hiện trực tiếp dấu vạch trên GPU iPhone.
+
+Bản sửa bắt đầu sàn sảnh ở `y=1460`, chỉ tiếp giáp cạnh hành lang, giữ tối ưu bóng hiện tại. `test/world.js` kiểm tra mọi cặp zone không chồng diện tích; renderer test đi camera qua khu này ở safe/high. Đồng thời bỏ biển tên phòng lơ lửng theo yêu cầu người dùng. Cần xác nhận lại vạch chớp trên máy thật trong lúc di chuyển, không suy ra từ ảnh tĩnh. Lượt regression renderer cảm ứng mới nhất qua 18 checks, có 50 draw calls ở safe và 302 ở high, geometry giữ ổn định ở 90; bỏ biển tên làm số mesh nhìn thấy khác lượt trước.
 
 ## Kết luận hiện tại
 

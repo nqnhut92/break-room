@@ -46,3 +46,5 @@ The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall
 There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The mini map shows you in yellow, other players in white and broken objects in red.
 
 [View the current layout](../artifacts/map-overview.png).
+
+Room names in the overview are layout annotations; the game no longer renders floating room-name signs.

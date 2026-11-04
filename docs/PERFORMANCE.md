@@ -14,9 +14,15 @@ The user confirmed stutter immediately after joining a fresh session. Retention 
 
 The [WebGL regression test](../test/renderer.cjs) checks actual cleanup without a behavior patch. In its touch fixture with one dev-accessory player, safe submits **52 draws / 27,140 triangles**, high **304 / 813,964**, including shadows. Eight join/leave cycles keep geometries at **92 → 92**. This fixture adds an accessory compared with the original baseline, so compare safe/high within this run rather than subtracting across fixtures.
 
-The suite passes **17 checks** in each touch and desktop configuration, with no page or WebGL errors; repeated high/safe transitions do not retain shadow textures.
+The initial cleanup/shadow regression run passed **17 checks** in each touch and desktop configuration, with no page or WebGL errors; repeated high/safe transitions do not retain shadow textures.
 
 These are measured submission reductions on SwiftShader, not an established iPhone FPS improvement. See [ADR 0005](adr/0005-safe-mode-shadows.md) and [test instructions](DEVELOPMENT.md#renderer-checks-and-mobile-performance). Remaining proposals below are not implemented.
+
+## Moving horizontal flicker follow-up
+
+A later iPhone report says both modes are smooth but show a horizontal flickering line while moving. Layout inspection found two corridor zones overlapping reception over `y=1420..1460`, together spanning `x=0..2880`; all are rendered at the same height. This is a concrete coplanar/z-fighting defect shared by both graphics modes, not a direct reproduction of the observed line on the iPhone GPU.
+
+The fix starts reception at `y=1460`, sharing only an edge with the corridor, while keeping the shadow optimizations. `test/world.js` checks all zone pairs for area overlap; renderer checks move the camera through this region in safe/high. Floating room-name signs were also removed at the user's request. Confirm the reported line on hardware while moving; a still image cannot establish that it is resolved. The latest touch renderer regression run passes 18 checks, with 50 safe-mode draws versus 302 in high and a resource plateau at 90 geometries; removing signs changes the visible-mesh counts from the earlier run.
 
 ## Findings
 

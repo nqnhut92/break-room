@@ -796,16 +796,11 @@ canvas {
 .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .settings-head h2 { margin: 0; font-size: 18px; }
 #settingsClose { min-width: 44px; min-height: 44px; }
-#settingsTools #sideTools, #settingsExtras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-#settingsTools .btn, #settingsExtras .btn { min-height: 44px; padding: 8px; font-size: 14px; white-space: normal; }
-#settingsTools .btn::after, #settingsExtras #copyLink::after, #settingsExtras #mute::after { content: ' ' attr(aria-label); }
-#settingsTools .btn[aria-pressed="false"] { opacity: 0.55; }
-#settingsTools .btn.dim { opacity: 0.3; }
-#settingsTools #zoomBtns { display: flex; gap: 8px; grid-column: 1 / -1; flex-direction: row; }
-#settingsTools #zoomBtns .btn { flex: 1; }
-#settingsExtras #resetBtn, #settingsExtras #emotes { grid-column: 1 / -1; }
-#settingsExtras #emotes { width: auto; flex-wrap: wrap; justify-content: center; overflow: visible; }
-#settingsExtras #emotes button { min-width: 44px; min-height: 44px; }
+#settingsActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+#settingsActions .btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 48px; padding: 10px; border-radius: 12px; font-size: 14px; white-space: normal; }
+#settingsActions .btn:not(#resetBtn)::after { content: ' ' attr(aria-label); }
+#settingsActions #gfxBtn[aria-pressed="true"] { border-color: var(--accent-2); }
+#settingsActions #resetBtn { grid-column: 1 / -1; }
 @media (pointer: coarse) { #sideBtns #settingsBtn { display: block; width: 44px; height: 44px; } }
 
 /* Lucide control icons inherit the current button colour and never intercept taps. */
@@ -813,8 +808,6 @@ canvas {
 [data-icon] { display: inline-flex; align-items: center; vertical-align: middle; pointer-events: none; }
 #sideBtns .btn { display: inline-flex; align-items: center; justify-content: center; }
 #sideBtns #settingsBtn, #sideBtns #chatBtn { display: none; }
-#settingsTools .btn, #settingsExtras .btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
-#settingsTools #zoomBtns .btn { display: flex; }
 .rotate-icon .ui-icon { width: 56px; height: 56px; }
 @media (pointer: coarse) { #sideBtns #settingsBtn { display: inline-flex; } }
 

@@ -50,7 +50,7 @@ A browser with WebGL is required. Weak phones may stutter; touch screens default
 
 ## Changing the map and graphics
 
-Room boundaries, doors and shared walls live in `FLOOR_ROOMS` in `lib/world.js`; game server names live in `ROOMS`. `rot`: 0 south, PI/2 east, PI north, -PI/2 west. Preserve object IDs and types because Redis stores state by ID. Layout changes must check object reachability, walkable doors and continuous walls; see [ADR 0004](adr/0004-static-world.md).
+Room boundaries, doors and shared walls live in `FLOOR_ROOMS` in `lib/world.js`; game server names live in `ROOMS`. `rot`: 0 south, PI/2 east, PI north, -PI/2 west. Floor zones at the same height may share edges but must not overlap: coplanar faces can flicker during camera movement in either graphics mode. `test/world.js` checks this invariant. Floating room-name signs have been removed from props/rendering; room names remain layout metadata. Preserve object IDs and types because Redis stores state by ID. Layout changes must check object reachability, walkable doors and continuous walls; see [ADR 0004](adr/0004-static-world.md).
 
 Roles in `public/roles.js` must match `ROLE_IDS` in `lib/world.js`. Mana settings live in `MANA` in `lib/realtime.js`.
 
@@ -74,3 +74,5 @@ See [the investigation and hardware acceptance plan](PERFORMANCE.md), [ADR 0005]
 Run `npm run test:orientation` after installing Chromium as above (or set `CHROMIUM_PATH`) to check the rotation prompt. This keeps real HTML/CSS, game/viewport logic and WebSockets, stubbing only WebGL; it covers pre-join reload, auto-rejoin, disconnects and rejected orientation/fullscreen APIs. See [Mobile](MOBILE.md#orientation-regression-checks).
 
 Run `npm run test:joystick` (Chromium/`CHROMIUM_PATH`) for joystick lifecycle checks. It combines native Chromium touch input with fault-injected missing events to check direction, held touches, simultaneous attack, capture loss and chat focus. This does not establish the exact Safari failure; see [Mobile](MOBILE.md#joystick-recovery) and repeat on hardware.
+
+Run `npm run test:settings` (Chromium/`CHROMIUM_PATH`) for paired button alignment, the full-width Call IT row, preserved listeners/state and desktop toolbar placement. `SETTINGS_REAL_RENDERER=1` enables a real-WebGL smoke test; see [Mobile](MOBILE.md#settings-layout). Renderer checks also move the camera across the former overlapping floor boundary in safe/high; moving-scene checks on actual hardware are still needed.
