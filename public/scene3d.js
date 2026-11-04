@@ -491,7 +491,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   scene.fog = new THREE.Fog(BG, 2200, 5200);
   // soft image-based light from a built-in studio room: reflections and gentler shading everywhere
   const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = envTex;
   scene.environmentIntensity = 0.22;
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
@@ -1578,11 +1579,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // objects
     for (const o of S.objects) {
       const rig = objectRig(o, S.types, S.objects);
+      if (rig.halo) rig.halo.visible = haloOn && !o.broken;
       if (rig.shown !== o.broken) {
         rig.shown = o.broken;
         rig.body.visible = !o.broken;
         if (rig.glow) rig.glow.visible = !o.broken;
-        if (rig.halo) rig.halo.visible = !o.broken;
         rig.wreck.visible = o.broken;
         rig.proxy.userData.broken = o.broken;
       }
@@ -1679,6 +1680,28 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return null;
   }
 
+  // ---- graphics quality. High (the default on computers): supersampled, sharp shadows, soft studio light and the
+  // screen halos. Low (the safe option, default on touch screens): native resolution, smaller shadow map, no halos. Both
+  // render straight to the screen: there is no post-processing chain. ----
+  let haloOn = true;
+  let quality = 'high';
+  function setQuality(q) {
+    quality = q === 'low' ? 'low' : 'high';
+    const dpr = window.devicePixelRatio || 1;
+    renderer.setPixelRatio(quality === 'high' ? Math.min(2, Math.max(dpr, 1.5)) : Math.min(dpr, 1));
+    const size = quality === 'high' ? (coarse ? 1024 : 2048) : 1024;
+    if (sun.shadow.mapSize.x !== size) {
+      sun.shadow.mapSize.set(size, size);
+      if (sun.shadow.map) {
+        sun.shadow.map.dispose();
+        sun.shadow.map = null;
+      }
+    }
+    scene.environment = quality === 'high' ? envTex : null;
+    haloOn = quality === 'high';
+    if (W) resize(W, H);
+  }
+
   function resize(w, h) {
     W = w;
     H = h;
@@ -1706,7 +1729,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, zoom, zoomLimits, cameraTo, ready,
+    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
     fx: { debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),

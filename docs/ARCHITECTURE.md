@@ -77,4 +77,4 @@ Rough size (estimate, not measured): the state of one room is tens of KB. Redis 
 | Server list (`BR-1`, `BR-2`) | `lib/world.js` (`ROOMS`), `lib/room-list.js` |
 | Contract tests for both stores | `test/shared.js` |
 | Furniture layout and facing (`rot`: 0 south, PI/2 east, PI north, -PI/2 west) | `lib/world.js` |
-| 3D scene and lighting (direct render, no post-processing) | `public/scene3d.js` |
+| 3D scene, lighting and the ✨ graphics switch (high / safe, direct render, no post-processing) | `public/scene3d.js` |

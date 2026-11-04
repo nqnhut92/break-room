@@ -961,6 +961,27 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     syncMapBtn();
   });
   syncMapBtn();
+  // graphics: high by default on computers, the safe (low) mode by default on touch screens; the choice is remembered
+  {
+    const coarseGfx = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    let q = coarseGfx ? 'low' : 'high';
+    try {
+      q = localStorage.getItem('br-gfx2') || q;
+    } catch (e) { /* ignore */ }
+    const applyGfx = () => {
+      $('gfxBtn').setAttribute('aria-pressed', String(q === 'high'));
+      $('gfxBtn').title = q === 'high' ? 'Đồ họa cao (bấm để chuyển sang chế độ an toàn)' : 'Chế độ an toàn (bấm để bật đồ họa cao)';
+      if (scene && scene.setQuality) scene.setQuality(q);
+    };
+    $('gfxBtn').addEventListener('click', () => {
+      q = q === 'high' ? 'low' : 'high';
+      try {
+        localStorage.setItem('br-gfx2', q);
+      } catch (e) { /* ignore */ }
+      applyGfx();
+    });
+    applyGfx();
+  }
   // the static part: floor zones and walls/furniture, drawn once per welcome into an offscreen canvas
   function mmBuild(world, props, zones) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
