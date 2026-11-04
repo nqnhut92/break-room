@@ -36,6 +36,8 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 
 VKL dùng thêm ba key của cùng phòng (cùng hạn sống): `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: id người chơi → sát thương đã gây cho sếp hiện tại) và `blk` (hợp đồng của instance đang điều khiển sếp). Chúng không nằm trong bộ chín key ở trên; script của chúng chỉ nhận key cần dùng. Xem [BOSS.vi.md](BOSS.vi.md).
 
+Bạn sếp dùng thêm key `moles` (hash: id người chơi → `{hp, rev, conn}`), cũng nằm ngoài bộ chín key. Xem [MOLES.vi.md](MOLES.vi.md).
+
 Lease kết nối theo IP (mỗi IP một zset) và key `br:keepalive` của health check nằm ngoài phòng.
 
 **2. Thao tác nguyên tử.** Vào, rời, đập, dọn dẹp, snapshot và reset đều là một script Lua. Hai người ở hai instance đập cùng một món thì món chỉ vỡ đúng một lần và điểm cộng một lần. Việc kiểm tra tên nằm trong script vào phòng, nên hai người không thể giành cùng một tên trong cùng một khoảnh khắc.

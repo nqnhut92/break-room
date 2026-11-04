@@ -1517,6 +1517,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const skill = isBoss ? 'boss' : (isMe ? S.skill : p.skill) === 'milkTea' ? 'milkTea' : (isMe ? S.skill : p.skill) === 'electric' ? 'electric' : 'hammer';
     if (!isBoss) rig.hammer.visible = skill === 'hammer';
     const armed = rig.hammer.visible;
+    // the ultimate: whatever is in the hand swells for a moment
+    const giantTarget = (p.ultUntil || 0) > performance.now() ? 3.2 : 1;
+    rig.giant = (rig.giant || 1) + (giantTarget - (rig.giant || 1)) * Math.min(1, dt * (giantTarget > 1 ? 14 : 6));
+    rig.hammer.scale.setScalar(0.82 * rig.giant);
+    rig.cup.scale.setScalar(rig.giant);
+    rig.taser.scale.setScalar(rig.giant);
     const CARRY = -0.12; // at rest: the arm hangs naturally at the side
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
     let lean = 0.1 * mv;
