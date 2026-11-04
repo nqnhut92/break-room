@@ -74,7 +74,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     hitRange: 110,
     players: new Map(),
     objects: [],
-    boss: null, // Sếp Tổng of this server (see the boss section)
+    boss: null, // Sếp VKL of this server (see the boss section)
     hpCfg: null,
     keys: new Set(),
     target: null,
@@ -238,7 +238,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function makeObject(o) {
     const max = S.types[o.type].hp;
     return {
-      id: o.id, type: o.type, x: o.x, y: o.y,
+      id: o.id, type: o.type, x: o.x, y: o.y, rot: o.rot || 0,
       hp: o.hp, hpMax: max, broken: o.broken,
       shake: 0, flash: 0, pop: 0, smokeT: rand(0, 0.5),
     };
@@ -607,7 +607,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (e.key === 'Escape' && !rankEl.hidden) rankClose();
   });
 
-  // ------------------------------------------------- Sếp Tổng and health ----
+  // ------------------------------------------------- Sếp VKL and health ----
   // The server runs the boss (walking, noticing people, punching) and every client just draws what it is told:
   // a position stream, a red circle during the windup, strikes, hit points and the bounty. Health works like
   // mana: the server sends the stored value plus how long ago it was stored, and each client adds the same
@@ -719,7 +719,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     S.shake = Math.min(1.4, S.shake + 0.9);
     const names = m.shares.map((s) => s.name);
-    toast('🏆 Sếp Tổng đã bị hạ gục! Tiền thưởng ' + fmtMoney(m.bounty) + ' chia theo sát thương');
+    toast('🏆 Sếp VKL đã bị hạ gục! Tiền thưởng ' + fmtMoney(m.bounty) + ' chia theo sát thương');
     toast(m.shares.slice(0, 3).map((s, i) => i + 1 + '. ' + s.name + ' +' + fmtShort(s.bounty)).join('  ·  '));
     const mine = m.shares.find((s) => s.id === S.me);
     if (mine) toast('💰 Bạn nhận ' + fmtMoney(mine.bounty) + ' thưởng (gây ' + mine.dmg + ' sát thương)');
@@ -734,7 +734,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     b.hp = b.cfg.maxHp;
     b.hpT = performance.now();
     b.wind = null;
-    toast('👔 Sếp Tổng đã quay lại phòng server');
+    toast('👔 Sếp VKL đã quay lại phòng server');
   }
   function playerHurt(m) {
     const p = S.players.get(m.id);
@@ -770,7 +770,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       hurtEl.classList.add('on');
       sfxHurt();
       $('downOverlay').hidden = false;
-    } else toast('💀 ' + p.name + ' bị Sếp Tổng hạ gục');
+    } else toast('💀 ' + p.name + ' bị Sếp VKL hạ gục');
   }
   function playerUp(m) {
     const p = S.players.get(m.id);
@@ -1087,7 +1087,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     items.push(
       '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
       'Đồ đã bị đập hiện <b>thanh máu</b>: xanh khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối.',
-      '<b>Sếp Tổng</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
+      '<b>Sếp VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
       'Một mình hay hai người không hạ nổi sếp (sếp tự hồi máu). <b>Từ 5 người</b> đánh cùng nhau thì được, sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 3 đến 5 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',

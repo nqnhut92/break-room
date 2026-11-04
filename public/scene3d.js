@@ -164,7 +164,7 @@ async function loadKenney() {
 // Animated characters (Kenney "Animated Characters Survivors", CC0): one rigged mesh with idle/run/jump clips,
 // plus a skin texture per gender. If anything fails to load the players keep the blocky code-built body.
 const CHAR_SCALE = 0.32; // the model is about 376 units tall; players are about 120
-// 'boss' is a recoloured copy (navy suit, red tie, silver hair, no stains) that only Sếp Tổng wears; players can only pick m or f.
+// 'boss' is a recoloured copy (navy suit, red tie, silver hair, no stains) that only Sếp VKL wears; players can only pick m or f.
 const SKIN_FILES = { m: 'survivorMaleB', f: 'survivorFemaleA', boss: 'survivorBoss' };
 const BOSS_SCALE = 2.1; // the boss is a big man
 let charAsset = null;
@@ -523,6 +523,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     for (const p of props) {
       const kl = kenneyProp(p);
       if (kl) {
+        if (p.rot) for (const g of kl) g.rotateY(p.rot);
         addAll(kl, p.x, p.y);
         continue;
       }
@@ -548,13 +549,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           cyl(5, 5, 9, '#ffffff', 150, DESK_TOP + 11, -20, 10),
         ], p.x, p.y);
       } else if (p.k === 'sofa') {
-        addAll([
-          box(p.w, 28, p.h, '#3d5a80', 0, 20, 0),
-          box(p.w, 44, 22, '#34506f', 0, 44, -p.h / 2 + 11),
-          box(22, 34, p.h, '#2d4663', -p.w / 2 + 11, 34, 0),
-          box(22, 34, p.h, '#2d4663', p.w / 2 - 11, 34, 0),
-          box(p.w - 50, 8, p.h - 28, '#4a6a95', 0, 38, 8),
-        ], p.x, p.y);
+        const sideways = p.rot && Math.abs(Math.sin(p.rot)) > 0.5; // footprint is the world-space one
+        const sw = sideways ? p.h : p.w;
+        const sh = sideways ? p.w : p.h;
+        const parts = [
+          box(sw, 28, sh, '#3d5a80', 0, 20, 0),
+          box(sw, 44, 22, '#34506f', 0, 44, -sh / 2 + 11),
+          box(22, 34, sh, '#2d4663', -sw / 2 + 11, 34, 0),
+          box(22, 34, sh, '#2d4663', sw / 2 - 11, 34, 0),
+          box(sw - 50, 8, sh - 28, '#4a6a95', 0, 38, 8),
+        ];
+        if (p.rot) for (const g of parts) g.rotateY(p.rot);
+        addAll(parts, p.x, p.y);
       } else if (p.k === 'rug') {
         addAll([
           box(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
@@ -739,7 +745,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     else buildNow(w, props, zones);
   }
 
-  // ---- Sếp Tổng -----------------------------------------------------------
+  // ---- Sếp VKL -----------------------------------------------------------
   // One big character drawn with the same rig as the players (a cloned model with its own skin and a crown), plus
   // the red circle that shows where the next punch will land.
   let bossRig = null;
@@ -796,11 +802,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // A chair turns to face the nearest desk or table (the model's front is +z).
   const CHAIR_FRONT = 0;
-  function faceNearestFurniture(group, o) {
+  function faceNearestFurniture(group, o, types, all) {
     let best = null;
     let bd = Infinity;
-    for (const p of propList) {
-      if (p.k !== 'desk' && p.k !== 'table' && p.k !== 'conference') continue;
+    // desks are objects (so they can be smashed), not props
+    const dd = types && types.desk;
+    const rects = propList.filter((p) => p.k === 'table' || p.k === 'conference');
+    for (const d of all) if (d.type === 'desk' && dd) rects.push({ x: d.x, y: d.y, w: dd.w, h: dd.h });
+    for (const p of rects) {
       const nx = Math.max(p.x - p.w / 2, Math.min(p.x + p.w / 2, o.x));
       const ny = Math.max(p.y - p.h / 2, Math.min(p.y + p.h / 2, o.y));
       const d = Math.hypot(nx - o.x, ny - o.y);
@@ -810,9 +819,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       }
     }
     if (best && bd < 160) group.rotation.y = Math.atan2(best[0] - o.x, best[1] - o.y) + CHAIR_FRONT;
+    else if (o.rot) group.rotation.y = o.rot + CHAIR_FRONT;
   }
 
-  function objectRig(o, types) {
+  function objectRig(o, types, all) {
     let rig = rigs.get(o.id);
     if (rig) return rig;
     if (!models[o.type]) models[o.type] = buildModel(o.type, types);
@@ -841,7 +851,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     proxy.userData.objId = o.id;
     group.add(proxy);
     proxies.push(proxy);
-    if (o.type === 'chair') faceNearestFurniture(group, o);
+    if (o.type === 'chair') faceNearestFurniture(group, o, types, all);
+    else if (o.rot) group.rotation.y = o.rot;
     scene.add(group);
     rig = { group, body, glow, wreck, mat, proxy, o, popPrev: 0, shown: null };
     rigs.set(o.id, rig);
@@ -1496,7 +1507,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     // objects
     for (const o of S.objects) {
-      const rig = objectRig(o, S.types);
+      const rig = objectRig(o, S.types, S.objects);
       if (rig.shown !== o.broken) {
         rig.shown = o.broken;
         rig.body.visible = !o.broken;
