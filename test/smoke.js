@@ -89,8 +89,10 @@ async function main() {
 
   await step('hitting an object out of reach is rejected', async () => {
     const far = A.welcome.objects.reduce((best, o) => (dist(A, o) > dist(A, best) ? o : best));
-    assert.ok(dist(A, far) > server.HIT_RANGE);
+    assert.ok(dist(A, far) > server.HIT_RANGE * 2);
     send(A, { t: 'hit', id: far.id });
+    await none(A, (m) => m.t === 'hit');
+    send(A, { t: 'hit', id: far.id, skill: 'milkTea' });
     await none(A, (m) => m.t === 'hit');
   });
 
@@ -114,8 +116,14 @@ async function main() {
     .reduce((best, o) => (dist(A, o) < dist(A, best) ? o : best));
   const info = server.TYPES[target.type];
 
-  await step('walking in range then hitting damages the object for everyone', async () => {
-    await walkTo(A, target, 60);
+  await step('milk tea reaches beyond hammer range and damages the object for everyone', async () => {
+    await walkTo(A, target, 160);
+    assert.ok(dist(A, target) > server.HIT_RANGE);
+    assert.ok(dist(A, target) < server.HIT_RANGE * 2);
+    send(A, { t: 'hit', id: target.id });
+    await none(A, (m) => m.t === 'hit' && m.id === target.id);
+    send(A, { t: 'hit', id: target.id, skill: 'electric' });
+    await none(A, (m) => m.t === 'hit' && m.id === target.id);
     send(A, { t: 'hit', id: target.id, skill: 'milkTea' });
     const hitA = await take(A, (m) => m.t === 'hit' && m.id === target.id);
     const hitB = await take(B, (m) => m.t === 'hit' && m.id === target.id);
@@ -124,15 +132,20 @@ async function main() {
     assert.strictEqual(hitB.by, A.id);
     assert.strictEqual(hitA.skill, 'milkTea');
     assert.strictEqual(hitB.skill, 'milkTea');
+    await walkTo(A, target, 60); // following hammer checks still run at melee range
   });
 
-  await step('hit cooldown drops rapid duplicate hits', async () => {
+  await step('electric uses hammer damage and cooldown and is relayed to other players', async () => {
     await sleep(250);
-    send(A, { t: 'hit', id: target.id });
-    send(A, { t: 'hit', id: target.id });
+    send(A, { t: 'hit', id: target.id, skill: 'electric' });
+    send(A, { t: 'hit', id: target.id, skill: 'electric' });
     await sleep(120);
     const hits = A.msgs.filter((m) => !m._used && m.t === 'hit' && m.id === target.id);
     assert.strictEqual(hits.length, 1);
+    assert.strictEqual(hits[0].hp, info.hp - 2);
+    assert.strictEqual(hits[0].skill, 'electric');
+    const otherHit = await take(B, m => m.t === 'hit' && m.id === target.id && m.skill === 'electric');
+    assert.strictEqual(otherHit.hp, hits[0].hp);
     hits[0]._used = true;
   });
 
@@ -208,6 +221,10 @@ async function main() {
     const s2 = await take(A, (m) => m.t === 'swing' && m.id === B.id && m.h === 0);
     assert.strictEqual(s2.h, 0);
     assert.strictEqual(s2.skill, 'hammer');
+    await sleep(250);
+    send(B, { t: 'swing', h: 0.5, skill: 'electric' });
+    const electric = await take(A, m => m.t === 'swing' && m.id === B.id && m.skill === 'electric');
+    assert.strictEqual(electric.h, 0.5);
   });
 
   await step('garbage input does not break the server', async () => {

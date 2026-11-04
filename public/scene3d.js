@@ -167,7 +167,7 @@ async function loadFloorTextures() {
   }));
 }
 
-function buildModel(type, types) {
+function buildModel(type, types, largeScreen = false) {
   const body = [];
   const glow = [];
   let pick = null;
@@ -316,9 +316,15 @@ function buildModel(type, types) {
     case 'tv':
       body.push(box(44, 3, 26, '#2b3240', 0, 1.5, 0));
       body.push(box(5, 40, 5, '#2b3240', 0, 22, -2));
-      body.push(box(92, 56, 5, '#12151c', 0, 74, 0));
-      glow.push(box(84, 48, 0.8, '#4aa8ff', 0, 74, 2.7));
-      glow.push(box(60, 4, 0.9, '#bfe3ff', 0, 90, 2.9));
+      {
+        const w = largeScreen ? 2 : 1;
+        const h = largeScreen ? 1.8 : 1;
+        const cy = 46 + 28 * h; // keep the bottom edge at the top of the stand
+        body.push(box(92 * w, 56 * h, 5, '#12151c', 0, cy, 0));
+        glow.push(box(92 * w - 8, 56 * h - 8, 0.8, '#4aa8ff', 0, cy, 2.7));
+        glow.push(box(60 * w, 4, 0.9, '#bfe3ff', 0, cy + 16 * h, 2.9));
+        if (largeScreen) pick = [192, 154, 36];
+      }
       break;
     case 'toilet':
       body.push(ell(14, 11, 19, '#f4f6f9', 0, 12, 6), ell(16.5, 5, 21.5, '#fbfcfd', 0, 24, 7), ell(11, 2.4, 16, '#cfe3f5', 0, 26.8, 7));
@@ -549,6 +555,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- static world -------------------------------------------------------
   let exitMat = null;
+  const stallDoors = [];
   function buildNow(w, props, zones) {
     if (built) return;
     built = true;
@@ -577,6 +584,38 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           sbox(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
           sbox(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
         ], p.x, p.y);
+      } else if (p.k === 'roomSign') {
+        const tex = makeCanvasTexture(256, 64, (ctx, w, h) => {
+          ctx.fillStyle = '#233d42';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = '#e4fff1';
+          ctx.font = '800 36px ' + UI_FONT;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.text, w / 2, h / 2);
+        });
+        const sign = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+        sign.position.set(p.x, 150, p.y);
+        staticGroup.add(sign);
+      } else if (p.k === 'stallDoor') {
+        const frame = [
+          sbox(7, 180, 10, '#2f384a', -p.w / 2 - 3.5, 90),
+          sbox(7, 180, 10, '#2f384a', p.w / 2 + 3.5, 90),
+          sbox(p.w + 14, 7, 10, '#2f384a', 0, 180),
+        ];
+        addAll(frame, p.x, p.y);
+        const hinge = new THREE.Group();
+        hinge.position.set(p.x - p.w / 2, 0, p.y);
+        const leaf = new THREE.Mesh(merge([
+          box(p.w - 4, 152, 7, '#758c9a', p.w / 2, 94),
+          box(5, 17, 4, '#dce5eb', p.w - 16, 94, 6),
+          cyl(3, 3, 3, '#53d49a', p.w - 16, 112, 5, 10, Math.PI / 2),
+        ]), bodyMat);
+        leaf.castShadow = true;
+        leaf.receiveShadow = true;
+        hinge.add(leaf);
+        staticGroup.add(hinge);
+        stallDoors.push({ hinge, x: p.x, y: p.y });
       } else if (p.k === 'wall') {
         const hgt = 210;
         const b = bucket(p.x, p.y);
@@ -925,8 +964,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   function objectRig(o, types, all) {
     let rig = rigs.get(o.id);
     if (rig) return rig;
-    if (!models[o.type]) models[o.type] = buildModel(o.type, types);
-    const mod = models[o.type];
+    // Meeting-room screens face the end of a conference table on the same axis.
+    const largeScreen = o.type === 'tv' && all.some(d =>
+      d.type === 'conference' && Math.abs(d.y - o.y) < 1 && Math.abs(d.x - o.x) < 650);
+    const modelKey = largeScreen ? 'meetingTv' : o.type;
+    if (!models[modelKey]) models[modelKey] = buildModel(o.type, types, largeScreen);
+    const mod = models[modelKey];
     const group = new THREE.Group();
     group.position.set(o.x, lift(o.type), o.y);
     const mat = bodyMat.clone();
@@ -945,7 +988,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     wreck.visible = false;
     group.add(wreck);
     const pk = mod.pick || PICK[o.type] || [40, 40, 40];
-    PICK[o.type] = pk;
+    if (!largeScreen) PICK[o.type] = pk;
     const proxy = new THREE.Mesh(new THREE.BoxGeometry(pk[0], pk[1], pk[2]), pickMat);
     proxy.position.y = pk[1] / 2;
     proxy.userData.objId = o.id;
@@ -954,9 +997,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     if (o.type === 'chair') faceNearestFurniture(group, o, types, all);
     else if (o.rot) group.rotation.y = o.rot;
     const halo = makeHalo(o.type);
-    if (halo) group.add(halo);
+    if (halo) {
+      if (largeScreen) {
+        halo.position.y += 22.4;
+        halo.scale.multiplyScalar(1.8);
+      }
+      group.add(halo);
+    }
     scene.add(group);
-    rig = { group, body, glow, halo, wreck, mat, proxy, o, popPrev: 0, shown: null };
+    rig = { group, body, glow, halo, wreck, mat, proxy, o, barLift: largeScreen ? 158 : null, popPrev: 0, shown: null };
     rigs.set(o.id, rig);
     return rig;
   }
@@ -1261,7 +1310,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const eo = (t) => 1 - (1 - t) * (1 - t);
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
-    if (S.players.has(p.id)) rig.hammer.visible = (isMe ? S.skill : p.skill) !== 'milkTea';
+    if (S.players.has(p.id)) rig.hammer.visible = !['milkTea', 'electric'].includes(isMe ? S.skill : p.skill);
     const armed = rig.hammer.visible;
     const CARRY = -0.12; // at rest: the arm hangs naturally at the side
     let a = armed ? CARRY + sw * 0.2 + breathe * 0.03 : -0.35 + sw * 0.55 + breathe * 0.04;
@@ -1486,7 +1535,52 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     cup.mesh.visible = true;
   }
 
+  // Short-lived branching arcs: bounded buffers and no extra lights or post-processing.
+  const electricArcs = Array.from({ length: 24 }, () => {
+    const positions = new Float32Array(3 * 8 * 2 * 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({ color: 0x9bf5ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const mesh = new THREE.LineSegments(geometry, material);
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    return { mesh, positions, life: 0, x: 0, z: 0, tx: 0, tz: 0 };
+  });
+  let electricNext = 0;
+  function fxElectric(x, z, tx, tz) {
+    const arc = electricArcs[electricNext];
+    electricNext = (electricNext + 1) % electricArcs.length;
+    Object.assign(arc, { life: 0.25, x, z, tx, tz });
+    // Fill its reused buffer on the next update before making it visible.
+    arc.mesh.visible = false;
+    fxSparks(tx, 45, tz, 5);
+  }
+
   function updateParticles(dt) {
+    for (const arc of electricArcs) {
+      if (arc.life <= 0) continue;
+      arc.life = Math.max(0, arc.life - dt);
+      arc.mesh.visible = arc.life > 0;
+      if (!arc.life) continue;
+      let offset = 0;
+      for (let branch = 0; branch < 3; branch++) {
+        let px = arc.x, py = 65, pz = arc.z;
+        for (let segment = 1; segment <= 8; segment++) {
+          const t = segment / 8;
+          const jitter = segment === 8 ? 0 : 12;
+          const x = arc.x + (arc.tx - arc.x) * t + rand(-jitter, jitter);
+          const y = 65 - 20 * t + rand(-jitter, jitter);
+          const z = arc.z + (arc.tz - arc.z) * t + rand(-jitter, jitter);
+          arc.positions.set([px, py, pz, x, y, z], offset);
+          offset += 6;
+          px = x; py = y; pz = z;
+        }
+      }
+      arc.mesh.geometry.attributes.position.needsUpdate = true;
+      arc.mesh.material.opacity = Math.min(1, arc.life / 0.1);
+    }
+
     for (const cup of teaCups) {
       if (cup.life <= 0) continue;
       cup.life = Math.max(0, cup.life - dt);
@@ -1621,7 +1715,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         }
         continue;
       }
-      const pr = project(o.x, BAR_LIFT[o.type] || 70, o.y);
+      const pr = project(o.x, rigs.get(o.id)?.barLift || BAR_LIFT[o.type] || 70, o.y);
       const on = pr.ok && pr.sx > -60 && pr.sx < W + 60 && pr.sy > -30 && pr.sy < H + 30;
       if (!b) {
         const el = document.createElement('div');
@@ -1665,6 +1759,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     if (!loaded || !built) return; // models still loading
     time += dt;
     const me = S.players.get(S.me);
+
+    for (const door of stallDoors) {
+      const nearby = [...S.players.values()].some(p => !p.dead && Math.hypot(p.x - door.x, p.y - door.y) < 160);
+      const angle = nearby ? Math.PI / 2 : 0;
+      door.hinge.rotation.y += (angle - door.hinge.rotation.y) * Math.min(1, dt * 10);
+    }
 
     // camera follows the player
     if (me) {
@@ -1859,7 +1959,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   return {
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
-    fx: { milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
+    fx: { electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),
   };

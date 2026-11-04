@@ -25,6 +25,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   const EMOTES = ['😤', '😂', '💀', '🔥', '☕', '😭', '👍', '🫠'];
   const JOKES = ['KPI!', 'Deadline!', 'Họp lúc 5h!', 'Reply All!', 'OT miễn phí!', 'Task gấp!', 'Sếp ơi!', 'Còn bug!'];
+  const SKILLS = [
+    { id: 'hammer', label: '🔨 Skill: Đập búa', action: 'ĐẬP!' },
+    { id: 'milkTea', label: '🧋 Skill: Ném ly trà sữa', action: 'NÉM!' },
+    { id: 'electric', label: '⚡ Skill: Chích điện', action: 'CHÍCH!' },
+  ];
   const HIT_WORDS = ['BỐP!', 'RẦM!', 'CHÁT!', 'BỊCH!', 'RẮC!'];
   const RUBBLE = {
     laptop: ['#9aa3b2', '#1c2330', '#4aa8ff'],
@@ -81,6 +86,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     types: {},
     desks: [],
     hitRange: 110,
+    milkTeaRangeMultiplier: 2,
     players: new Map(),
     objects: [],
     boss: null, // VKL of this server (see the boss section)
@@ -376,6 +382,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.types = m.types;
         S.colliders = m.colliders;
         S.hitRange = m.hitRange;
+        S.milkTeaRangeMultiplier = m.milkTeaRangeMultiplier || 2;
         S.manaCfg = m.mana;
         S.maxPlayers = m.maxPlayers || 20;
         S.hpCfg = m.player || { max: 100, regenDelayMs: 4000, regenPerSec: 5 };
@@ -1198,7 +1205,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
       'Một mình hay hai người không hạ nổi sếp (sếp tự hồi máu). <b>Từ 5 người</b> đánh cùng nhau thì được, sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 3 đến 5 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
-      'Bấm nút <b>Skill</b> cạnh Gọi IT để đổi giữa <b>Đập búa</b> và <b>Ném ly trà sữa</b>. Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
+      'Bấm nút <b>Skill</b> cạnh Gọi IT để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. Bấm <b>Gọi IT</b> để thay hết đồ mới ngay.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
@@ -1221,19 +1228,29 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // ---------------------------------------------------------------- input ----
   function showSkill(p, skill, target) {
-    p.skill = skill === 'milkTea' ? 'milkTea' : 'hammer';
+    p.skill = SKILLS.some(s => s.id === skill) ? skill : 'hammer';
     if (p.skill === 'milkTea' && scene) {
+      const distance = 100 * S.milkTeaRangeMultiplier;
+      const x = target ? target.x : p.x + Math.sin(p.heading) * distance;
+      const y = target ? target.y : p.y + Math.cos(p.heading) * distance;
+      scene.fx.milkTea(p.x, p.y, x, y);
+    } else if (p.skill === 'electric' && scene) {
       const x = target ? target.x : p.x + Math.sin(p.heading) * 100;
       const y = target ? target.y : p.y + Math.cos(p.heading) * 100;
-      scene.fx.milkTea(p.x, p.y, x, y);
+      scene.fx.electric(p.x, p.y, x, y);
     }
+  }
+
+  function attackRange(boss = false, margin = 0) {
+    const base = boss ? S.boss.cfg.reach : S.hitRange;
+    return (base - margin) * (S.skill === 'milkTea' ? S.milkTeaRangeMultiplier : 1);
   }
 
   function nearest() {
     const me = S.players.get(S.me);
     if (!me) return null;
     let best = null;
-    let bestD = S.hitRange - 5;
+    let bestD = attackRange(false, 5);
     for (const o of S.objects) {
       if (o.broken) continue;
       const d = Math.hypot(o.x - me.x, o.y - me.y);
@@ -1245,7 +1262,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const bo = bossObj();
     if (bo && S.boss) {
       const center = Math.hypot(bo.x - me.x, bo.y - me.y);
-      if (center <= S.boss.cfg.reach - 10 && center - S.boss.cfg.radius <= bestD) best = bo;
+      if (center <= attackRange(true, 10) && center - S.boss.cfg.radius <= bestD) best = bo;
     }
     return best;
   }
@@ -1273,7 +1290,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       return false;
     }
-    if (Math.hypot(o.x - me.x, o.y - me.y) > (o.boss ? S.boss.cfg.reach - 10 : S.hitRange - 5)) return false;
+    if (Math.hypot(o.x - me.x, o.y - me.y) > attackRange(o.boss, o.boss ? 10 : 5)) return false;
     S.lastHit = now;
     send(o.boss ? { t: 'bhit', skill: S.skill } : { t: 'hit', id: o.id, skill: S.skill });
     me.skill = S.skill;
@@ -1424,11 +1441,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   );
 
   $('skillBtn').addEventListener('click', () => {
-    S.skill = S.skill === 'hammer' ? 'milkTea' : 'hammer';
-    const tea = S.skill === 'milkTea';
-    $('skillBtn').textContent = tea ? '🧋 Skill: Ném ly trà sữa' : '🔨 Skill: Đập búa';
-    $('smashBtn').textContent = tea ? 'NÉM!' : 'ĐẬP!';
-    toast(tea ? 'Đã chọn Ném ly trà sữa · Space hoặc nút NÉM! để dùng' : 'Đã chọn Đập búa');
+    const next = SKILLS[(SKILLS.findIndex(s => s.id === S.skill) + 1) % SKILLS.length];
+    S.skill = next.id;
+    $('skillBtn').textContent = next.label;
+    $('smashBtn').textContent = next.action;
+    toast(next.label + ' · Space hoặc nút ' + next.action + ' để dùng');
   });
 
   $('resetBtn').addEventListener('click', () => send({ t: 'reset' }));
@@ -1696,7 +1713,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.attackId = null;
       } else {
         const dist = Math.hypot(o.x - me.x, o.y - me.y);
-        if (dist <= (o.boss ? S.boss.cfg.reach - 25 : S.hitRange - 15)) {
+        if (dist <= attackRange(o.boss, o.boss ? 25 : 15)) {
           if (tryHit(o)) S.attackId = null; // one tap, one smash
         } else {
           dx = (o.x - me.x) / dist;
