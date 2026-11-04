@@ -125,6 +125,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     target: null,
     attackId: null,
     smashHeld: false,
+    respawnMs: 0, respawnPolicy: null,
     joystick: { x: 0, y: 0, pointerId: null, pointerType: null },
     skill: 'hammer',
     lastAir: 0,
@@ -445,6 +446,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.types = m.types;
         S.colliders = m.colliders;
         S.hitRange = m.hitRange;
+        S.respawnMs = Number(m.respawnMs) || 0;
+        S.respawnPolicy = m.respawnPolicy || null;
         S.milkTeaRangeMultiplier = m.milkTeaRangeMultiplier || 2;
         S.manaCfg = m.mana;
         S.maxPlayers = m.maxPlayers || 20;
@@ -1569,7 +1572,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           '<b>Enter</b> hoặc bấm vào ô chat để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, <b>Shift + 1 đến 8</b> để thả emoji.',
         ];
+    const itPolicy = S.respawnPolicy || { minMs: 25000, maxMs: 60000 };
+    const autoIT = S.respawnMs > 0
+      ? 'IT tự thay đồ vỡ sau khoảng <b>' + (S.respawnMs / 1000) + ' giây</b>.'
+      : 'IT tự thay đồ vỡ trong <b>' + (itPolicy.minMs / 1000) + '–' + (itPolicy.maxMs / 1000) + ' giây</b>: càng đông người thật và càng nhiều đồ vỡ thì thay càng nhanh.';
     items.push(
+      autoIT,
       '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
       'Đồ đã bị đập hiện <b>thanh máu</b>: xanh khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối.',
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',

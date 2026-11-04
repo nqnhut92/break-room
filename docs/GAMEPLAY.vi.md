@@ -27,6 +27,24 @@ Trên màn hình cảm ứng, dùng joystick bên trái để di chuyển và gi
 
 Nút ✨ chuyển giữa đồ họa cao và chế độ an toàn. Chế độ an toàn giữ bóng tròn dưới chân, tắt bóng thời gian thực và halo để giảm tải. Điện thoại mặc định dùng chế độ an toàn, nhưng lựa chọn đã lưu vẫn được giữ; nếu đã bật high trước đó, chuyển lại safe để thử giảm giật.
 
+## IT tự thay đồ
+
+Mặc định mỗi món vỡ được tự thay trong **25–60 giây**, tính từ lúc vỡ. Phòng ít người, ít đồ vỡ thì IT đến chậm; đông người hoặc nhiều đồ vỡ thì nhanh hơn:
+
+`thời gian (ms) = max(25000, 60000 − 2500 × max(0, người thật − 1) − 500 × max(0, món vỡ − 3))`
+
+| Người thật online | Đồ đang vỡ | Tuổi vỡ tối thiểu để được thay |
+| --- | --- | --- |
+| 1 | 1–3 | 60 giây |
+| 1 | 20 | 51,5 giây |
+| 5 | 20 | 41,5 giây |
+| 10 | 20 | 29 giây |
+| 20 | 1 | 25 giây |
+
+Mỗi lượt housekeeping dùng số người online sau khi dọn presence hết hạn và số đồ vỡ **trước lượt thay**. Nội gián không tính là người thật; đồ chỉ mất máu chưa vỡ không tăng tải. Mỗi món vẫn giữ thời điểm vỡ gốc. Người vào/rời và đồ mới vỡ làm ngưỡng thay đổi; không khởi động lại đồng hồ của món cũ, và đủ 60 giây thì luôn đủ tuổi. Housekeeping chạy khoảng mỗi giây khi đang có đồ chờ, nên thời điểm hiển thị có thể muộn hơn ngưỡng một nhịp.
+
+Nút Gọi IT vẫn thay ngay khi hết cooldown như cũ. Đặt `RESPAWN_MS` dương là override thời gian cố định cho quản trị/test, kể cả ngoài khoảng mặc định; xem [Deploy](DEPLOYMENT.vi.md).
+
 ## Boss và nội gián
 
 VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:

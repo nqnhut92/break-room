@@ -20,7 +20,7 @@ Redis  (single source of truth for each server's state)
 
 ## What Redis does
 
-**1. Shared state of each server (BR-1, BR-2).** A "room" is one server. Its keys share the hash tag `{room}` (one cluster slot) and base-state scripts receive the following nine-key set (feature scripts use additional keys):
+**1. Shared state of each server (BR-1, BR-2).** A "room" is one server. Its keys share the hash tag `{room}` (one cluster slot) and base-state scripts receive the following nine-key set (feature scripts use additional keys; housekeeping also receives `moles` to exclude bots from replacement pressure):
 
 | Key | Type | Content |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ Redis is not written to forever. Everything has an expiry or a bounded size:
 | --- | --- |
 | Whole room (all 9 keys) | `touch` sets `EXPIRE` to `ROOM_TTL_S` (default 1800 s) on every join, leave and housekeeping run. A room nobody touches for 30 minutes disappears completely, including scores, names and tokens |
 | Online presence (`on`, `own`) | Heartbeat refreshed by housekeeping about every second (every 2 s while nothing is broken). A player with no heartbeat for `PRESENCE_TTL_MS` (20 s) is pruned, for example after an instance dies |
-| Broken objects (`o`) | Housekeeping deletes an entry once it has been broken for `RESPAWN_MS` (25 s); "Call IT" deletes the whole hash. Untouched objects are not stored at all, so `o` holds at most the number of objects in `lib/world.js` (currently 359) |
+| Broken objects (`o`) | Housekeeping atomically calculates a 25–60 s threshold from current human presence and pre-sweep broken count; positive `RESPAWN_MS` keeps a fixed override. It deletes entries old enough; "Call IT" deletes the whole hash. Untouched objects are not stored at all, so `o` holds at most the number of objects in `lib/world.js` (currently 359) |
 | Per-IP leases | Each lease expires after 60 s and is refreshed while the connection lives |
 | `br:keepalive` | 3-day expiry, rewritten by each deep health check |
 
@@ -87,3 +87,5 @@ The server decides everything important: the client only sends its position and 
 ## Architecture decisions
 
 See [ADRs](adr/README.md) for the rationale behind shared storage, leased runners, direct rendering and static collision geometry. [Development](DEVELOPMENT.md) covers editing and verification.
+
+Object replacement policy lives in `lib/object-respawn.js`; Lua embeds the same constants and computes pressure from shared Redis state inside housekeeping, not an instance-local count. Break timestamps stay unchanged. [Formula and examples](GAMEPLAY.md#automatic-it-replacement).

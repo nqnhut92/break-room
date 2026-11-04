@@ -19,7 +19,7 @@ State dùng chung cần Redis khi chạy nhiều instance. Vercel không nhận 
 | --- | --- |
 | `REDIS_URL` hoặc `KV_URL` | Chuỗi kết nối Redis (TCP). Bắt buộc trên Vercel. Local có thể bỏ trống |
 | `WS_MAX_DURATION_S` | Thời gian tối đa của một kết nối WebSocket. Mặc định 300 trên Vercel, 0 (không giới hạn) khi chạy local. Đặt bằng `maxDuration` nếu bạn nâng lên (gói Pro) |
-| `RESPAWN_MS` | Thời gian đồ vật tự thay mới, mặc định 25000 |
+| `RESPAWN_MS` | Override dương: thời gian thay đồ cố định (ms). Bỏ trống/0/không hợp lệ: tự tính 25000–60000 ms. Xoá cấu hình `25000` cũ nếu muốn bật chế độ tự tính |
 | `AFK_MS` | Người chơi đứng yên (không đi, đập, emoji) quá từng này mili giây thì bị ngắt với mã 4002, mặc định 180000 (3 phút). Client không tự kết nối lại, hiện nút vào lại, điểm vẫn còn. Chặn tab bỏ quên giữ instance Vercel sống (bộ nhớ tính theo thời gian instance còn sống) |
 | `MAX_CONNECTIONS` | Số kết nối tối đa mỗi instance. Mặc định 200 trên Vercel, không giới hạn khi chạy local |
 | `MAX_ROOMS` | Số phòng tối đa mỗi instance. Mặc định 40 trên Vercel, không giới hạn khi chạy local. Với danh sách phòng cố định thì gần như không còn tác dụng |

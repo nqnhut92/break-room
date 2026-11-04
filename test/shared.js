@@ -426,6 +426,65 @@ async function contract(label, makeStore) {
     assert.strictEqual((await store.read(r3, { now: NOW + 10000, ttlMs: 5000 })).players.length, 0);
   });
 
+  // Controlled clocks exercise the same adaptive contract in RAM and Redis.
+  async function adaptiveRoom(suffix, people, count) {
+    const r = room + '-adaptive-' + suffix, live = [];
+    for (let i = 0; i < people; i++) {
+      const connId = 'adaptive-' + suffix + '-' + i;
+      const player = await store.join(r, { ...base, now: NOW, ttlMs: 1000000, max: 30, token: T(1000 + i), name: 'A' + i, connId });
+      live.push({ id: player.id, connId, pos: null });
+    }
+    for (let i = 1; i <= count; i++) await store.hit(r, { objId: i, defaultHp: 1, cost: 1, playerId: live[0]?.id || 1, now: NOW });
+    return { r, live };
+  }
+  const sweepAdaptive = (r, at, entries = [], ttlMs = 1000000, extra = {}) =>
+    store.housekeep(r, { now: NOW + at, ttlMs, respawnMs: 0, sweep: true, entries, ...extra });
+
+  await step(label + ': adaptive IT gives a quiet room 60s and ignores partially damaged objects', async () => {
+    const { r } = await adaptiveRoom('quiet', 1, 3);
+    for (let id = 4; id <= 30; id++) await store.hit(r, { objId: id, defaultHp: 3, cost: 1, playerId: 1, now: NOW });
+    assert.deepStrictEqual((await sweepAdaptive(r, 59999)).respawned, []);
+    const done = await sweepAdaptive(r, 60000);
+    assert.strictEqual(done.remaining, 0);
+    assert.deepStrictEqual(done.respawned.sort((a,b)=>a-b), [1,2,3]);
+    assert.strictEqual((await store.read(r, { now: NOW + 60000, ttlMs: 1000000 })).objects[4].hp, 2);
+  });
+  await step(label + ': adaptive IT freezes broken count for a sweep, including the 25s lower bound', async () => {
+    const { r } = await adaptiveRoom('batch', 1, 20);
+    assert.strictEqual((await sweepAdaptive(r, 51499)).remaining, 20);
+    assert.strictEqual((await sweepAdaptive(r, 51500)).respawned.length, 20, 'every item uses the pre-sweep count');
+    const crowded = await adaptiveRoom('many-items', 1, 100);
+    assert.strictEqual((await sweepAdaptive(crowded.r, 24999)).remaining, 100);
+    assert.strictEqual((await sweepAdaptive(crowded.r, 25000)).respawned.length, 100);
+  });
+  await step(label + ': adaptive IT excludes moles and stale humans and keeps each room independent', async () => {
+    const busy = await adaptiveRoom('people', 2, 1);
+    for (let i = 0; i < 8; i++) {
+      const connId = 'fake-' + i;
+      const bot = await store.join(busy.r, { ...base, ttlMs: 1000000, max: 30, token: T(2000 + i), name: 'Fake' + i, connId });
+      await store.moleAdd(busy.r, bot.id, { hp: 8, conn: connId, now: NOW });
+    }
+    const quiet = await adaptiveRoom('other-room', 1, 1);
+    assert.deepStrictEqual((await sweepAdaptive(busy.r, 57499)).respawned, []);
+    assert.deepStrictEqual((await sweepAdaptive(busy.r, 57500)).respawned, [1]);
+    assert.deepStrictEqual((await sweepAdaptive(quiet.r, 57500)).respawned, []);
+    const expired = await adaptiveRoom('expired', 2, 1);
+    const hk = await sweepAdaptive(expired.r, 57500, [expired.live[0]], 5000);
+    assert.deepStrictEqual(hk.pruned, [expired.live[1].id]);
+    assert.deepStrictEqual(hk.respawned, [], 'a pruned human no longer increases pressure');
+    assert.deepStrictEqual((await sweepAdaptive(expired.r, 60000, [expired.live[0]], 5000)).respawned, [1]);
+  });
+  await step(label + ': adaptive IT re-evaluates demand without restarting age and claims each respawn once', async () => {
+    const { r } = await adaptiveRoom('ramp', 1, 1);
+    assert.deepStrictEqual((await sweepAdaptive(r, 25000)).respawned, []);
+    const peer = label === 'redis' ? makeStore() : store;
+    try {
+      for (let i = 1; i < 20; i++) await peer.join(r, { ...base, now: NOW + 25000, ttlMs: 1000000, max: 30, token: T(3000+i), name: 'New'+i, connId: 'remote-'+i });
+      const attempts = await Promise.all([sweepAdaptive(r, 25000), peer.housekeep(r, { now: NOW+25000, ttlMs:1000000, respawnMs:0, sweep:true, entries:[] })]);
+      assert.deepStrictEqual(attempts.flatMap(a=>a.respawned), [1]);
+    } finally { if (peer !== store) await peer.close(); }
+  });
+
   await step(label + ': reset cooldown and per-IP leases', async () => {
     const r4 = room + '-rs';
     assert.strictEqual((await store.reset(r4, { now: NOW, cooldownMs: 1000 })).ok, true);

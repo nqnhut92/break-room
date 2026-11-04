@@ -21,7 +21,7 @@ Put the function in the same region as the database (for example both in Singapo
 | --- | --- |
 | `REDIS_URL` or `KV_URL` | Redis (TCP) connection string. Required on Vercel. Optional locally |
 | `WS_MAX_DURATION_S` | Maximum lifetime of a WebSocket connection. Default 300 on Vercel, 0 (no limit) locally. Set it to your `maxDuration` if you raise it (Pro plan) |
-| `RESPAWN_MS` | Time before smashed objects are replaced, default 25000 |
+| `RESPAWN_MS` | Optional positive fixed replacement delay in ms. Missing/zero/invalid enables adaptive 25000–60000 ms. Remove a previous `25000` setting to enable the adaptive policy |
 | `AFK_MS` | A player who does nothing (no move, smash or emoji) for this many ms is disconnected with code 4002, default 180000 (3 minutes). The client does not reconnect by itself and shows a join button; the score is kept. Stops forgotten tabs from keeping a Vercel instance alive (memory is billed while an instance is alive) |
 | `MAX_CONNECTIONS` | Maximum connections per instance. Default 200 on Vercel, unlimited locally |
 | `MAX_ROOMS` | Maximum rooms per instance. Default 40 on Vercel, unlimited locally. Almost irrelevant with the fixed server list |

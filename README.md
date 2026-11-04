@@ -2,7 +2,7 @@
 
 English · [Tiếng Việt](README.vi.md) · [Documentation](docs/README.md)
 
-A multiplayer 3D office-smashing game built with three.js. Smash furniture with colleagues, compete on the damage board or team up against VKL, TML and DMM. IT replaces broken objects after 25 seconds; Call IT restores everything immediately.
+A multiplayer 3D office-smashing game built with three.js. Smash furniture with colleagues, compete on the damage board or team up against VKL, TML and DMM. IT replaces broken objects in 25–60 seconds depending on players and broken items; Call IT restores everything immediately.
 
 ![Break Room](artifacts/map-ingame.png)
 

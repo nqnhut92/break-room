@@ -31,6 +31,24 @@ Mobile layout, gesture handling and performance validation are documented in [MO
 
 The ✨ button switches between high and safe graphics. Safe mode retains player ground shadows and disables real-time shadows and screen halos to reduce rendering work. Phones default to safe mode, but a saved choice is preserved; switch back to safe if high was selected earlier.
 
+## Automatic IT replacement
+
+By default, each broken object becomes eligible for replacement **25–60 seconds** after it broke. A quiet room gets a longer wait; more people or broken items shorten it:
+
+`delay (ms) = max(25000, 60000 − 2500 × max(0, real players − 1) − 500 × max(0, broken items − 3))`
+
+| Real players online | Currently broken items | Minimum broken age for replacement |
+| --- | --- | --- |
+| 1 | 1–3 | 60 s |
+| 1 | 20 | 51.5 s |
+| 5 | 20 | 41.5 s |
+| 10 | 20 | 29 s |
+| 20 | 1 | 25 s |
+
+Each housekeeping sweep uses live presence after pruning and the broken count **before that sweep replaces anything**. Moles do not count as real people; partially damaged objects do not count as broken. Every object retains its original break timestamp. Arrivals, departures and new damage can change the threshold without restarting any object's clock; an age of 60 seconds is always eligible. Housekeeping runs about once a second while objects wait, so the visible replacement may occur a tick after eligibility.
+
+Call IT still replaces everything immediately when its existing cooldown permits. A positive `RESPAWN_MS` overrides the policy with a fixed delay for operators/tests, even outside the default range; see [Deployment](DEPLOYMENT.md).
+
 ## Bosses and moles
 
 VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. Moles pose as ordinary players. Detailed rules and balance:

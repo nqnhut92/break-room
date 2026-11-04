@@ -76,3 +76,5 @@ Kiểm tra nhắc xoay màn hình bằng `npm run test:orientation` sau khi cài
 Kiểm tra vòng đời joystick bằng `npm run test:joystick` (Chromium/`CHROMIUM_PATH`). Test kết hợp touch thật trong Chromium và sự kiện bị mất được mô phỏng để kiểm tra hướng, giữ ngón, vừa đi vừa đánh, mất capture và focus chat. Đây không phải tái hiện chắc chắn lỗi Safari trên iPhone; xem [Mobile](MOBILE.md#joystick-recovery) và kiểm tra tiếp trên máy thật.
 
 Kiểm tra lưới cài đặt bằng `npm run test:settings` (Chromium/`CHROMIUM_PATH`): bố cục các cặp nút, Gọi IT toàn hàng, listener/trạng thái được giữ và toolbar desktop. `SETTINGS_REAL_RENDERER=1` chạy smoke test có WebGL thật; xem [Mobile](MOBILE.md#settings-layout). Renderer test cũng đi camera qua ranh giới sàn cũ ở cả safe/high; kiểm tra máy thật khi di chuyển vẫn cần thiết.
+
+Chỉnh chính sách IT trong `lib/object-respawn.js`: hệ số dùng chung cho RAM và Lua. `test/object-respawn.js` kiểm tra ví dụ/biên/tính đơn điệu; `test/shared.js` chạy cùng contract trên RAM/Redis, gồm bot, presence hết hạn, batch, thay đổi số người và tranh chấp hai client Redis. Chạy `npm run test:redis`; `RESPAWN_MS` dương vẫn giữ chế độ cố định để test nhanh.

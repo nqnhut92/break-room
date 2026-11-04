@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
 const {createApp}=require('../server');
 
 async function main(){
-  const app=createApp({bossEnabled:false,moleEnabled:false,afkMs:0,log:()=>{}}),port=await app.start(0);
+  const app=createApp({bossEnabled:false,moleEnabled:false,afkMs:0,respawnMs:0,log:()=>{}}),port=await app.start(0);
   let browser;
   try{
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true});
@@ -39,7 +39,7 @@ async function main(){
       if(process.env.SETTINGS_SCREENSHOT&&width===844)await page.screenshot({path:process.env.SETTINGS_SCREENSHOT});
       await page.click('#settingsClose');assert.equal(await page.locator('#settingsDlg').isVisible(),false);
       await page.click('#settingsBtn');await page.click('#helpBtn');
-      assert.equal(await page.locator('#help').isVisible(),true);assert.equal(await page.locator('#settingsDlg').isVisible(),false);
+      assert.equal(await page.locator('#help').isVisible(),true);assert.match(await page.locator('#helpList').innerText(),/25–60 giây/);assert.equal(await page.locator('#settingsDlg').isVisible(),false);
       assert.deepEqual(errors,[]);ok(width+'x'+height+': existing actions work and gameplay controls remain outside settings');
       await page.close();
     }

@@ -20,7 +20,7 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 
 ## Redis làm gì
 
-**1. Giữ state dùng chung của mỗi server (BR-1, BR-2).** Một "phòng" là một server. Các key của phòng cùng hash tag `{room}` (cùng một slot cluster) và các script cho state cơ bản nhận bộ chín key sau (script cho từng tính năng dùng key riêng):
+**1. Giữ state dùng chung của mỗi server (BR-1, BR-2).** Một "phòng" là một server. Các key của phòng cùng hash tag `{room}` (cùng một slot cluster) và các script cho state cơ bản nhận bộ chín key sau (script tính năng dùng key riêng; housekeeping còn nhận `moles` để không tính bot vào tải thay đồ):
 
 | Key | Kiểu | Nội dung |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ Redis không bị ghi vô hạn. Mọi thứ đều có hạn dùng hoặc kích
 | --- | --- |
 | Cả phòng (9 key) | `touch` đặt `EXPIRE` bằng `ROOM_TTL_S` (mặc định 1800 giây) ở mỗi lần vào, rời và dọn dẹp. Phòng 30 phút không ai chạm vào thì biến mất hoàn toàn, gồm cả điểm, tên và token |
 | Online (`on`, `own`) | Nhịp tim được làm mới khi dọn dẹp, khoảng mỗi giây (mỗi 2 giây khi chưa có gì vỡ). Người không có nhịp tim quá `PRESENCE_TTL_MS` (20 giây) bị loại, ví dụ khi instance chết |
-| Đồ vật vỡ (`o`) | Xoá mục sau `RESPAWN_MS` (25 giây); Gọi IT xoá cả hash. Món nguyên vẹn không được lưu; số mục tối đa bằng số đồ vật trong `lib/world.js` (hiện 359) |
+| Đồ vật vỡ (`o`) | Housekeeping tính nguyên tử ngưỡng 25–60 giây theo số người thật và đồ vỡ trước lượt thay, rồi xoá mục đủ tuổi; `RESPAWN_MS` dương giữ override cố định; Gọi IT xoá cả hash. Món nguyên vẹn không được lưu; số mục tối đa bằng số đồ vật trong `lib/world.js` (hiện 359) |
 | Lease theo IP | Mỗi lease hết hạn sau 60 giây và được làm mới khi kết nối còn sống |
 | `br:keepalive` | Hạn 3 ngày, ghi lại ở mỗi lần health check sâu |
 
@@ -89,3 +89,5 @@ Server là nơi quyết định mọi thứ quan trọng: client chỉ gửi v�
 ## Quyết định kiến trúc
 
 Xem [ADR](adr/README.md) để biết vì sao chọn store dùng chung, runner có lease, render trực tiếp và map va chạm tĩnh. [Phát triển](DEVELOPMENT.vi.md) hướng dẫn sửa và kiểm tra code.
+
+Quy tắc thay đồ nằm ở `lib/object-respawn.js`; script Lua lấy hệ số từ cùng constants và tính trên state Redis ngay trong lượt housekeeping, không dùng số đếm riêng của từng instance. Tuổi đồ vỡ giữ nguyên. [Công thức và ví dụ](GAMEPLAY.vi.md#it-tự-thay-đồ).
