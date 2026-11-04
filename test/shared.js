@@ -286,6 +286,26 @@ async function contract(label, makeStore) {
     assert.strictEqual((await store.snakeList(r, { now: NOW + 1000 })).length, 0);
   });
 
+  await step(label + ': a mole is secret until hit, dies once and pays its bounty to the one who killed it', async () => {
+    const r = room + '-mole';
+    await store.moleAdd(r, 7, { hp: 8, conn: 'c7', now: NOW });
+    assert.deepStrictEqual(await store.moleList(r, { now: NOW }), [{ id: 7, hp: 8, revealed: false, conn: 'c7' }]);
+    assert.deepStrictEqual(await store.moleHit(r, { id: 99, dmg: 1, cost: 120, playerId: 1, now: NOW }), { state: 'none' });
+    const first = await store.moleHit(r, { id: 7, dmg: 3, cost: 120, playerId: 1, now: NOW });
+    assert.deepStrictEqual([first.state, first.hp], ['hit', 5]);
+    assert.strictEqual((await store.moleList(r, { now: NOW }))[0].revealed, true);
+    const kills = await Promise.all([1, 2, 3].map((p) => store.moleHit(r, { id: 7, dmg: 5, cost: 120, playerId: p, now: NOW })));
+    assert.strictEqual(kills.filter((k) => k.state === 'killed').length, 1);
+    assert.deepStrictEqual(await store.moleList(r, { now: NOW }), []);
+    const snap = await store.read(r, { now: NOW, ttlMs: 5000 });
+    assert.strictEqual(snap.total, 120);
+    await store.moleAdd(r, 8, { hp: 8, conn: 'c8', now: NOW });
+    await store.moleReveal(r, 8, NOW);
+    assert.strictEqual((await store.moleList(r, { now: NOW }))[0].revealed, true);
+    await store.moleDel(r, 8, NOW);
+    assert.deepStrictEqual(await store.moleList(r, { now: NOW }), []);
+  });
+
   await step(label + ': concurrent hits break an object exactly once and score it once', async () => {
     const r2 = room + '-hits';
     const results = await Promise.all(

@@ -269,6 +269,18 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   // ---------------------------------------------------------------- state ----
+  // A "bạn sếp" gives itself away when it stabs or when somebody hits it. From then on it carries a label and a health bar.
+  const MOLE_HP = 8;
+  function revealMole(id, hp) {
+    const p = S.players.get(id);
+    if (!p) return null;
+    p.mole = true;
+    p.moleHp = hp;
+    p.alwaysHp = true;
+    p.company = '🐍 BẠN SẾP';
+    return p;
+  }
+
   function addPlayer(p) {
     S.players.set(p.id, {
       id: p.id, name: p.name, hue: p.hue, gender: p.gender === 'f' ? 'f' : 'm', role: ROLE_BY_ID[p.role] ? p.role : 'nv', company: String(p.company || ''),
@@ -425,6 +437,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.mana = { v: m.mana.v, t: performance.now() - m.mana.ago };
         S.players = new Map();
         m.players.forEach(addPlayer);
+        for (const f of m.moles || []) revealMole(f.id, f.hp);
         S.objects = m.objects.map(makeObject);
         S.snakes = new Map((m.snakes || []).map(s => [s.id, { ...s, tx: s.x, ty: s.y }]));
         initBoss(m.boss);
@@ -465,7 +478,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         break;
       case 'pl': {
         const p = S.players.get(m.id);
-        if (p) toast(p.name + ' đã rời server');
+        if (p && !p.mole) toast(p.name + ' đã rời server');
         S.players.delete(m.id);
         break;
       }
@@ -581,6 +594,46 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           p.hpT = performance.now();
           if (scene) scene.fx.floatText(p.x, 150, p.y, '♥ + MANA', '#7df3ba', 18);
         }
+        break;
+      }
+      case 'moleReveal': {
+        const mole = revealMole(m.id, m.hp);
+        if (mole && scene) scene.fx.floatText(mole.x, 170, mole.y, '🐍 BẠN SẾP!', '#ff5a5a', 22);
+        break;
+      }
+      case 'moleStab': {
+        const mole = S.players.get(m.id);
+        const target = S.players.get(m.target);
+        if (!mole) break;
+        mole.swing = 1;
+        mole.skill = 'hammer';
+        mole.heading = m.h || 0;
+        if (target) showSkill(mole, 'hammer', target);
+        if (m.first && target && scene) {
+          scene.fx.sparks(target.x, 65, target.y, 10);
+          scene.fx.floatText(target.x, 110, target.y, 'ĐÂM LÉN!', '#ff5a5a', 20);
+        }
+        break;
+      }
+      case 'moleHit': {
+        const mole = revealMole(m.id, m.hp);
+        const attacker = S.players.get(m.by);
+        if (!mole || !attacker) break;
+        attacker.swing = 1;
+        attacker.heading = Math.atan2(mole.x - attacker.x, mole.y - attacker.y);
+        showSkill(attacker, m.skill, mole);
+        mole.hitUntil = performance.now() + 300;
+        if (scene && m.skill !== 'milkTea') scene.fx.sparks(mole.x, 65, mole.y, 8);
+        if (scene) scene.fx.floatText(mole.x, 130, mole.y, m.skill === 'electric' ? '⚡ TÊ TÊ!' : m.skill === 'milkTea' ? 'TRÀ SỮA!' : 'BỐP!', '#ffd24a', 18);
+        sfxHit(volumeAt(mole.x, mole.y));
+        break;
+      }
+      case 'moleDead': {
+        const mole = S.players.get(m.id);
+        const killer = S.players.get(m.by);
+        toast('🐍 ' + (killer ? killer.name : 'Ai đó') + ' hạ gục bạn sếp ' + (mole ? mole.name : '') + '! +' + m.cost);
+        if (mole && scene) scene.fx.floatText(mole.x, 150, mole.y, '+' + m.cost, '#7df3ba', 24);
+        if (mole) S.shake = Math.min(1, S.shake + 0.4 * volumeAt(mole.x, mole.y));
         break;
       }
       case 'phit': {
@@ -1007,7 +1060,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // Per-frame upkeep: bars, the boss's smooth walk, the HUD pieces.
   function bossTick(dt) {
     const me = S.players.get(S.me);
-    for (const p of S.players.values()) p.hpFrac = hpNow(p) / (S.hpCfg ? S.hpCfg.max : 100);
+    for (const p of S.players.values()) p.hpFrac = p.mole ? clamp(p.moleHp / MOLE_HP, 0, 1) : hpNow(p) / (S.hpCfg ? S.hpCfg.max : 100);
     if (me) {
       const pct = clamp(me.hpFrac, 0, 1);
       $('hpFill').style.transform = 'scaleX(' + pct.toFixed(3) + ')';
@@ -1447,7 +1500,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   function playerObj(id) {
     const p = S.players.get(id);
-    return p && id !== S.me && !p.dead ? { player: true, id, x: p.x, y: p.y } : null;
+    return p && id !== S.me && !p.dead ? { player: true, mole: !!p.mole, id, x: p.x, y: p.y } : null;
   }
 
   function nearest() {
@@ -1498,7 +1551,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!me || !o || o.broken || me.dead) return false;
     const now = performance.now();
     if (now - S.lastHit < 190) return false;
-    if (!o.player && S.manaCfg && manaNow() < S.manaCfg.cost) {
+    if ((!o.player || o.mole) && S.manaCfg && manaNow() < S.manaCfg.cost) {
       S.manaEmptyT = 1; // flash the bar
       if (now - S.manaToastAt > 2500) {
         S.manaToastAt = now;
