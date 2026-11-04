@@ -498,7 +498,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
   const ZOOM_MIN = 560;
   const ZOOM_MAX = 2300;
-  const cam = { x: 0, z: 0, dist: 820, pitch: 0.97, ready: false };
+  const ZOOM_START = 1300; // roughly the middle of the range: a whole meeting room fits, characters stay readable
+  const cam = { x: 0, z: 0, dist: ZOOM_START, pitch: 0.97, ready: false };
+  try {
+    const saved = Number(localStorage.getItem('br-zoom'));
+    if (saved >= ZOOM_MIN && saved <= ZOOM_MAX) cam.dist = saved; // the player's own choice, remembered
+  } catch (e) { /* ignore */ }
   let shadowR = 900;
 
   scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x6a5f58, 1.0));
@@ -1747,6 +1752,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   function zoom(delta) {
     cam.dist = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, cam.dist * (1 + delta)));
+    try {
+      localStorage.setItem('br-zoom', String(Math.round(cam.dist)));
+    } catch (e) { /* ignore */ }
   }
 
   function cameraTo(x, y) {
