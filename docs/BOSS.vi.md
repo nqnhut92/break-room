@@ -62,7 +62,7 @@ Trận thật khó hơn mô hình vì người chơi bị đấm, nên 3 đến 
 
 **Vì sao bỏ vai "Sếp".** Giờ chỉ có đúng một sếp. Danh sách vai trò không còn "Sếp"; lựa chọn đã lưu cũ tự về nhân viên thường.
 
-**Diện mạo của sếp.** Người chơi chọn giữa hai skin Kenney (`m` và `f`). Sếp dùng skin thứ ba, `survivorBoss.png`, không có trong danh sách người chơi (`SKIN_FILES.boss` trong `scene3d.js` chỉ dùng cho sếp; màn vào và server chỉ nhận `m` và `f`). Lúc làm không tải được các skin khác của bộ Kenney, nên đây là bản đổi màu từ skin nam (vest xanh navy, cà vạt đỏ, tóc bạc, bỏ vết bẩn; bản gốc là CC0 nên bản này cũng vậy). Muốn thay bằng skin khác cùng bố cục UV 1024×1024 thì thay đúng file này.
+**Diện mạo của sếp.** Sếp dùng cùng thân dựng bằng code như người chơi (`makePlayer` trong `scene3d.js`, `gender: 'boss'`): vest xanh navy, cà vạt đỏ, tóc bạc dựng và vương miện vàng, phóng to bằng `BOSS_SCALE`. Người chơi chỉ chọn `m` hoặc `f`; màn hình vào phòng và server chỉ nhận hai giá trị đó.
 
 ## Chạy trên nhiều instance thế nào
 

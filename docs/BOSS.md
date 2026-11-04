@@ -62,7 +62,7 @@ The real fight is harder than this model because players get punched, so 3 and 4
 
 **Why no "Sếp" role any more.** There is now exactly one boss. The role list lost "Sếp"; old saved choices fall back to a normal employee.
 
-**The boss's look.** Players choose between two Kenney skins (`m` and `f`). The boss uses a third, `survivorBoss.png`, which is not offered to players (`SKIN_FILES.boss` in `scene3d.js` is only used for the boss; the join screen and the server accept only `m` and `f`). The Kenney pack's other skins could not be downloaded when this was built, so it is a recolour of the male skin (navy suit, red tie, silver hair, stains removed; the original is CC0, so is the copy). It can be swapped for any other 1024×1024 skin in the same UV layout by replacing that one file.
+**The boss's look.** The boss is drawn with the same code-built body as the players (`makePlayer` in `scene3d.js`, `gender: 'boss'`): navy suit, red tie, silver spiky hair and a gold crown, scaled by `BOSS_SCALE`. Players only choose `m` or `f`; the join screen and the server accept only those.
 
 ## How it works across instances
 

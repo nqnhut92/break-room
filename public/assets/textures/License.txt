@@ -1,0 +1,9 @@
+Textures by ambientCG (https://ambientcg.com), License: Creative Commons CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+Free to use in personal and commercial projects, no credit required.
+
+wood_*    WoodFloor051
+carpet_*  Carpet016
+tile_*    Tiles141
+metal_*   DiamondPlate009
+Resized to 512x512 from the 1K JPG set (colour and OpenGL normal maps only).
