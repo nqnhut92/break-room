@@ -1887,10 +1887,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } catch (err) { /* show the rotate prompt if a physical turn is needed */ }
   }
   function mobilePortrait() {
-    return coarseUi && viewport.height > viewport.width;
+    return viewport.portrait;
   }
   function syncOrientation() {
-    $('rotateOverlay').hidden = !S.joined || !mobilePortrait();
+    viewport.syncOrientation();
   }
   $('landscapeBtn').addEventListener('click', requestLandscape);
   window.addEventListener('gameviewportchange', syncOrientation);

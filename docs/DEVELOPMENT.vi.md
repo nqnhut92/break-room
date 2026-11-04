@@ -70,3 +70,5 @@ Có thể dùng Chromium đã cài bằng `CHROMIUM_PATH=/path/to/chromium npm r
 Geometry rig người chơi được cấp riêng; `ownedMaterials` chỉ chứa material riêng của bóng tròn/vòng chọn. Cleanup dispose mỗi geometry riêng một lần, thêm material điện nếu có; không dispose body material hoặc pick material dùng chung. Nếu chuyển rig sang geometry cache chung sau này thì phải cập nhật ownership và test.
 
 Xem [kết quả điều tra và kiểm tra máy thật](PERFORMANCE.vi.md), [ADR 0005](adr/0005-safe-mode-shadows.md). Capture/probe chẩn đoán ban đầu vẫn giữ local; regression test WebGL ở `test/renderer.cjs` đã nằm trong repo.
+
+Kiểm tra nhắc xoay màn hình bằng `npm run test:orientation` sau khi cài Chromium như trên (hỗ trợ `CHROMIUM_PATH`). Test giữ HTML/CSS, logic game/viewport và WebSocket thật, chỉ stub WebGL; kiểm tra reload trước khi vào phòng, auto-rejoin, ngắt kết nối và API xoay/toàn màn hình bị từ chối. Xem [Mobile](MOBILE.md#orientation-regression-checks).

@@ -3,6 +3,13 @@
   'use strict';
   const root = document.documentElement;
   let width = 0, height = 0;
+  function mobilePortrait() {
+    return !!window.matchMedia?.('(pointer: coarse)').matches && height > width;
+  }
+  function syncOrientation() {
+    const overlay = document.getElementById('rotateOverlay');
+    if (overlay) overlay.hidden = !mobilePortrait();
+  }
   function keyboardInset() {
     const visual = window.visualViewport;
     const editing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
@@ -19,14 +26,18 @@
       root.style.setProperty('--game-vh', height / 100 + 'px');
       window.dispatchEvent(new Event('gameviewportchange'));
     }
+    syncOrientation();
     keyboardInset();
   }
   window.GameViewport = {
     point: (x, y) => ({ x, y }),
     rect: el => el.getBoundingClientRect(),
     get width() { return width; }, get height() { return height; },
+    get portrait() { return mobilePortrait(); }, syncOrientation,
   };
   window.addEventListener('resize', sync);
+  window.addEventListener('pageshow', sync);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
   // Keyboard/zoom changes can update the chat inset, but never the canvas or HUD scale.
   window.visualViewport?.addEventListener('resize', keyboardInset);
   window.visualViewport?.addEventListener('scroll', keyboardInset);

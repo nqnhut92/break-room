@@ -1,6 +1,6 @@
 # Mobile UI and rendering
 
-The entry form uses a two-column layout on landscape touch screens at least 600 CSS pixels wide. In portrait it remains a scrolling form. After joining, portrait shows a rotate prompt; the DOM is never rotated. Native browser fullscreen/orientation APIs are optional.
+The entry form uses a two-column layout on landscape touch screens at least 600 CSS pixels wide. On portrait touch screens, the rotate prompt covers entry immediately, including first load, reload, auto-rejoin and disconnected states. `viewport.js` owns this gate before the game/WebGL module initializes; it does not depend on `S.joined`. Landscape reveals the entry form. The DOM is never rotated. Native browser fullscreen/orientation APIs are optional.
 
 The header shows room, online count, sound and rage. Health stays above the local character. Camera zoom buttons sit below settings. Skills, chat and the emoji toggle sit at the bottom center. The emoji toggle opens a single row above the bottom controls. Choices close after selection or an outside tap. A full rage bar reveals ULTI above the attack button; after rage is spent, it hides again.
 
@@ -23,7 +23,8 @@ Local verification found zero new program initializations during the measured fi
 Run `npm run test:redis` for the complete suite, including the viewport regression checks. Browser checks should cover 740×320, 844×390 and 956×440 touch viewports, then desktop:
 
 - Entry button visible without scrolling in landscape; inputs usable with native keyboard.
-- Portrait/native landscape transitions, with no CSS rotation.
+- Portrait first load/reload before game.js or WebGL initialization; auto-rejoin and disconnect retain the rotate prompt. Landscape reveals the form again; desktop portrait windows remain usable.
+- Portrait/native landscape transitions, with no CSS rotation. Native APIs may fail while the device orientation lock is enabled; the manual unlock instruction remains visible.
 - Repeated double taps on the joystick do not zoom or resize the HUD; moving while holding attack still works.
 - Canvas pinching changes the camera, while settings/help still scroll.
 - Sound, zoom, emoji and skill hints match their mobile locations; desktop controls restore correctly.
@@ -35,3 +36,7 @@ Before claiming the Safari smart-zoom issue or impact smoothness fully resolved 
 ## Current performance investigation
 
 The iPhone 17 Pro Max stutter report is still open. See [Performance](PERFORMANCE.md) ([Tiếng Việt](PERFORMANCE.vi.md)) for measured draw/resource counters, a geometry-disposal counterfactual, prioritized proposals and the hardware acceptance plan. The current implementation disables real-time shadows in safe mode and releases player-owned resources on removal; real-device FPS validation is still pending. Saved high-mode preferences are preserved. See [ADR 0005](adr/0005-safe-mode-shadows.md).
+
+## Orientation regression checks
+
+`node test/viewport.js` checks native sizing and early prompt visibility. After installing Chromium with `npx playwright install chromium`, run `npm run test:orientation` (or set `CHROMIUM_PATH`). It uses real HTML/CSS, viewport/game logic and WebSockets while stubbing WebGL. Checks cover blocked game-module initialization, locked/unsupported fullscreen APIs, reload, auto-rejoin, inactivity disconnect, native landscape and desktop portrait. These browser checks do not simulate the actual iPhone OS rotation lock.

@@ -25,7 +25,7 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 
 On touch screens, use the left joystick to move and hold the action button on the right to attack. Tapping the floor or an object does not move or attack. Pinching on the game zooms the camera; it does not zoom the page. With a mouse, use the keyboard.
 
-On phones, turn off orientation lock and rotate to landscape after joining. The entry form uses two columns in landscape, and typing follows the browser's native orientation. In Safari, use Share → Add to Home Screen (enable Open as Web App if offered) to launch without browser toolbars. Existing Home Screen shortcuts may need to be removed and added again to pick up the app settings.
+On phones, portrait shows a rotate prompt from the entry screen, including reloads and disconnects. Turn off orientation lock and rotate to landscape to enter. The entry form uses two columns in landscape, and typing follows the browser's native orientation. In Safari, use Share → Add to Home Screen (enable Open as Web App if offered) to launch without browser toolbars. Existing Home Screen shortcuts may need to be removed and added again to pick up the app settings.
 
 Mobile layout, gesture handling and performance validation are documented in [MOBILE.md](MOBILE.md).
 

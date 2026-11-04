@@ -70,3 +70,5 @@ To use an installed Chromium, run `CHROMIUM_PATH=/path/to/chromium npm run test:
 Player rig geometry is allocated per rig; `ownedMaterials` lists the private ground-shadow/selection-ring materials. Cleanup disposes each owned geometry once and the private electric materials when present; it leaves the shared body and pick materials intact. Moving rigs to shared geometry caches later requires updating ownership and tests.
 
 See [the investigation and hardware acceptance plan](PERFORMANCE.md), [ADR 0005](adr/0005-safe-mode-shadows.md). Original diagnostic probes/captures remain local; the WebGL regression test is distributed in `test/renderer.cjs`.
+
+Run `npm run test:orientation` after installing Chromium as above (or set `CHROMIUM_PATH`) to check the rotation prompt. This keeps real HTML/CSS, game/viewport logic and WebSockets, stubbing only WebGL; it covers pre-join reload, auto-rejoin, disconnects and rejected orientation/fullscreen APIs. See [Mobile](MOBILE.md#orientation-regression-checks).
