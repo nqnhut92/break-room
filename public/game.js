@@ -115,6 +115,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     hitRange: 110,
     milkTeaRangeMultiplier: 2,
     players: new Map(),
+    minis: new Map(), miniVersion: 0,
     snakes: new Map(),
     objects: [],
     duel: null,
@@ -456,6 +457,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         setRage((m.rage && m.rage.v) || 0);
         S.objects = m.objects.map(makeObject);
         S.snakes = new Map((m.snakes || []).map(s => [s.id, { ...s, tx: s.x, ty: s.y }]));
+        S.minis.clear(); S.miniVersion = 0;
+        receiveMinis(m.minis);
         initBoss(m.boss);
         receiveDuel({ state: m.duel, ...m.duel }, true);
         const meNow = S.players.get(S.me);
@@ -592,6 +595,26 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
             p.heading = m.h;
           }
         }
+        break;
+      }
+      case 'miniState':
+        receiveMinis(m.state);
+        break;
+      case 'miniHit': {
+        const b = S.minis.get(m.id), p = S.players.get(m.by);
+        if (!b) break;
+        if (p) { showSkill(p, m.skill, b); p.swing = 1; p.heading = Math.atan2(b.x - p.x, b.y - p.y); if (m.ult) p.ultUntil = performance.now() + 700; }
+        b.pl.hitUntil = performance.now() + 160;
+        if (m.skill === 'electric') b.pl.electricUntil = performance.now() + 700;
+        sfxHit(volumeAt(b.x, b.y));
+        if (scene) { scene.fx.sparks(b.x, 100, b.y, 6); scene.fx.floatText(b.x, 180, b.y, '-' + Math.round(m.dmg), '#ffd27c', 20); }
+        if (m.hp <= 0) toast(m.id + ' bị hạ! Thưởng ' + b.cfg.bounty + ' triệu, hồi sinh sau 30 giây.');
+        break;
+      }
+      case 'miniStrike': {
+        const b = S.minis.get(m.id);
+        if (b) { b.pl.swing = 1; b.wind = null; }
+        sfxPunch(volumeAt(m.x, m.y));
         break;
       }
       case 'snakeSpawn':
@@ -892,6 +915,41 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const narrowMQ = window.matchMedia('(max-width: 640px)');
   const BOSS_TARGET = -2; // value of S.attackId while tapping on the boss walks over and swings at it
   const hurtEl = $('hurt');
+
+  function receiveMinis(state) {
+    if (!state || state.version <= S.miniVersion) return;
+    S.miniVersion = state.version;
+    for (const item of state.list) {
+      let b = S.minis.get(item.id);
+      if (!b) {
+        b = { x: item.x, y: item.y, pl: { id: item.id === 'TML' ? -10 : -11, mini: item.id, name: item.id, gender: 'm', role: '', company: '', hue: item.id === 'TML' ? 32 : 280, heading: item.d, swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0, alwaysHp: true } };
+        S.minis.set(item.id, b);
+      }
+      const wasDead = b.hp <= 0;
+      b.cfg = item.cfg; b.hp = item.hp; b.mode = item.mode; b.tx = item.x; b.ty = item.y; b.d = item.d;
+      if (wasDead && item.hp > 0) { b.x = item.x; b.y = item.y; }
+      b.wind = item.wind ? { ...item.wind, t0: performance.now() - (item.wind.ms - item.wind.remainingMs) } : null;
+    }
+  }
+  function miniTick(dt) {
+    for (const b of S.minis.values()) {
+      b.x += (b.tx - b.x) * Math.min(1, dt * 13); b.y += (b.ty - b.y) * Math.min(1, dt * 13);
+      const p = b.pl;
+      p.x = b.x; p.y = b.y; p.heading = b.d; p.dead = b.hp <= 0;
+      p.moving = b.mode === 'chase' || b.mode === 'wander';
+      p.swing = Math.max(0, p.swing - dt * 3.5);
+      p.hpFrac = b.hp / b.cfg.maxHp;
+      p.hpLabel = Math.ceil(b.hp).toLocaleString('vi-VN') + ' / ' + b.cfg.maxHp.toLocaleString('vi-VN');
+      p.name = (b.mode === 'idle' || b.mode === 'wander' || b.mode === 'dead' ? '' : '💢 ') + p.mini;
+    }
+  }
+  function miniObj(id) {
+    const b = S.minis.get(id);
+    return b && b.hp > 0 ? { mini: true, id, x: b.x, y: b.y } : null;
+  }
+  function targetRange(o, margin = 0) {
+    return o.mini ? (S.minis.get(o.id).cfg.reach - margin) * (S.skill === 'milkTea' ? S.milkTeaRangeMultiplier : 1) : attackRange(o.boss, margin);
+  }
 
   function hpNow(p) {
     const c = S.hpCfg;
@@ -1520,6 +1578,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       touch ? 'Bấm <b>Skill</b> để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Giữ nút ra đòn bên phải để dùng skill.' : 'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> hoặc nút <b>Skill</b>. Giữ <b>Space</b> để dùng.',
       'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b> để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Đợt 70% và 40% có số rắn nguyên ngẫu nhiên từ 1,3 đến 2 lần số người online (làm tròn lên ở mức tối thiểu); đợt cuối ở 10% thả rắn đỏ, tăng lên 2–3 lần. Rắn xanh cắn 5 máu, rắn đỏ cắn 7 máu mỗi 1,2 giây; cả hai chịu 4 cú búa và đuổi khắp bản đồ. Rắn còn lại biến mất khi boss hồi sinh.',
+      '<b>TML và DMM</b> đi khắp bản đồ, chỉ trả đũa người đánh mình. TML có 900 máu, đánh 20; DMM có 600 máu, đánh 15. Né vòng báo đòn, hạ được thưởng 40/30 triệu chia theo damage. Chết sau 30 giây sẽ xuất hiện ở nơi khác. Đánh mỗi cú tăng 1 nộ; ulti gây 15% máu tối đa.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
@@ -1681,6 +1740,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         bestD = center - S.boss.cfg.radius;
       }
     }
+    for (const b of S.minis.values()) {
+      if (b.hp <= 0) continue;
+      const o = miniObj(b.pl.mini), d = Math.hypot(b.x - me.x, b.y - me.y);
+      if (d <= targetRange(o, 8) && d - 22 <= bestD) { best = o; bestD = d - 22; }
+    }
     for (const s of S.snakes.values()) {
       const d = Math.hypot(s.x - me.x, s.y - me.y);
       if (d < bestD) { best = snakeObj(s.id); bestD = d; }
@@ -1716,9 +1780,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       return false;
     }
-    if (Math.hypot(o.x - me.x, o.y - me.y) > attackRange(o.boss, o.boss ? 10 : 5)) return false;
+    if (Math.hypot(o.x - me.x, o.y - me.y) > targetRange(o, o.boss ? 10 : 5)) return false;
     S.lastHit = now;
-    send({ t: o.snake ? 'snakeHit' : o.player ? 'phit' : o.boss ? 'bhit' : 'hit', id: o.id, skill: S.skill });
+    send({ t: o.mini ? 'miniHit' : o.snake ? 'snakeHit' : o.player ? 'phit' : o.boss ? 'bhit' : 'hit', id: o.id, skill: S.skill });
     me.skill = S.skill;
     me.heading = Math.atan2(o.x - me.x, o.y - me.y);
     me.swing = 1;
@@ -2197,6 +2261,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const me = S.players.get(S.me);
     if (me) updateMe(me, dt);
     bossTick(dt);
+    miniTick(dt);
 
     for (const p of S.players.values()) {
       if (p.forcedMotion) {

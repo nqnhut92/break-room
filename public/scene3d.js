@@ -942,6 +942,44 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     windMesh.userData.fill.material.opacity = 0.3 + 0.35 * t;
   }
 
+  const miniRigs = new Map();
+  function updateMinis(dt, S) {
+    for (const [id, b] of S.minis) {
+      let rig = miniRigs.get(id);
+      if (!rig) {
+        rig = makePlayer(b.pl);
+        // TML keeps a compact silhouette; DMM is broad despite its lower HP.
+        rig.g.scale.set(id === 'TML' ? 1.15 : 1.65, 1.3, id === 'TML' ? 1.15 : 1.5);
+        rig.hpb.classList.add('boss');
+        const wind = new THREE.Group();
+        const mat = new THREE.MeshBasicMaterial({ color: id === 'TML' ? 0xffa13d : 0xc87dff, transparent: true, opacity: 0.65, depthWrite: false });
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 48), mat);
+        const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 48), mat.clone());
+        ring.rotation.x = fill.rotation.x = -Math.PI / 2;
+        fill.material.opacity = 0.22; wind.add(ring, fill); wind.position.y = 2; scene.add(wind);
+        rig.miniWind = wind; rig.miniFill = fill;
+        miniRigs.set(id, rig);
+      }
+      rig.g.visible = b.hp > 0;
+      if (b.hp > 0) {
+        updatePlayer(rig, b.pl, dt, false, S);
+        updateElectricTarget(rig, rig.torsoM, rig.torsoM.geometry, b.pl.electricUntil);
+        if (b.wind) { rig.armR.rotation.x = -1.8; rig.foreR.rotation.x = -0.7; }
+      }
+      rig.miniWind.visible = !!b.wind && b.hp > 0;
+      if (b.wind) {
+        rig.miniWind.position.set(b.wind.x, 2, b.wind.y); rig.miniWind.scale.setScalar(b.wind.r);
+        rig.miniFill.scale.setScalar(Math.max(0.02, Math.min(1, (performance.now() - b.wind.t0) / b.wind.ms)));
+      }
+    }
+    for (const [id, rig] of miniRigs) if (!S.minis.has(id)) {
+      disposePlayer(rig);
+      scene.remove(rig.miniWind);
+      for (const m of rig.miniWind.children) { m.geometry.dispose(); m.material.dispose(); }
+      miniRigs.delete(id);
+    }
+  }
+
   // Local visual feedback only: no stun or extra damage. Reuse each target's buffers.
   function updateElectricTarget(rig, parent, geometry, until) {
     const remaining = Math.max(0, ((until || 0) - performance.now()) / 1000);
@@ -1457,7 +1495,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const hpf = document.createElement('i');
     hpb.appendChild(hpf);
     let hpt = null; // the boss's bar also shows the number
-    if (p.gender === 'boss') {
+    if (p.gender === 'boss' || p.mini) {
       hpt = document.createElement('span');
       hpt.className = 'hpt';
       hpb.appendChild(hpt);
@@ -1514,8 +1552,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const eo = (t) => 1 - (1 - t) * (1 - t);
     const ei = (t) => t * t;
     const lerp = (x, y, t) => x + (y - x) * t;
-    const skill = isBoss ? 'boss' : (isMe ? S.skill : p.skill) === 'milkTea' ? 'milkTea' : (isMe ? S.skill : p.skill) === 'electric' ? 'electric' : 'hammer';
-    if (!isBoss) rig.hammer.visible = skill === 'hammer';
+    const skill = isBoss || p.mini ? 'boss' : (isMe ? S.skill : p.skill) === 'milkTea' ? 'milkTea' : (isMe ? S.skill : p.skill) === 'electric' ? 'electric' : 'hammer';
+    if (!isBoss) rig.hammer.visible = !p.mini && skill === 'hammer';
     const armed = rig.hammer.visible;
     // the ultimate: whatever is in the hand swells for a moment
     const giantTarget = (p.ultUntil || 0) > performance.now() ? 3.2 : 1;
@@ -2294,6 +2332,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     updateBoss(dt, S);
     updateSnakes(dt, S);
+    updateMinis(dt, S);
 
     updateSpells(dt, S);
     updateParticles(dt);
@@ -2311,6 +2350,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const on = !!pr && !S.boss.dead && pr.ok && pr.sx > -120 && pr.sx < W + 120 && pr.sy > -60 && pr.sy < H + 60;
       bossRig.label.style.display = on ? '' : 'none';
       if (on) bossRig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
+    }
+    for (const [id, rig] of miniRigs) {
+      const b = S.minis.get(id), pr = b ? project(b.x, 190, b.y) : null;
+      const on = !!pr && b.hp > 0 && pr.ok && pr.sx > -120 && pr.sx < W + 120 && pr.sy > -60 && pr.sy < H + 60;
+      rig.label.style.display = on ? '' : 'none';
+      if (on) rig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
     }
     for (const [id, rig] of players) {
       const p = S.players.get(id);

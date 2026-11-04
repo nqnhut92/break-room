@@ -157,6 +157,59 @@ async function contract(label, makeStore) {
     assert.strictEqual(again.deadUntil, 0);
   });
 
+  await step(label + ': mini-boss: concurrent damage commits preserve hits and pay a kill exactly once', async () => {
+    const M = require('../lib/miniboss'), r = room + '-mini';
+    const a = await store.join(r, { ...base, token: T(901), connId: 'mini-a' });
+    const b = await store.join(r, { ...base, token: T(902), connId: 'mini-b' });
+    const first = M.initialState(); first.version = 1;
+    assert.strictEqual(await store.miniSave(r, { now: NOW, expected: 0, state: first }), true);
+    const hit = async (id, damage) => {
+      for (;;) {
+        const state = await store.miniGet(r, { now: NOW });
+        const boss = state.list[0];
+        const result = M.hitMini(boss, id, damage, NOW);
+        if (!result) return false;
+        const expected = state.version; state.version++;
+        if (await store.miniSave(r, { now: NOW, expected, state, shares: result.shares })) return true;
+      }
+    };
+    await Promise.all([hit(a.id, 100), hit(b.id, 200)]);
+    let current = await store.miniGet(r, { now: NOW });
+    assert.strictEqual(current.list[0].hp, 600);
+    assert.strictEqual(current.list[0].ledger[a.id], 100);
+    assert.strictEqual(current.list[0].ledger[b.id], 200);
+    assert.strictEqual((await Promise.all([hit(a.id, 1000), hit(b.id, 1000)])).filter(Boolean).length, 1);
+    const snap = await store.read(r, { now: NOW, ttlMs: 5000 });
+    assert.ok(Math.abs(snap.total - 40) < 0.0001);
+    current = await store.miniGet(r, { now: NOW });
+    assert.strictEqual(current.list[0].respawnAt, NOW + 30000);
+    assert.strictEqual(await store.miniSave(r, { now: NOW, expected: 1, state: first, shares: [{ id: a.id, bounty: 40 }] }), false);
+    assert.ok(Math.abs((await store.read(r, { now: NOW, ttlMs: 5000 })).total - 40) < 0.0001);
+  });
+
+  await step(label + ': mini-boss: only the current runner can move or respawn; state survives handover', async () => {
+    const M = require('../lib/miniboss'), r = room + '-mini-leader';
+    await store.bossLock(r, 'first', { now: NOW, ttlMs: 3000 });
+    const first = M.initialState(); first.version = 1;
+    M.hitMini(first.list[0], 1, 900, NOW);
+    assert.strictEqual(await store.miniSave(r, { now: NOW, owner: 'first', expected: 0, state: first }), true);
+    const next = structuredClone(first); next.version++;
+    assert.strictEqual(await store.miniSave(r, { now: NOW, owner: 'other', expected: 1, state: next }), false);
+    const resumed = await store.miniGet(r, { now: NOW + 30000 });
+    M.stepMini(resumed, [], NOW + 29999, 0.1); assert.strictEqual(resumed.list[0].hp, 0);
+    M.stepMini(resumed, [], NOW + 30000, 0.1); assert.strictEqual(resumed.list[0].hp, 900);
+    resumed.version++;
+    assert.strictEqual(await store.miniSave(r, { now: NOW, owner: 'first', expected: 1, state: resumed }), true);
+    assert.strictEqual(await store.miniSave(r, { now: NOW, owner: 'first', expected: 1, state: resumed }), false);
+    await store.bossLock(r, 'first', { now: NOW, ttlMs: 30 });
+    await sleep(50);
+    assert.strictEqual(await store.bossLock(r, 'second', { now: NOW + 50, ttlMs: 3000 }), true);
+    const transferred = await store.miniGet(r, { now: NOW + 50 });
+    transferred.version++;
+    assert.strictEqual(await store.miniSave(r, { now: NOW + 50, owner: 'first', expected: 2, state: transferred }), false);
+    assert.strictEqual(await store.miniSave(r, { now: NOW + 50, owner: 'second', expected: 2, state: transferred }), true);
+  });
+
   await step(label + ': boss: hits subtract, regenerate with time, and the killing blow pays the bounty by damage, once', async () => {
     const r6 = room + '-boss';
     const big = { ...base, max: 10 };
@@ -585,6 +638,33 @@ async function twoInstances(url) {
     assert.strictEqual(C.welcome.players.find((p) => p.id === A.id).score, server.TYPES.chair.cost);
     closeAll(A, B, C);
     await sleep(300);
+  });
+
+  await step('redis: mini-bosses share HP, retaliation, bounty and respawn across two servers', async () => {
+    const M = require('../lib/miniboss'), r = room.slice(0, 16) + '-minis', now = Date.now();
+    const first = M.initialState(); first.version = 1;
+    Object.assign(first.list[0], { x: world.WORLD.spawn.x, y: world.WORLD.spawn.y, hp: 20, pauseUntil: now + 10000 });
+    await app1.store.miniSave(r, { now, expected: 0, state: first });
+    const A = await h.client(p1, 'MiniA', r), B = await h.client(p2, 'MiniB', r);
+    try {
+      assert.strictEqual(B.welcome.minis.list.find(b => b.id === 'TML').hp, 20);
+      send(A, { t: 'miniHit', id: 'TML' }); send(B, { t: 'miniHit', id: 'TML' });
+      const dead = await take(B, m => m.t === 'miniHit' && m.hp === 0, 2500);
+      assert.strictEqual(dead.shares.length, 2);
+      assert.ok(Math.abs(dead.shares.reduce((n, s) => n + s.bounty, 0) - 40) < 0.001);
+      await take(A, m => m.t === 'board' && Math.abs(m.total - 40) < 0.001, 1500);
+      for (let tries = 0; tries < 20; tries++) {
+        const state = await app1.store.miniGet(r, { now: Date.now() });
+        state.list[0].respawnAt = Date.now() + 400;
+        const expected = state.version; state.version++;
+        if (await app1.store.miniSave(r, { now: Date.now(), expected, state })) break;
+      }
+      const up = await take(A, m => m.t === 'miniState' && m.state.list.some(b => b.id === 'TML' && b.hp === 900), 2500);
+      assert.ok(up.state.list.find(b => b.id === 'TML').respawnMs === 0);
+      const read = await app2.store.miniGet(r, { now: Date.now() });
+      assert.strictEqual(read.list[0].hp, 900);
+      assert.deepStrictEqual(read.list[0].ledger, {});
+    } finally { closeAll(A, B); await sleep(300); }
   });
 
   await step('redis: a room served by one instance sends no position traffic through Redis', async () => {

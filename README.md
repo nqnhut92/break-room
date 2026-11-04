@@ -189,3 +189,5 @@ npm test
 The server decides everything important: the client only sends its position and smash requests, and the server checks distance, prevents teleporting, and limits smash rate and messages per second. Player names are sanitised on the server and displayed only through `textContent` or canvas on the client. A player's token only lets them reclaim their place after a reconnect; it is not an authentication credential: there are no accounts, and a player's public id is an integer unrelated to the token.
 
 UI control icons use a bundled Lucide SVG subset (ISC/MIT); see `public/vendor/lucide-LICENSE.txt` and https://lucide.dev.
+
+Mini-boss rules and balance: [TML & DMM](docs/MINIBOSSES.md).
