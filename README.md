@@ -32,13 +32,13 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
 | Mini map | M to hide or show it (click it too) |
 
-**Mana.** Every smash costs 8 mana out of 100 (the blue bar under your name). Mana comes back at 2.5/s at first and 9/s once you have gone 2.5 seconds without smashing (so the walk between two far-apart objects only gives a little back), so you can burst about 12 hits, then you need roughly 12 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
+**Mana.** Every smash costs 5 mana out of 100 (the blue bar under your name). Mana comes back at 3/s at first and 12/s once you have gone 2 seconds without smashing (so the walk between two far-apart objects only gives a little back), so you can burst about 20 hits, then you need roughly 10 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
 
 On touch screens (and with a pen), tapping the floor walks there and tapping an object walks to it and smashes it once per tap (it stops if a desk or wall is in the way); hold the SMASH! button to keep smashing. With a mouse the canvas ignores clicks: use the keyboard.
 
 ## VKL, the boss
 
-Every server has a boss in the server room. Step in and it runs at you; a red circle on the floor shows where its fist will land, so you can dodge. Four punches (30 each) knock you out for 15 seconds, then you come back at the lobby; your health regenerates slowly when you are left alone. One or two players cannot beat it (it heals), about five can in two minutes, and when it falls a 500 million bounty goes to the damage board, split by damage dealt. It returns 3 to 5 minutes later. The rules, the numbers and the reasons behind them are in [docs/BOSS.md](docs/BOSS.md).
+Every server has a boss in the server room. Step in and it runs at you; a red circle on the floor shows where its fist will land, so you can dodge. Four punches (30 each) knock you out for 15 seconds, then you come back at the lobby; your health regenerates slowly when you are left alone. It does not heal, so you can hit and run; one or two players can wear it down in the end but the punches make that hard, about five take it down in around a minute, and when it falls a 500 million bounty goes to the damage board, split by damage dealt. It returns 3 to 5 minutes later. The rules, the numbers and the reasons behind them are in [docs/BOSS.md](docs/BOSS.md).
 
 ## The office
 

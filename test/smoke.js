@@ -337,11 +337,12 @@ async function main() {
     assert.deepStrictEqual({ max: cfg.max, cost: cfg.cost }, { max: server.MANA.max, cost: server.MANA.cost });
     const m = await take(A, (x) => x.t === 'mana');
     assert.ok(m.v >= 0 && m.v <= cfg.max && m.ago >= 0);
-    // pure regeneration rule shared with the client: 2.5/s at first, 9/s after 2.5 s without smashing
+    // pure regeneration rule shared with the client: `regen` per second at first, `restRegen` per second after `restMs` without smashing
+    const M = server.MANA;
     const probe = (ms) => server.manaAt({ mana: 0, manaAt: 0 }, ms);
-    assert.strictEqual(probe(1000), 2.5);
-    assert.strictEqual(probe(2500), 6.25);
-    assert.strictEqual(probe(3500), 15.25);
+    assert.strictEqual(probe(1000), M.regen);
+    assert.strictEqual(probe(M.restMs), (M.regen * M.restMs) / 1000);
+    assert.strictEqual(probe(M.restMs + 1000), (M.regen * M.restMs) / 1000 + M.restRegen);
     assert.strictEqual(probe(60000), server.MANA.max);
   });
 

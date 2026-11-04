@@ -9,7 +9,7 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. It
 - The boss walks a loop inside the server room. When a player is **inside the room** (or standing in the doorway apron) it runs at the nearest one, raises its fist (0.7 s, a **red circle** on the floor shows where it will land) and punches. Anyone inside the circle when the fist lands takes 30 damage. Running out of the circle in time dodges it.
 - Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **15 seconds**, can still chat, and then come back at the **lobby**, never where they fell.
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.
-- The boss has 3,600 health, a hammer hit does 10 (that is 360 hits), and it heals by itself (see the numbers). **One or two players cannot beat it, about five can in two minutes, and a crowd is not a walkover.**
+- The boss has 6,000 health, a hammer hit does 10 (that is 600 hits) and it **does not heal**: damage sticks, so hit and run works. **A lone player can wear it down in the end but the punches make that very hard; about five players take it down in around a minute, and a crowd is not a walkover.**
 - When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back 3 to 5 minutes later (random), at its starting spot, with full health.
 - It never leaves the server room: leave and it goes back to patrolling and healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
 
@@ -22,8 +22,8 @@ All of them live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); noth
 | Player health | 100 | Four punches. Few enough to feel dangerous, enough to survive a mistake. |
 | Boss punch | 30 damage, 0.7 s windup, 0.6 s recovery | "It has to hurt", but dodgeable. A player at full speed leaves the circle in about 0.29 s. |
 | Boss speed | 110 patrolling, 280 chasing (players walk at 420) | You can always run away, you just cannot stand still. |
-| Boss health | 3,600, hit = 10 | Tuned with the simulation below. |
-| Regeneration | 5 per second always, +20 per second after 5 s without being hit | See "Why it heals". |
+| Boss health | 6,000, hit = 10 | Tuned with the simulation below. |
+| Regeneration | none | Players found a boss that heals too hard. See "Why it does not heal". |
 | Player regeneration | 5 per second after 4 s | Moderate: not "never", not "instantly". |
 | Player respawn | 15 s, at the lobby | Was 60 s; players found a minute too long. |
 | Boss respawn | random 3 to 5 min | As asked. |
@@ -44,7 +44,7 @@ The real fight is harder than this model because players get punched, so 3 and 4
 
 **A separate damage scale, not "100 to 1000 times the health".** The first idea was a boss with 100 to 1000 times a player's health. Taken literally that is 10,000 to 100,000 health, but everything a player does is 1 damage per hit and the whole group manages about four hits a second, so such a boss could never die. What matters is the *time to kill*, not the ratio. So hits on the boss are worth 10 and the boss has 3,600 (36 times a player's health, 360 hits), and the numbers were chosen by the time to kill above.
 
-**Why it heals (and in two tiers).** Without regeneration a lone player can win by patience: hit, hide, come back. Healing only "after a pause" is not enough either, because someone who hits every 4.9 seconds never lets the pause start. So there is a small constant recovery (5 per second), which is more than one player can deal in the mana-limited trickle (about 3.7 per second), plus a fast recovery after a pause that beats hit and run. Together: one or two players can never win, and a group has to stay on it. Regeneration is *computed* from the stored value and its timestamp (`bossHpAt`), never ticked, so it costs nothing while nobody is around and is identical on every instance.
+**Why it does not heal (any more).** It used to recover 5 per second plus 20 per second after a pause, so one or two players could never win and a group had to stay on it. In play that was too hard and no fun: nobody could chip at it and leave. Now damage sticks, which makes hit and run a real tactic. The fight is still hard because of the punches, and the health is higher (6,000) so it stays a group effort. The regeneration code (`bossHpAt`) is still there and the two numbers are in `BOSS` (`baseRegenPerSec`, `regenPerSec`): a value above 0 brings it back, and the client uses the same formula.
 
 **Why the hit value scales with the crowd.** If twenty friends join, a boss tuned for five would die in 30 seconds. Each hit is divided by `max(1, players in the boss's room / 5)`, so time to kill stays near two minutes however many come. The count is the players *inside the boss's zone and alive*, not everyone online, otherwise fifteen people standing in the toilets would make it stronger for the five who fight, and a big crowd outside would not matter.
 

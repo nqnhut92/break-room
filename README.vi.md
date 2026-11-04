@@ -32,13 +32,13 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |
 | Bản đồ nhỏ | Phím M để ẩn hoặc hiện (bấm vào nó cũng được) |
 
-**Mana.** Mỗi cú đập tốn 8 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 2,5/giây lúc đầu và 9/giây khi đã quá 2,5 giây không đập (nên đi bộ giữa hai món xa nhau chỉ hồi được chút ít), nên bạn đập dồn được khoảng 12 cú rồi cần khoảng 12 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
+**Mana.** Mỗi cú đập tốn 5 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 3/giây lúc đầu và 12/giây khi đã quá 2 giây không đập (nên đi bộ giữa hai món xa nhau chỉ hồi được chút ít), nên bạn đập dồn được khoảng 20 cú rồi cần khoảng 10 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
 
 Trên màn hình cảm ứng (và bút), chạm vào nền thì đi tới đó, chạm vào một món thì đi tới và đập đúng một cú cho mỗi lần chạm (nếu bị bàn hay tường chặn thì dừng lại); giữ nút ĐẬP! để đập liên tục. Với chuột thì canvas bỏ qua cú click: chơi bằng bàn phím.
 
 ## VKL, boss của server
 
-Mỗi server có một boss trong phòng server. Bước vào là sếp chạy lại đấm; vòng đỏ dưới sàn báo chỗ nắm đấm sẽ rơi nên né được. Bốn cú đấm (30 mỗi cú) là gục 15 giây, rồi hồi sinh ở sảnh; máu tự hồi chậm khi bạn yên ổn. Một hay hai người không hạ nổi (sếp tự hồi máu), khoảng năm người hạ trong hai phút, sếp ngã thì 500 triệu tiền thưởng vào bảng thiệt hại, chia theo sát thương. 3 đến 5 phút sau sếp quay lại. Luật, các con số và lý do chọn chúng nằm ở [docs/BOSS.vi.md](docs/BOSS.vi.md).
+Mỗi server có một boss trong phòng server. Bước vào là sếp chạy lại đấm; vòng đỏ dưới sàn báo chỗ nắm đấm sẽ rơi nên né được. Bốn cú đấm (30 mỗi cú) là gục 15 giây, rồi hồi sinh ở sảnh; máu tự hồi chậm khi bạn yên ổn. Sếp không hồi máu nên đánh rồi chạy cũng được; một hay hai người rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó, khoảng năm người hạ trong chừng một phút, sếp ngã thì 500 triệu tiền thưởng vào bảng thiệt hại, chia theo sát thương. 3 đến 5 phút sau sếp quay lại. Luật, các con số và lý do chọn chúng nằm ở [docs/BOSS.vi.md](docs/BOSS.vi.md).
 
 ## Văn phòng
 

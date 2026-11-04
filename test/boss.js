@@ -20,13 +20,18 @@ const free = (x, y, r) => {
   return Math.hypot(p.x - x, p.y - y) < 0.5;
 };
 
-step('boss and player hp: regeneration is computed, waits for its delay and never passes the maximum', () => {
+step('boss and player hp: the boss does not heal by default, the formula still works, players regenerate after a delay', () => {
   const { BOSS, PLAYER } = B;
-  assert.strictEqual(B.bossHpAt(1000, 0, 1000), 1000 + BOSS.baseRegenPerSec); // always a little
-  const at5 = B.bossHpAt(1000, 0, BOSS.regenDelayMs);
-  assert.strictEqual(at5, 1000 + (BOSS.regenDelayMs * BOSS.baseRegenPerSec) / 1000); // no fast regen before the delay
-  assert.strictEqual(B.bossHpAt(1000, 0, BOSS.regenDelayMs + 1000), at5 + BOSS.baseRegenPerSec + BOSS.regenPerSec);
-  assert.strictEqual(B.bossHpAt(2990, 0, 10 * 60 * 1000), BOSS.maxHp);
+  assert.strictEqual(BOSS.baseRegenPerSec, 0);
+  assert.strictEqual(BOSS.regenPerSec, 0);
+  assert.strictEqual(B.bossHpAt(1000, 0, 10 * 60 * 1000), 1000, 'damage sticks');
+  // the regeneration code is kept: with a non-zero config it is computed, waits for its delay and never passes the maximum
+  const cfg = { ...BOSS, baseRegenPerSec: 5, regenPerSec: 20 };
+  assert.strictEqual(B.bossHpAt(1000, 0, 1000, cfg), 1000 + cfg.baseRegenPerSec);
+  const at5 = B.bossHpAt(1000, 0, cfg.regenDelayMs, cfg);
+  assert.strictEqual(at5, 1000 + (cfg.regenDelayMs * cfg.baseRegenPerSec) / 1000);
+  assert.strictEqual(B.bossHpAt(1000, 0, cfg.regenDelayMs + 1000, cfg), at5 + cfg.baseRegenPerSec + cfg.regenPerSec);
+  assert.strictEqual(B.bossHpAt(BOSS.maxHp - 10, 0, 10 * 60 * 1000, cfg), BOSS.maxHp);
   assert.strictEqual(B.playerHpAt(40, 0, PLAYER.regenDelayMs), 40);
   assert.strictEqual(B.playerHpAt(40, 0, PLAYER.regenDelayMs + 2000), 40 + 2 * PLAYER.regenPerSec);
   assert.strictEqual(B.playerHpAt(40, 0, 10 * 60 * 1000), PLAYER.maxHp);
@@ -143,7 +148,7 @@ step('dead boss does nothing until the caller revives it', () => {
   assert.strictEqual(B.respawnDelay(() => 1), B.BOSS.respawnMaxMs);
 });
 
-// A deliberately generous model of N players who never die and never miss, against the boss's regeneration. Two ways to
+// A deliberately generous model of N players who never die and never miss (the boss does not heal any more). Two ways to
 // swing: "greedy" hits whenever there is mana for it, "burst" waits for a full bar and empties it (better use of the
 // fast mana regeneration, but it leaves gaps in which the boss heals). Deaths only make the real fight harder, so if
 // a group cannot win here it cannot win for real.
@@ -177,15 +182,14 @@ function secondsToKill(n, style, limitS = 900) {
 }
 const best = (n) => Math.min(secondsToKill(n, 'greedy'), secondsToKill(n, 'burst'));
 
-step('balance: one or two players cannot beat the boss, about five do it in a couple of minutes, a crowd is not trivial', () => {
+step('balance: no regeneration, so it is a damage budget: a lone player takes a long time, five take about a minute, a crowd is not trivial', () => {
   const times = {};
   for (const n of [1, 2, 3, 4, 5, 8, 12, 20]) times[n] = best(n);
   console.log('   seconds to kill by players (best of two swing styles): ' + Object.entries(times).map(([n, t]) => n + ':' + (t === Infinity ? 'never' : Math.round(t))).join('  '));
-  assert.strictEqual(times[1], Infinity, 'solo never wins');
-  assert.strictEqual(times[2], Infinity, 'two players do not win within 15 minutes');
-  assert.ok(times[3] > 240, 'three players struggle: ' + times[3]);
-  assert.ok(times[5] >= 60 && times[5] <= 150, 'five players: ' + times[5]);
-  for (const n of [8, 12, 20]) assert.ok(times[n] >= 60 && times[n] <= 180, n + ' players: ' + times[n]);
+  assert.ok(times[1] > 240, 'solo is a long job even if the boss never punched: ' + times[1]);
+  assert.ok(times[2] > times[3] && times[3] > times[4] && times[4] > times[5], 'more players, faster: ' + JSON.stringify(times));
+  assert.ok(times[5] >= 50 && times[5] <= 150, 'five players: ' + times[5]);
+  for (const n of [8, 12, 20]) assert.ok(times[n] >= 50 && times[n] <= 180, n + ' players: ' + times[n]);
 });
 
 console.log('\nAll ' + passed + ' checks passed');

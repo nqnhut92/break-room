@@ -9,7 +9,7 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong p
 - Sếp đi một vòng trong phòng server. Khi có người **ở trong phòng** (hoặc đứng ở khoảng sân ngay trước cửa) sếp chạy lại người gần nhất, giơ nắm đấm lên (0,7 giây, **vòng đỏ** dưới sàn báo chỗ nắm đấm sẽ rơi) rồi đấm. Ai đang trong vòng lúc nắm đấm rơi thì mất 30 máu. Chạy ra khỏi vòng kịp lúc là né được.
 - Người chơi có 100 máu (thanh máu trên đầu khi bị thương, và một ô ở thanh trên cùng). Bốn cú đấm là gục. Nằm **15 giây**, vẫn chat được, rồi hồi sinh ở **sảnh**, không bao giờ hồi sinh ngay chỗ ngã.
 - Máu hồi chậm: 4 giây đầu sau cú đấm không hồi gì, sau đó 5 máu mỗi giây (đầy lại khoảng 24 giây sau cú cuối). Ra khỏi phòng chờ một chút là lựa chọn thật sự.
-- Sếp có 3.600 máu, một cú búa gây 10 (tức 360 cú) và sếp tự hồi máu (xem bảng). **Một hay hai người không hạ nổi, khoảng năm người hạ trong hai phút, đông người cũng không dễ.**
+- Sếp có 6.000 máu, một cú búa gây 10 (tức 600 cú) và sếp **không hồi máu**: sát thương được giữ lại, nên đánh rồi chạy cũng được. **Một người đánh một mình rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó; khoảng năm người hạ trong chừng một phút, đông người cũng không dễ.**
 - Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 3 đến 5 phút sau (ngẫu nhiên) sếp quay lại chỗ cũ với đầy máu.
 - Sếp không bao giờ rời phòng server: bạn đi ra thì sếp quay lại tuần tra và hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
 
@@ -22,8 +22,8 @@ Tất cả nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js), 
 | Máu người chơi | 100 | Bốn cú đấm. Đủ ít để thấy nguy hiểm, đủ nhiều để sống sót qua một lỗi. |
 | Cú đấm của sếp | 30 sát thương, báo trước 0,7 giây, hồi 0,6 giây | "Phải đau" nhưng né được. Người chạy hết tốc độ thoát khỏi vòng trong khoảng 0,29 giây. |
 | Tốc độ sếp | 110 khi tuần tra, 280 khi đuổi (người chơi đi 420) | Luôn chạy trốn được, chỉ là không được đứng yên. |
-| Máu sếp | 3.600, mỗi cú búa 10 | Chỉnh theo mô phỏng bên dưới. |
-| Hồi máu sếp | luôn 5/giây, thêm 20/giây sau 5 giây không bị đánh | Xem "Vì sao sếp tự hồi máu". |
+| Máu sếp | 6.000, mỗi cú búa 10 | Chỉnh theo mô phỏng bên dưới. |
+| Hồi máu sếp | không | Người chơi thấy sếp hồi máu quá khó. Xem "Vì sao sếp không hồi máu". |
 | Hồi máu người chơi | 5/giây sau 4 giây | Vừa phải: không "không bao giờ", không "ngay lập tức". |
 | Người chơi hồi sinh | 15 giây, ở sảnh | Trước là 60 giây; người chơi thấy một phút là quá lâu. |
 | Sếp hồi sinh | ngẫu nhiên 3 đến 5 phút | Theo yêu cầu. |
@@ -44,7 +44,7 @@ Trận thật khó hơn mô hình vì người chơi bị đấm, nên 3 đến 
 
 **Thang sát thương riêng, không phải "gấp 100 đến 1000 lần máu".** Ý đầu tiên là sếp có máu gấp 100 đến 1000 lần người chơi. Hiểu đúng nghĩa thì là 10.000 đến 100.000 máu, mà mỗi cú đập chỉ 1 sát thương và cả nhóm chỉ đập được khoảng bốn cú mỗi giây, nên sếp như vậy không bao giờ chết. Điều quan trọng là *thời gian hạ sếp*, không phải tỉ lệ. Nên cú búa vào sếp tính 10 và sếp có 3.600 (gấp 36 lần máu người, 360 cú), số được chọn theo thời gian hạ ở bảng trên.
 
-**Vì sao sếp tự hồi máu (hai tầng).** Không hồi máu thì một người kiên nhẫn có thể thắng: đánh, trốn, quay lại. Chỉ hồi sau khi nghỉ cũng chưa đủ, vì ai đánh mỗi 4,9 giây thì khoảng nghỉ không bao giờ bắt đầu. Nên có một mức hồi nhỏ luôn chạy (5/giây), lớn hơn lượng một người đánh được khi bị mana giới hạn (khoảng 3,7/giây), cộng thêm hồi nhanh sau khi nghỉ để chặn đánh rồi chạy. Gộp lại: một hay hai người không bao giờ thắng, cả nhóm phải bám sát. Hồi máu được *tính* từ giá trị đã lưu và thời điểm lưu (`bossHpAt`), không phải chạy đồng hồ, nên không tốn gì khi phòng vắng và giống hệt nhau ở mọi instance.
+**Vì sao sếp không hồi máu (nữa).** Trước đây sếp hồi 5 mỗi giây, thêm 20 mỗi giây sau một lúc yên, nên một hay hai người không bao giờ thắng và cả nhóm phải bám sát. Chơi thật thì quá khó và mất vui: không ai đánh bớt rồi rút lui được. Giờ sát thương được giữ lại, đánh rồi chạy là chiến thuật thật. Trận vẫn khó vì sếp đấm, và máu sếp tăng lên 6.000 để vẫn là việc của cả nhóm. Code hồi máu (`bossHpAt`) vẫn còn và hai con số nằm trong `BOSS` (`baseRegenPerSec`, `regenPerSec`): đặt lớn hơn 0 là hồi máu trở lại, client dùng cùng công thức.
 
 **Vì sao sát thương theo số đông.** Nếu hai mươi người bạn vào, sếp chỉnh cho năm người sẽ chết trong 30 giây. Mỗi cú búa được chia cho `max(1, số người trong phòng sếp / 5)`, nên thời gian hạ sếp vẫn quanh hai phút dù đông hay vắng. Số này đếm người *còn sống và đang trong khu vực của sếp*, không phải số người online, nếu không thì mười lăm người đứng trong nhà vệ sinh làm sếp khoẻ hơn với năm người đang đánh, còn một đám đông đứng ngoài thì chẳng ảnh hưởng gì.
 
