@@ -46,10 +46,10 @@ async function step(name, fn) {
 }
 
 async function main() {
-  // Everyone spawns in the pantry, a few steps from the printers, so the old walk-and-hit
-  // checks stay short. (Real players spawn in the lobby.)
+  // Spawn in the print alcove so walk-and-hit checks stay short.
+  // Real players still spawn in reception.
   const lobbySpawn = world.WORLD.spawn;
-  world.WORLD.spawn = { x: 3140, y: 300, rx: 0, ry: 0 };
+  world.WORLD.spawn = { x: 150, y: 300, rx: 0, ry: 0 };
   port = await server.start(0);
   // a second app with a high per-IP cap, for the full-room check
   const bigIp = server.createApp({ maxConnPerIp: 100 });
@@ -116,7 +116,7 @@ async function main() {
   });
 
   await step('teleporting is clamped by the server', async () => {
-    const near = A.welcome.objects[0];
+    const near = A.welcome.objects.reduce((best, o) => dist(A, o) > dist(A, best) ? o : best);
     send(A, { t: 'move', x: near.x, y: near.y, d: 1 });
     await sleep(100);
     send(A, { t: 'hit', id: near.id });

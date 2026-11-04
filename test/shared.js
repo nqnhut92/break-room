@@ -588,8 +588,8 @@ async function twoInstances(url) {
     });
   const app1 = mk();
   const app2 = mk();
-  // spawn next to the pantry so the walk-and-hit steps are short
-  world.WORLD.spawn = { x: 3140, y: 330, rx: 0, ry: 0 };
+  // Spawn by the print alcove so walk-and-hit steps are short.
+  world.WORLD.spawn = { x: 150, y: 330, rx: 0, ry: 0 };
   const p1 = await app1.start(0);
   const p2 = await app2.start(0);
   const room = 'shared-' + Date.now();

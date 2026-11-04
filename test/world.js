@@ -42,7 +42,7 @@ step('object ids are dense and every type is known', () => {
 step('IT wing has four six-seat islands with facing rows and paired arm monitors', () => {
   const desks = W.OBJECTS.filter(o => o.itDesk);
   assert.strictEqual(desks.length, 24);
-  for (const cy of [380, 1020]) for (const cx of [1700, 2420]) {
+  for (const cy of [380, 1020]) for (const cx of [1700, 2360]) {
     const cluster = desks.filter(d => Math.abs(d.x - cx) <= 160 && Math.abs(d.y - cy) === 58);
     assert.strictEqual(cluster.length, 6);
     assert.strictEqual(cluster.filter(d => d.y < cy).length, 3);
@@ -107,6 +107,31 @@ step('every breakable object can be reached from the spawn point', () => {
     return true;
   });
   assert.deepStrictEqual(unreachable.map((o) => o.type + '#' + o.id), []);
+});
+
+step('every room has continuous walls and a single intentional doorway', () => {
+  const walls = W.PROPS.filter(p => p.k === 'wall');
+  for (const r of W.FLOOR_ROOMS) {
+    for (const [side, lo, hi, c, horizontal] of [
+      ['n',r.x0,r.x1,r.y0,true], ['s',r.x0,r.x1,r.y1,true],
+      ['w',r.y0,r.y1,r.x0,false], ['e',r.y0,r.y1,r.x1,false],
+    ]) {
+      if (c === 0 || c === (horizontal ? W.WORLD.h : W.WORLD.w)) continue;
+      for (let v = lo + 2; v < hi; v += 4) {
+        const inDoor = side === r.door.side && Math.abs(v - r.door.at) < r.door.w / 2;
+        if (inDoor) continue;
+        const x = horizontal ? v : c, y = horizontal ? c : v;
+        assert.ok(walls.some(p => Math.abs(p.x-x) <= p.w/2 && Math.abs(p.y-y) <= p.h/2), r.name + ': sealed ' + side + ' at ' + v);
+      }
+    }
+    const d = r.door;
+    const x = d.side === 'w' ? r.x0 : d.side === 'e' ? r.x1 : d.at;
+    const y = d.side === 'n' ? r.y0 : d.side === 's' ? r.y1 : d.at;
+    const dx = d.side === 'w' || d.side === 'e' ? 1 : 0, dy = 1-dx;
+    const from = { x:x-dx*55, y:y-dy*55 }, to = { x:x+dx*55, y:y+dy*55 };
+    const end = W.slideMove(from.x, from.y, to.x, to.y);
+    assert.ok(Math.hypot(end.x-to.x,end.y-to.y) < 0.5, r.name + ': doorway is walkable');
+  }
 });
 
 step('stamp-assets puts one version on every module URL and can run twice', () => {
