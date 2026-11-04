@@ -294,6 +294,8 @@ canvas {
 #emotes button:hover { background: rgba(255, 255, 255, 0.1); }
 
 #smashBtn { font-size: 18px; padding: 12px 22px; touch-action: none; }
+/* with a mouse and keyboard Space does the same thing; the button is for touch screens and pens */
+@media (hover: hover) and (pointer: fine) { #smashBtn { display: none; } }
 /* mini map: the whole office, you in yellow, other players in white, smashed things in red */
 #minimap {
   position: fixed;

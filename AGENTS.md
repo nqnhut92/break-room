@@ -6,3 +6,5 @@
 - **Layout and facing:** all furniture is laid out in `lib/world.js`. `rot` is where an object faces: 0 south (+y), `Math.PI / 2` east, `Math.PI` north, `-Math.PI / 2` west. Kenney models face +z, so rot 0 faces the camera.
 - **Assets:** only CC0 models (Kenney) go into `public/assets/`; keep the licence file next to them and update the credits in `README.md`.
 - **Commits:** follow the user's git rules (work on `main`, author `Nicholas Nguyen`, no co-author trailers).
+- **Look:** code-built furniture uses `box()` (rounded edges); walls and frames use `sbox()` (sharp). Kenney models get soft normals in `fitKenney` (`SOFT_ANGLE`), and `bodyMat` is not flat-shaded. Graphics "high" adds bloom and FXAA through a composer (not MSAA: a multisampled target rendered a black rectangle on some GPUs); "low" renders directly.
+- **Smash button:** `#smashBtn` is only shown on touch screens and pens; with a mouse and keyboard Space does the same.

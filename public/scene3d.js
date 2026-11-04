@@ -5,7 +5,9 @@
 // code (no model or texture files), merged per type with vertex colours.
 
 import * as THREE from 'three';
-import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { mergeGeometries, toCreasedNormals } from './vendor/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import * as SkeletonUtils from './vendor/SkeletonUtils.js';
 import { ROLE_BY_ID } from './roles.js';
@@ -37,7 +39,13 @@ function place(geo, x, y, z, rx = 0, ry = 0, rz = 0) {
   geo.applyMatrix4(_m);
   return geo;
 }
-const box = (w, h, d, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) =>
+// Furniture is built from rounded boxes (soft edges catch the light); walls and frames use plain ones (sbox).
+const box = (w, h, d, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
+  const r = Math.min(7, Math.min(w, h, d) * 0.32);
+  const geo = r < 0.6 ? new THREE.BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 2, r);
+  return place(paint(geo, hex), x, y, z, rx, ry, rz);
+};
+const sbox = (w, h, d, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) =>
   place(paint(new THREE.BoxGeometry(w, h, d), hex), x, y, z, rx, ry, rz);
 const cyl = (rt, rb, h, hex, x = 0, y = 0, z = 0, seg = 12, rx = 0, ry = 0, rz = 0) =>
   place(paint(new THREE.CylinderGeometry(rt, rb, h, seg), hex), x, y, z, rx, ry, rz);
@@ -154,6 +162,7 @@ function colored(src, color) {
   return out;
 }
 
+const SOFT_ANGLE = Math.PI * 0.42; // about 75 degrees
 function fitKenney(root, width) {
   root.updateMatrixWorld(true);
   const parts = [];
@@ -163,7 +172,8 @@ function fitKenney(root, width) {
     g.applyMatrix4(o.matrixWorld);
     parts.push(g);
   });
-  const geo = mergeGeometries(parts, false);
+  const merged = mergeGeometries(parts, false);
+  const geo = toCreasedNormals(merged, SOFT_ANGLE); // soft shading: edges below this angle are smoothed over
   geo.computeBoundingBox();
   const b = geo.boundingBox;
   geo.translate(-(b.min.x + b.max.x) / 2, -b.min.y, -(b.min.z + b.max.z) / 2);
@@ -534,12 +544,16 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
   const BG = 0x0d1017;
   scene.background = new THREE.Color(BG);
   scene.fog = new THREE.Fog(BG, 2200, 5200);
+  // soft image-based light from a built-in studio room: reflections and gentler shading everywhere
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.22;
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
   const ZOOM_MIN = 560;
@@ -552,7 +566,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   } catch (e) { /* ignore */ }
   let shadowR = 900;
 
-  scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x6a5f58, 1.0));
+  scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x6a5f58, 0.8));
   // a cool fill from the opposite side (no shadows) so the shaded faces keep some colour
   const fill = new THREE.DirectionalLight(0x8fb4ff, 0.45);
   fill.position.set(900, 700, -600);
@@ -566,7 +580,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   sun.shadow.normalBias = 1.5;
   scene.add(sun, sun.target);
 
-  const bodyMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0.05 });
+  const bodyMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.8, metalness: 0.04 });
   const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false });
   const pickMat = new THREE.MeshBasicMaterial({ visible: false });
@@ -614,22 +628,22 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (p.k === 'desk') addAll(deskGeometry(), p.x, p.y);
       else if (p.k === 'rug') {
         addAll([
-          box(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
-          box(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
+          sbox(p.w, 1.2, p.h, '#6e3a3a', 0, 0.8, 0),
+          sbox(p.w - 30, 1.6, p.h - 30, '#7f4646', 0, 1.0, 0),
         ], p.x, p.y);
       } else if (p.k === 'wall') {
         const hgt = 210;
         const b = bucket(p.x, p.y);
-        b.body.push(at(box(p.w + 2, 18, p.h + 2, '#3a4458', 0, 9, 0), p.x, 0, p.y));
-        b.body.push(at(box(p.w + 2, 10, p.h + 2, '#3a4458', 0, hgt - 5, 0), p.x, 0, p.y));
-        if (p.opaque) b.body.push(at(box(p.w, hgt - 28, p.h, '#5a6478', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
-        else b.glass.push(at(box(p.w, hgt - 28, p.h, '#9fd4ff', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
+        b.body.push(at(sbox(p.w + 2, 18, p.h + 2, '#3a4458', 0, 9, 0), p.x, 0, p.y));
+        b.body.push(at(sbox(p.w + 2, 10, p.h + 2, '#3a4458', 0, hgt - 5, 0), p.x, 0, p.y));
+        if (p.opaque) b.body.push(at(sbox(p.w, hgt - 28, p.h, '#5a6478', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
+        else b.glass.push(at(sbox(p.w, hgt - 28, p.h, '#9fd4ff', 0, 18 + (hgt - 28) / 2, 0), p.x, 0, p.y));
         // posts
         const long = Math.max(p.w, p.h);
         const horiz = p.w >= p.h;
         for (let i = 0; i <= Math.ceil(long / 240); i++) {
           const o = -long / 2 + Math.min(long, i * 240);
-          b.body.push(at(box(8, hgt, 8, '#2f384a', horiz ? o : 0, hgt / 2, horiz ? 0 : o), p.x, 0, p.y));
+          b.body.push(at(sbox(8, hgt, 8, '#2f384a', horiz ? o : 0, hgt / 2, horiz ? 0 : o), p.x, 0, p.y));
         }
       }
     }
@@ -644,7 +658,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     perim.push([W / 2, H + 20, W + 120, 40, 36, '#262e40']);
     for (const [x, z, w, d, h, c] of perim) {
       const b = bucket(Math.max(0, Math.min(W - 1, x)), Math.max(0, Math.min(H - 1, z)));
-      b.body.push(at(box(w, h, d, c, 0, h / 2, 0), x, 0, z));
+      b.body.push(at(sbox(w, h, d, c, 0, h / 2, 0), x, 0, z));
     }
     // exit door in the west wall: frame, green door, sign and a mat in front of it
     if (world.exit) {
@@ -652,10 +666,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const ey = (ex.y0 + ex.y1) / 2;
       const dw = ex.y1 - ex.y0;
       const b = bucket(2, ey);
-      b.body.push(at(box(8, 120, 8, '#1b2130', 4, 60, 0), 0, 0, ex.y0 - 4));
-      b.body.push(at(box(8, 120, 8, '#1b2130', 4, 60, 0), 0, 0, ex.y1 + 4));
-      b.body.push(at(box(8, 10, dw + 16, '#1b2130', 4, 124, 0), 0, 0, ey));
-      b.glow.push(at(box(2, 112, dw, '#3ddc84', 1, 56, 0), 0, 0, ey));
+      b.body.push(at(sbox(8, 120, 8, '#1b2130', 4, 60, 0), 0, 0, ex.y0 - 4));
+      b.body.push(at(sbox(8, 120, 8, '#1b2130', 4, 60, 0), 0, 0, ex.y1 + 4));
+      b.body.push(at(sbox(8, 10, dw + 16, '#1b2130', 4, 124, 0), 0, 0, ey));
+      b.glow.push(at(sbox(2, 112, dw, '#3ddc84', 1, 56, 0), 0, 0, ey));
       const exitSign = makeCanvasTexture(256, 64, (ctx, w, h) => {
         ctx.fillStyle = '#0f3d27';
         ctx.fillRect(0, 0, w, h);
@@ -678,11 +692,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // windows and light strips on the north wall
     for (let x = 220; x < W; x += 480) {
       const b = bucket(x, 0);
-      b.glow.push(at(box(260, 120, 2, '#8cc8ff', 0, 170, 0), x, 0, 1.2));
-      b.body.push(at(box(272, 6, 4, '#1b2130', 0, 232, 0), x, 0, 2));
-      b.body.push(at(box(272, 6, 4, '#1b2130', 0, 108, 0), x, 0, 2));
-      b.body.push(at(box(6, 128, 4, '#1b2130', -130, 170, 0), x, 0, 2));
-      b.body.push(at(box(6, 128, 4, '#1b2130', 130, 170, 0), x, 0, 2));
+      b.glow.push(at(sbox(260, 120, 2, '#8cc8ff', 0, 170, 0), x, 0, 1.2));
+      b.body.push(at(sbox(272, 6, 4, '#1b2130', 0, 232, 0), x, 0, 2));
+      b.body.push(at(sbox(272, 6, 4, '#1b2130', 0, 108, 0), x, 0, 2));
+      b.body.push(at(sbox(6, 128, 4, '#1b2130', -130, 170, 0), x, 0, 2));
+      b.body.push(at(sbox(6, 128, 4, '#1b2130', 130, 170, 0), x, 0, 2));
     }
 
     for (const b of buckets.values()) {
@@ -1720,6 +1734,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- quality: 'high' adds bloom (glowing screens) through a post-processing chain, 'low' renders directly ----
   let composer = null;
+  let fxaaPass = null;
   let quality = 'low';
   let postLoad = null;
   async function setQuality(q) {
@@ -1735,16 +1750,23 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         import('./vendor/jsm/postprocessing/RenderPass.js'),
         import('./vendor/jsm/postprocessing/UnrealBloomPass.js'),
         import('./vendor/jsm/postprocessing/OutputPass.js'),
+        import('./vendor/jsm/postprocessing/ShaderPass.js'),
+        import('./vendor/jsm/shaders/FXAAShader.js'),
       ]);
-      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await postLoad;
+      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }, { ShaderPass }, { FXAAShader }] = await postLoad;
       if (quality !== 'high') return; // switched back while loading
-      const target = new THREE.WebGLRenderTarget(W || 800, H || 600, { type: THREE.HalfFloatType, samples: 4 });
+      const target = new THREE.WebGLRenderTarget(W || 800, H || 600, { type: THREE.HalfFloatType });
       const c = new EffectComposer(renderer, target);
       c.setPixelRatio(renderer.getPixelRatio());
       c.setSize(W || 800, H || 600);
       c.addPass(new RenderPass(scene, camera));
       c.addPass(new UnrealBloomPass(new THREE.Vector2((W || 800) / 2, (H || 600) / 2), 0.35, 0.5, 0.9));
       c.addPass(new OutputPass());
+      // anti-aliasing as a pass: a multisampled target glitched on some GPUs
+      const fxaa = new ShaderPass(FXAAShader);
+      fxaa.material.uniforms.resolution.value.set(1 / ((W || 800) * renderer.getPixelRatio()), 1 / ((H || 600) * renderer.getPixelRatio()));
+      fxaaPass = fxaa;
+      c.addPass(fxaa);
       composer = c;
     } catch (e) {
       composer = null; // keep the plain renderer if anything fails to load
@@ -1756,6 +1778,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     H = h;
     renderer.setSize(w, h, false);
     if (composer) composer.setSize(w, h);
+    if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio()));
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
