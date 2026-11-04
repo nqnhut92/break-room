@@ -25,6 +25,8 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 
 Trên màn hình cảm ứng, dùng joystick bên trái để di chuyển và giữ nút ĐẬP! bên phải để đánh. Chạm vào nền hoặc đồ vật không di chuyển hay tấn công. Chụm hai ngón trên canvas để zoom camera. Trên điện thoại, xoay máy sang ngang sau khi vào phòng; giao diện dùng hướng xoay gốc của trình duyệt. Safari có thể thêm game vào Home Screen để chơi không có thanh công cụ. Chi tiết giao diện và kiểm tra thiết bị: [MOBILE.md](MOBILE.md).
 
+Nút ✨ chuyển giữa đồ họa cao và chế độ an toàn. Chế độ an toàn giữ bóng tròn dưới chân, tắt bóng thời gian thực và halo để giảm tải. Điện thoại mặc định dùng chế độ an toàn, nhưng lựa chọn đã lưu vẫn được giữ; nếu đã bật high trước đó, chuyển lại safe để thử giảm giật.
+
 ## Boss và nội gián
 
 VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:

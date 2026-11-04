@@ -46,7 +46,7 @@ The 3D art uses licensed textures and code-built geometry:
 
 Three.js is vendored in `public/vendor/` (MIT, licence included), not loaded from a CDN. To upgrade: `npm install three@<version> --save-dev`, then copy `three.module.min.js` (from `build`) plus `BufferGeometryUtils.js` (from `examples/jsm/utils`) into `public/vendor/`, and `RoundedBoxGeometry.js` and `RoomEnvironment.js` (from `examples/jsm/geometries` and `examples/jsm/environments`) into `public/vendor/jsm/` under the same folder names.
 
-A browser with WebGL is required. Weak phones may stutter; on touch screens the game lowers resolution and shadows by itself.
+A browser with WebGL is required. Weak phones may stutter; touch screens default to safe mode with native resolution and ground/blob shadows, without a real-time shadow pass. A saved high-mode preference still applies.
 
 ## Changing the map and graphics
 
@@ -56,6 +56,17 @@ Roles in `public/roles.js` must match `ROLE_IDS` in `lib/world.js`. Mana setting
 
 Both graphics modes render directly to the screen without EffectComposer. Rationale and revisit conditions: [ADR 0003](adr/0003-direct-rendering.md). Viewport rules and device verification: [MOBILE.md](MOBILE.md).
 
-## Mobile performance probe
+## Renderer checks and mobile performance
 
-See [the investigation and hardware acceptance plan](PERFORMANCE.md). The investigation used the actual renderer with synthetic state, counters including shadow passes and a geometry-disposal counterfactual. Diagnostic tooling and raw captures currently remain local and are not distributed in this repository; Playwright is not required to run the game. SwiftShader counters are not iPhone FPS measurements.
+WebGL checks run separately from the server suite, using the Playwright dev dependency (pinned for Node 18 support) and Chromium:
+
+```bash
+npx playwright install chromium
+npm run test:renderer
+```
+
+To use an installed Chromium, run `CHROMIUM_PATH=/path/to/chromium npm run test:renderer`. The default fixture is touch; also run `RENDERER_TOUCH=0 npm run test:renderer` for the desktop configuration. The test intercepts a module to inspect internal resources without changing production behavior. It checks safe/high switching, shadow-target disposal, shared materials, player/mini-boss geometry, electric effects, picking and repeated join/leave. Counters include shadow passes; SwiftShader does not measure iPhone FPS.
+
+Player rig geometry is allocated per rig; `ownedMaterials` lists the private ground-shadow/selection-ring materials. Cleanup disposes each owned geometry once and the private electric materials when present; it leaves the shared body and pick materials intact. Moving rigs to shared geometry caches later requires updating ownership and tests.
+
+See [the investigation and hardware acceptance plan](PERFORMANCE.md), [ADR 0005](adr/0005-safe-mode-shadows.md). Original diagnostic probes/captures remain local; the WebGL regression test is distributed in `test/renderer.cjs`.

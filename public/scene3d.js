@@ -517,7 +517,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !coarse;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -551,7 +551,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   fill.position.set(900, 700, -600);
   scene.add(fill);
   const sun = new THREE.DirectionalLight(0xffe6c4, 1.9);
-  sun.castShadow = true;
+  sun.castShadow = !coarse;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
   const sc = sun.shadow.camera;
   sc.left = -900; sc.right = 900; sc.top = 900; sc.bottom = -900; sc.near = 100; sc.far = 2600;
@@ -1568,7 +1568,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, cup, taser, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
+    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, cup, taser, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, ownedMaterials: [blob.material, ring.material], lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -1807,11 +1807,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   function disposePlayer(rig) {
-    if (rig.pickProxy) rig.pickProxy.geometry.dispose();
+    // Player rigs allocate their own geometry (including accessories and pick proxies).
+    // Materials on the body/accessories are shared; only these private materials belong
+    // to the rig. Keep both sets deduplicated when effects are attached under the torso.
+    const geometries = new Set();
+    const materials = new Set(rig.ownedMaterials);
+    rig.g.traverse(o => { if (o.geometry) geometries.add(o.geometry); });
     if (rig.electricFx) {
-      for (const mesh of [rig.electricFx.outline, rig.electricFx.arcs]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+      for (const mesh of [rig.electricFx.outline, rig.electricFx.arcs]) materials.add(mesh.material);
     }
     scene.remove(rig.g);
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) material.dispose();
     rig.label.remove();
   }
 
@@ -2477,7 +2484,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   // ---- graphics quality. High (the default on computers): supersampled, sharp shadows, soft studio light and the
-  // screen halos. Low (the safe option, default on touch screens): native resolution, smaller shadow map, no halos. Both
+  // screen halos. Low (the safe option, default on touch screens): native resolution, ground/blob shadows only, no halos. Both
   // render straight to the screen: there is no post-processing chain. ----
   let haloOn = true;
   let quality = 'high';
@@ -2485,14 +2492,22 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     quality = q === 'low' ? 'low' : 'high';
     const dpr = window.devicePixelRatio || 1;
     renderer.setPixelRatio(quality === 'high' ? Math.min(2, Math.max(dpr, 1.5)) : Math.min(dpr, 1));
-    const size = quality === 'high' ? (coarse ? 1024 : 2048) : 1024;
-    if (sun.shadow.mapSize.x !== size) {
-      sun.shadow.mapSize.set(size, size);
+    const shadows = quality === 'high';
+    const size = coarse ? 1024 : 2048;
+    renderer.shadowMap.enabled = shadows;
+    sun.castShadow = shadows;
+    if (!shadows || sun.shadow.mapSize.x !== size) {
       if (sun.shadow.map) {
         sun.shadow.map.dispose();
         sun.shadow.map = null;
       }
+      if (sun.shadow.mapPass) {
+        sun.shadow.mapPass.dispose();
+        sun.shadow.mapPass = null;
+      }
     }
+    sun.shadow.mapSize.set(size, size);
+    if (shadows) sun.shadow.needsUpdate = true;
     scene.environment = quality === 'high' ? envTex : null;
     haloOn = quality === 'high';
     ready.then(warmEffects);

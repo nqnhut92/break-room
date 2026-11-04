@@ -29,6 +29,8 @@ On phones, turn off orientation lock and rotate to landscape after joining. The 
 
 Mobile layout, gesture handling and performance validation are documented in [MOBILE.md](MOBILE.md).
 
+The ✨ button switches between high and safe graphics. Safe mode retains player ground shadows and disables real-time shadows and screen halos to reduce rendering work. Phones default to safe mode, but a saved choice is preserved; switch back to safe if high was selected earlier.
+
 ## Bosses and moles
 
 VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. Moles pose as ordinary players. Detailed rules and balance:

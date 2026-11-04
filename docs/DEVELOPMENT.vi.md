@@ -46,7 +46,7 @@ Hình 3D dùng texture có giấy phép và hình học dựng bằng code:
 
 Three.js được chép sẵn vào `public/vendor/` (MIT, kèm giấy phép), không tải từ CDN. Muốn nâng cấp: `npm install three@<phiên bản> --save-dev` rồi chép `three.module.min.js` (thư mục `build`) cùng `BufferGeometryUtils.js` (từ `examples/jsm/utils`) vào `public/vendor/`, và `RoundedBoxGeometry.js`, `RoomEnvironment.js` (từ `examples/jsm/geometries` và `examples/jsm/environments`) vào `public/vendor/jsm/` với cùng tên thư mục.
 
-Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, game tự giảm độ phân giải và bóng đổ trên màn hình cảm ứng.
+Cần trình duyệt có WebGL. Điện thoại yếu có thể giật, màn hình cảm ứng mặc định dùng chế độ an toàn với độ phân giải gốc và bóng tròn dưới chân, không render bóng thời gian thực. Lựa chọn chế độ cao đã lưu vẫn được áp dụng.
 
 ## Chỉnh map và đồ họa
 
@@ -56,6 +56,17 @@ Vai trò ở `public/roles.js` phải khớp `ROLE_IDS` trong `lib/world.js`. Ma
 
 Hai mức đồ họa vẽ thẳng ra màn hình, không dùng EffectComposer. Lý do và điều kiện xem xét lại: [ADR 0003](adr/0003-direct-rendering.md). Quy tắc viewport và kiểm tra điện thoại: [MOBILE.md](MOBILE.md).
 
-## Đo tải render trên mobile
+## Kiểm tra renderer và hiệu năng mobile
 
-Xem [kết quả điều tra và kế hoạch kiểm tra máy thật](PERFORMANCE.vi.md). Phép đo đã dùng renderer thật với state mô phỏng, bộ đếm tính cả shadow pass và đối chứng cleanup geometry. Script chẩn đoán và capture gốc hiện giữ local, chưa phát hành trong repo; không cần cài Playwright để chạy game. Bộ đếm trên SwiftShader không phải FPS iPhone.
+Kiểm tra WebGL tách khỏi bộ test server, dùng Playwright ở dev dependency (ghim phiên bản để hỗ trợ Node 18) và Chromium:
+
+```bash
+npx playwright install chromium
+npm run test:renderer
+```
+
+Có thể dùng Chromium đã cài bằng `CHROMIUM_PATH=/path/to/chromium npm run test:renderer`. Fixture mặc định là màn hình cảm ứng; chạy thêm `RENDERER_TOUCH=0 npm run test:renderer` để kiểm tra cấu hình desktop. Test intercept module để đọc tài nguyên nội bộ, không đổi hành vi production. Nó kiểm tra safe/high, giải phóng shadow target, vật liệu dùng chung, geometry nhân vật/mini-boss, hiệu ứng điện, picking và nhiều lượt vào/rời. Phép đo tính cả shadow pass; SwiftShader không đại diện cho FPS iPhone.
+
+Geometry rig người chơi được cấp riêng; `ownedMaterials` chỉ chứa material riêng của bóng tròn/vòng chọn. Cleanup dispose mỗi geometry riêng một lần, thêm material điện nếu có; không dispose body material hoặc pick material dùng chung. Nếu chuyển rig sang geometry cache chung sau này thì phải cập nhật ownership và test.
+
+Xem [kết quả điều tra và kiểm tra máy thật](PERFORMANCE.vi.md), [ADR 0005](adr/0005-safe-mode-shadows.md). Capture/probe chẩn đoán ban đầu vẫn giữ local; regression test WebGL ở `test/renderer.cjs` đã nằm trong repo.

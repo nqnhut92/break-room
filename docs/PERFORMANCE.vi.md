@@ -2,7 +2,21 @@
 
 [English](PERFORMANCE.md) · Tiếng Việt · [Tài liệu](README.md)
 
-Ghi nhận ngày 2026-11-04, runtime revision `dcbcb33`. Báo cáo iPhone 17 Pro Max còn giật vẫn đang mở. Phần này là điều tra và đề xuất; chưa sửa hay deploy renderer của game.
+Điều tra ban đầu ngày 2026-11-04 trên runtime revision `dcbcb33`. Các phát hiện/bảng baseline bên dưới mô tả phiên bản đó. Bản sửa hiện tại nằm ở phần tiếp theo; vấn đề iPhone 17 Pro Max vẫn cần kiểm tra trên máy thật.
+
+## Bản sửa để thử trên thiết bị
+
+Người dùng đã xác nhận giật ngay từ phiên mới. Thiếu cleanup sau nhiều lượt vào/rời **không giải thích được riêng trường hợp đó**; đây là lỗi tài nguyên độc lập. Bản sửa xử lý cả cleanup và tải bóng có ngay từ frame đầu:
+
+- Safe mode tắt shadow pass thời gian thực, giữ bóng tròn dưới chân. High mode giữ bóng thời gian thực (1024 trên cảm ứng, 2048 desktop), có thể bật lại bằng nút ✨. Lựa chọn đã lưu không bị reset.
+- Chuyển sang safe mode giải phóng shadow target; chuyển lại high tạo lại đúng cách.
+- Khi gỡ nhân vật/mini-boss, dispose geometry riêng và material bóng tròn/vòng chọn/điện, giữ material dùng chung.
+
+[Regression test WebGL](../test/renderer.cjs) kiểm tra cleanup thực tế, không chèn patch sửa hành vi. Ở fixture cảm ứng có một người đội phụ kiện dev, safe là **52 draw calls / 27.140 tam giác**, high là **304 / 813.964**, tính cả bóng. Qua tám lượt vào/rời, geometry giữ **92 → 92**. Fixture khác baseline cũ một phụ kiện, vì vậy so safe/high trong cùng lượt này thay vì trừ số giữa hai fixture.
+
+Bộ kiểm tra hoàn tất **17 checks** trên mỗi cấu hình cảm ứng và desktop, không có page error hay WebGL error; việc chuyển high/safe cũng không giữ lại shadow texture.
+
+Đây là giảm tải gửi hình học đo trên SwiftShader, chưa phải cải thiện FPS đã đo trên iPhone. Xem [ADR 0005](adr/0005-safe-mode-shadows.md) và [cách chạy test](DEVELOPMENT.vi.md#kiểm-tra-renderer-và-hiệu-năng-mobile). Các đề xuất còn lại phía dưới vẫn chưa triển khai.
 
 ## Kết luận hiện tại
 
@@ -47,8 +61,8 @@ Cả hai lượt đo hoàn tất, không có page error. CPU profile chứa cả
 
 | Ưu tiên | Thay đổi | Kiểm tra / đánh đổi |
 | --- | --- | --- |
-| P0 | Dispose geometry riêng của người chơi và material riêng của bóng tròn/vòng chọn khi gỡ rig. Quản lý ownership và tránh dispose lặp; không dispose body material, model cache hay geometry rắn đang dùng chung. | Bản sửa thật phải giữ tài nguyên ổn định sau teardown đám đông và nhiều lượt vào/rời. Kiểm tra người vào lại, phụ kiện vai trò, điện và người mới không mất hình. Patch đối chứng mới chỉ xác nhận geometry, chưa phải cleanup production đầy đủ. |
-| P1 | Làm bóng ở chế độ an toàn nhẹ hơn: so sánh tắt bóng thời gian thực, giữ bóng tròn dưới chân; sau đó thử chỉ nhân vật đổ bóng hoặc thu vùng shadow nếu cần giữ chất hình. Chế độ cao vẫn có sẵn. | Đo cùng góc/cùng cảnh trên iPhone; kiểm tra chiều sâu, bóng khi di chuyển và mép phòng. Không thêm composer, theo ADR 0003. |
+| P0 (đã sửa, chờ kiểm tra thiết bị) | Dispose geometry riêng của người chơi và material riêng của bóng tròn/vòng chọn khi gỡ rig. Quản lý ownership và tránh dispose lặp; không dispose body material, model cache hay geometry rắn đang dùng chung. | Bản sửa thật phải giữ tài nguyên ổn định sau teardown đám đông và nhiều lượt vào/rời. Kiểm tra người vào lại, phụ kiện vai trò, điện và người mới không mất hình. Patch đối chứng mới chỉ xác nhận geometry, chưa phải cleanup production đầy đủ. |
+| P1 (đã tắt bóng thời gian thực ở safe mode) | Làm bóng ở chế độ an toàn nhẹ hơn: so sánh tắt bóng thời gian thực, giữ bóng tròn dưới chân; sau đó thử chỉ nhân vật đổ bóng hoặc thu vùng shadow nếu cần giữ chất hình. Chế độ cao vẫn có sẵn. | Đo cùng góc/cùng cảnh trên iPhone; kiểm tra chiều sâu, bóng khi di chuyển và mép phòng. Không thêm composer, theo ADR 0003. |
 | P1 | Thêm overlay/cờ chẩn đoán tuỳ chọn: chất lượng/DPR thực tế, phân vị khoảng cách frame, long task nếu hỗ trợ, draw/triangle gồm bóng và bộ đếm resource. | Xác định high đã lưu hay không, giật gắn với render, GC, warmup hay snapshot mạng. UI bình thường không mang chi tiết chẩn đoán. Safari thiếu một số API bộ nhớ/long task của Chromium nên phải kiểm tra hỗ trợ. |
 | P2 | Thử DPR 0,85/0,75 ở chế độ an toàn; chỉ thêm điều chỉnh tự động chậm, có giới hạn sau khi đo. | Giảm pixel nhưng không giảm hình học. So độ nét, nhịp frame dài hạn; giữ nguyên layout viewport và ánh xạ cử chỉ. |
 | P2 | Giảm độ chi tiết nhân vật xa, dùng chung geometry bất biến và giảm cập nhật ngoài màn hình. Cân nhắc instancing nội thất lặp nếu vẫn giữ được hình khi bị đánh. | Profile cảnh đông trước. Giữ nhắm đánh, phụ kiện, picking, điện và ownership tài nguyên đúng; không ẩn nhầm đối tượng còn cần cho bóng/hiệu ứng. |

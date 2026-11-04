@@ -8,7 +8,8 @@
     "build": "node scripts/stamp-assets.js",
     "test": "node test/viewport.js && node test/world.js && node test/boss.js && node test/snakes.js && node test/miniboss.js && node test/duel.js && node test/duel-realtime.js && node test/smoke.js && node test/boss-net.js && node test/moles.js && node test/shared.js",
     "check:store": "node scripts/check-store.js",
-    "test:redis": "bash scripts/test-with-redis.sh"
+    "test:redis": "bash scripts/test-with-redis.sh",
+    "test:renderer": "node test/renderer.cjs"
   },
   "engines": {
     "node": ">=18"
@@ -19,6 +20,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "playwright": "1.56.1",
     "three": "^0.170.0"
   }
 }

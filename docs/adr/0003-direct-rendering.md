@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Recorded: 2026-11-04 (existing decision documented retrospectively)
-- Supersedes / superseded by: none
+- Supersedes / superseded by: the safe-mode shadow detail below is superseded by [0005](0005-safe-mode-shadows.md); the direct-rendering decision remains accepted.
 
 ## Context
 

@@ -34,4 +34,4 @@ Before claiming the Safari smart-zoom issue or impact smoothness fully resolved 
 
 ## Current performance investigation
 
-The iPhone 17 Pro Max stutter report is still open. See [Performance](PERFORMANCE.md) ([Tiếng Việt](PERFORMANCE.vi.md)) for measured draw/resource counters, a geometry-disposal counterfactual, prioritized proposals and the hardware acceptance plan. No proposed runtime optimization has been deployed by this investigation.
+The iPhone 17 Pro Max stutter report is still open. See [Performance](PERFORMANCE.md) ([Tiếng Việt](PERFORMANCE.vi.md)) for measured draw/resource counters, a geometry-disposal counterfactual, prioritized proposals and the hardware acceptance plan. The current implementation disables real-time shadows in safe mode and releases player-owned resources on removal; real-device FPS validation is still pending. Saved high-mode preferences are preserved. See [ADR 0005](adr/0005-safe-mode-shadows.md).

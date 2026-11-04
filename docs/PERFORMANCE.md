@@ -2,7 +2,21 @@
 
 English · [Tiếng Việt](PERFORMANCE.vi.md) · [Documentation](README.md)
 
-Recorded 2026-11-04 against runtime revision `dcbcb33`. The iPhone 17 Pro Max stutter report remains open. This investigation proposes changes; it does not change or deploy the game renderer.
+Original investigation recorded 2026-11-04 against runtime revision `dcbcb33`. Baseline findings and tables below describe that revision. Current implementation changes are recorded next; the iPhone 17 Pro Max report still needs hardware validation.
+
+## Implementation for device testing
+
+The user confirmed stutter immediately after joining a fresh session. Retention after repeated joins/leaves **does not explain that case by itself**; it is an independent resource-lifecycle bug. This change addresses both lifecycle and shadow work present from the first frames:
+
+- Safe mode disables the real-time shadow pass while retaining player ground/blob shadows. High mode retains live shadows (1024 on touch, 2048 desktop), selectable with ✨. Saved preferences are preserved.
+- Switching to safe mode releases the shadow target; returning to high recreates it correctly.
+- Removing a player/mini-boss disposes its private geometries and ground/ring/electric materials, retaining shared materials.
+
+The [WebGL regression test](../test/renderer.cjs) checks actual cleanup without a behavior patch. In its touch fixture with one dev-accessory player, safe submits **52 draws / 27,140 triangles**, high **304 / 813,964**, including shadows. Eight join/leave cycles keep geometries at **92 → 92**. This fixture adds an accessory compared with the original baseline, so compare safe/high within this run rather than subtracting across fixtures.
+
+The suite passes **17 checks** in each touch and desktop configuration, with no page or WebGL errors; repeated high/safe transitions do not retain shadow textures.
+
+These are measured submission reductions on SwiftShader, not an established iPhone FPS improvement. See [ADR 0005](adr/0005-safe-mode-shadows.md) and [test instructions](DEVELOPMENT.md#renderer-checks-and-mobile-performance). Remaining proposals below are not implemented.
 
 ## Findings
 
@@ -47,8 +61,8 @@ Both probes completed with zero page errors. CPU profiles include quality change
 
 | Priority | Change | Verification / tradeoff |
 | --- | --- | --- |
-| P0 | Dispose player-owned geometries and private blob/ring materials when removing a rig. Deduplicate ownership; never dispose the shared body material, shared model caches or snake geometry while in use. | Repeat crowd teardown and join/leave with an actual implementation; resource counts must plateau. Rejoin, role accessories, electric effects and new players must still render. The diagnostic patch proves the geometry hypothesis only; it is not a complete production ownership implementation. |
-| P1 | Make safe-mode shadows substantially cheaper: first compare no real-time shadows with existing ground/blob shadows, then character-only or smaller-frustum shadows if the look requires them. Keep high mode available. | Measure on the iPhone at the same camera and workload. Inspect depth/readability, moving shadows and room edges. Avoid introducing a composer; follow ADR 0003. |
+| P0 (implemented; device validation pending) | Dispose player-owned geometries and private blob/ring materials when removing a rig. Deduplicate ownership; never dispose the shared body material, shared model caches or snake geometry while in use. | Repeat crowd teardown and join/leave with an actual implementation; resource counts must plateau. Rejoin, role accessories, electric effects and new players must still render. The diagnostic patch proves the geometry hypothesis only; it is not a complete production ownership implementation. |
+| P1 (no-live-shadow safe mode implemented) | Make safe-mode shadows substantially cheaper: first compare no real-time shadows with existing ground/blob shadows, then character-only or smaller-frustum shadows if the look requires them. Keep high mode available. | Measure on the iPhone at the same camera and workload. Inspect depth/readability, moving shadows and room edges. Avoid introducing a composer; follow ADR 0003. |
 | P1 | Add an opt-in performance overlay or capture flag showing effective quality/DPR, frame interval percentiles, long tasks where supported, draw/triangle counts including shadows and resource counts. | Confirm actual saved quality and whether hitches track rendering, GC, warmup or network snapshots. Keep normal player flows free of diagnostic details. Safari lacks some Chromium memory/long-task APIs; detect support. |
 | P2 | Trial DPR 0.85/0.75 in safe mode, with a bounded, slow adaptive policy only after measuring. | Pixel work falls, geometry work remains. Compare text/UI sharpness and sustained frame pacing; do not alter the layout viewport or gesture mapping. |
 | P2 | Reduce character complexity at distance, share immutable rig geometry, and reduce offscreen updates. Consider instancing repeated static furniture where per-object damage visuals allow it. | Profile crowds first. Preserve damage targeting, accessories, picking, electric effects and shared ownership. Avoid hiding objects needed by shadows or effects. |
