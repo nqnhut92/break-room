@@ -114,7 +114,7 @@ Every five minutes the room offers “Đồng nghiệp mời nước” for five
 
 Every random 40–60 seconds, VKL selects one living player inside the server room or within 320 units of its boundary. With no eligible player, that attempt is skipped and another is scheduled 40–60 seconds later. A rope pulls the captive inside; a gust blows other living occupants into the west corridor.
 
-For 15 seconds the captive can move and fight inside but cannot leave. Spectators cannot enter, damage the boss or receive its strikes. Expiry, boss death or captive death opens the room. Disconnecting does not clear capture; reconnecting restores the remaining timer. The boss lease holder commits the versioned schedule and forced positions atomically in the shared store.
+For 20 seconds the captive can move and fight inside but cannot leave. Spectators cannot enter, damage the boss or receive its strikes. After the first 10 seconds, only the captive sees an “Em xin lỗi” button; clicking it opens the room early. The server validates the captive, duel version and elapsed time, including across instances. Expiry, boss death or captive death opens the room. Disconnecting does not clear capture; reconnecting restores the remaining timer. The boss lease holder commits the versioned schedule and forced positions atomically in the shared store.
 
 Snakes have a continuous S-shaped body, a tapered tail and a forked tongue. Summoning raises the boss's hands and displays green spell rings, using reused geometry without post-processing.
 

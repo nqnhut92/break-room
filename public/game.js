@@ -823,7 +823,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!state) { S.duel = null; return; }
     if (!welcome && S.duel && state.version <= S.duel.version) return;
     const wasActive = duelActive();
-    S.duel = { ...state, bounds: m.bounds, until: performance.now() + Math.max(0, m.ms || 0) };
+    S.duel = { ...state, bounds: m.bounds, apologyAt: performance.now() + Math.max(0, m.apologyMs || 0), until: performance.now() + Math.max(0, m.ms || 0) };
     if (!duelActive()) {
       $('duelBanner').hidden = true;
       if (wasActive && !welcome) toast('🔓 Kết thúc 1:1, phòng server đã mở lại.');
@@ -833,7 +833,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.keys.clear(); resetJoystick(); S.smashHeld = false; S.target = null; S.attackId = null;
     if (S.boss) { S.boss.wind = null; S.boss.cast = { kind: 'duel', until: performance.now() + 1200 }; }
     const captured = S.players.get(state.target);
-    toast('🪢 VKL kéo ' + (captured?.name || 'một đồng nghiệp') + ' vào đấu 1:1 trong 15 giây!');
+    toast('🪢 VKL kéo ' + (captured?.name || 'một đồng nghiệp') + ' vào đấu 1:1 trong 20 giây!');
     if (scene) scene.fx.duelCast(m.x, m.y);
     for (const move of state.moves || []) {
       const p = S.players.get(move.id);
@@ -846,6 +846,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     sfxWind(volumeAt(m.x, m.y));
   }
+  $('duelApologyBtn').addEventListener('click', () => {
+    if (duelActive() && S.duel.target === S.me && performance.now() >= S.duel.apologyAt) {
+      send({ t: 'duelApology', version: S.duel.version });
+    }
+  });
   function constrainDuel(p, x, y) {
     if (!duelActive()) return { x, y };
     const r = S.duel.bounds;
@@ -1378,7 +1383,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
       'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
-      'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 15 giây. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
+      'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b> để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Rắn đuổi khắp bản đồ, cắn nhẹ và chịu 4 cú búa. Rắn còn lại biến mất khi boss hồi sinh.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
@@ -1392,7 +1397,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   function helpClose() {
     helpEl.hidden = true;
-    $('helpBtn').focus();
+    $(coarseUi ? 'settingsBtn' : 'helpBtn').focus();
   }
   $('helpBtn').addEventListener('click', helpOpen);
   $('helpClose').addEventListener('click', helpClose);
@@ -1402,6 +1407,55 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !helpEl.hidden) helpClose();
   });
+
+  const settingsEl = $('settingsDlg');
+  const settingsMQ = window.matchMedia('(pointer: coarse)');
+  // Move the existing controls so state, cooldowns and listeners stay shared.
+  const settingsMoves = ['sideTools', 'copyLink', 'mute', 'resetBtn', 'emotes'].map(id => {
+    const el = $(id), slot = document.createComment(id);
+    el.before(slot);
+    return { el, slot };
+  });
+  function settingsClose(restoreFocus = true) {
+    settingsEl.hidden = true;
+    $('settingsBtn').setAttribute('aria-expanded', 'false');
+    if (restoreFocus) $('settingsBtn').focus();
+  }
+  function settingsLayout() {
+    settingsClose(false);
+    for (const { el, slot } of settingsMoves) {
+      if (settingsMQ.matches) $(el.id === 'sideTools' ? 'settingsTools' : 'settingsExtras').append(el);
+      else slot.after(el);
+    }
+    mmPlace(); sidePlace();
+  }
+  $('settingsBtn').addEventListener('click', () => {
+    if (!settingsMQ.matches) return;
+    S.keys.clear(); resetJoystick(); S.smashHeld = false; S.target = null; S.attackId = null;
+    settingsEl.hidden = false;
+    $('settingsBtn').setAttribute('aria-expanded', 'true');
+    $('settingsClose').focus();
+  });
+  $('settingsClose').addEventListener('click', () => settingsClose());
+  settingsEl.addEventListener('pointerdown', e => {
+    if (e.target === settingsEl) settingsClose();
+  });
+  settingsEl.addEventListener('click', e => {
+    if (e.target.closest('#helpBtn, #chatBtn, #resetBtn, #emotes button')) settingsClose(false);
+  }, true);
+  window.addEventListener('keydown', e => {
+    if (settingsEl.hidden) return;
+    e.stopImmediatePropagation();
+    if (e.key === 'Escape') { e.preventDefault(); settingsClose(); }
+    if (e.key === 'Tab') {
+      const buttons = [...settingsEl.querySelectorAll('button')].filter(b => !b.disabled && b.getClientRects().length);
+      const first = buttons[0], last = buttons[buttons.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, true);
+  settingsMQ.addEventListener('change', settingsLayout);
+  settingsLayout();
 
   let drinkTimer = null;
   let drinkId = 0;
@@ -1995,9 +2049,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
     const duelOn = duelActive();
     $('duelBanner').hidden = !duelOn;
+    $('duelApologyBtn').hidden = !(duelOn && S.duel.target === S.me && !S.players.get(S.me)?.dead && performance.now() >= S.duel.apologyAt);
     if (duelOn) {
       const name = S.players.get(S.duel.target)?.name || 'Đồng nghiệp';
-      $('duelBanner').textContent = (S.duel.target === S.me ? '🪢 Bạn đang đấu 1:1 với VKL' : '🔒 VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';
+      $('duelText').textContent = (S.duel.target === S.me ? '🪢 Bạn đang đấu 1:1 với VKL' : '🔒 VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';
     }
     const me = S.players.get(S.me);
     if (me) updateMe(me, dt);
@@ -2041,7 +2096,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       me.moving = false;
       return; // knocked out: no walking, no swinging until the server revives us
     }
-    if (mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden) {
+    if (mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) {
       resetJoystick();
       me.moving = false;
       return;

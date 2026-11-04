@@ -118,7 +118,7 @@ Mỗi 5 phút, nút “Đồng nghiệp mời nước” hiện trong 5 giây. M
 
 Cứ 40–60 giây (ngẫu nhiên), VKL chọn một người sống trong phòng hoặc cách mép phòng tối đa 320 đơn vị. Nếu không có ai đủ gần thì bỏ lượt và hẹn lại sau 40–60 giây. Boss tung dây kéo người đó vào phòng, thổi những người sống còn lại ra hành lang phía tây.
 
-Trong 15 giây, người bị bắt được di chuyển và chiến đấu trong phòng nhưng không ra được; người khác không vào phòng, gây sát thương lên boss hoặc nhận đòn boss. Hết giờ, hoặc một bên bị hạ, phòng mở lại. Ngắt kết nối không xóa thời gian bị bắt; tải lại trang khôi phục thời gian còn lại. Người giữ lease boss ghi lịch, mục tiêu và vị trí kéo/thổi nguyên tử trong store, có kiểm tra phiên bản.
+Trong 20 giây, người bị bắt được di chuyển và chiến đấu trong phòng nhưng không ra được; người khác không vào phòng, gây sát thương lên boss hoặc nhận đòn boss. Sau 10 giây đầu, chỉ người bị bắt thấy nút “Em xin lỗi”; bấm để mở phòng sớm. Server kiểm tra người bấm, phiên bản lượt đấu và thời gian, kể cả giữa các instance. Hết giờ, hoặc một bên bị hạ, phòng mở lại. Ngắt kết nối không xóa thời gian bị bắt; tải lại trang khôi phục thời gian còn lại. Người giữ lease boss ghi lịch, mục tiêu và vị trí kéo/thổi nguyên tử trong store, có kiểm tra phiên bản.
 
 Rắn có thân liền uốn chữ S, đuôi thuôn và lưỡi chẻ. Khi triệu hồi, boss giơ tay cùng vòng phép xanh. Hiệu ứng dùng hình học tái sử dụng, không thêm post-processing.
 

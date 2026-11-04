@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('assert');
 const { BOSS_ROOM, PLAYER_RADIUS, resolveCollisions } = require('../lib/world');
-const { DUEL, emptyDuel, nextDuel, nearRoom, activeDuel, duelPosition, insideRoom } = require('../lib/duel');
+const { DUEL, emptyDuel, nextDuel, nearRoom, activeDuel, canApologize, duelPosition, insideRoom } = require('../lib/duel');
 const { createMemoryStore } = require('../lib/store-memory');
 const near = { id: 1, x: 2750, y: 1700 }, inside = { id: 2, x: 3300, y: 1700 }, far = { id: 3, x: 1900, y: 1950 };
 const dead = { id: 4, x: 3200, y: 1700, dead: true };
@@ -16,7 +16,7 @@ check('random schedule is 40–60 seconds; dead and faraway players cannot be se
 const scheduled = nextDuel(null, 1000, [], true, () => 0);
 const duel = nextDuel(scheduled, scheduled.nextAt, [near, inside, far, dead], true, () => 0);
 check('capture one nearby player, blow other live occupants out, leave distant and dead players alone', () => {
-  assert.equal(duel.target, near.id); assert.equal(duel.until - duel.startedAt, 15000);
+  assert.equal(duel.target, near.id); assert.equal(duel.until - duel.startedAt, 20000);
   assert.equal(duel.nextAt - duel.startedAt, 40000);
   assert.deepEqual(duel.moves.map(m => [m.id, m.kind]), [[1, 'pull'], [2, 'blow']]);
   assert.ok(insideRoom(duel.moves[0].x, duel.moves[0].y)); assert.ok(!insideRoom(duel.moves[1].x, duel.moves[1].y));
@@ -29,7 +29,7 @@ check('selection is random across eligible users, no capture when nobody is near
   assert.equal(nextDuel(scheduled, 41000, [near], false, () => 0), null);
   assert.equal(nextDuel(scheduled, 40999, [near], true, () => 0), null);
 });
-check('doorway blocks escape and entry throughout 15s, free movement immediately after expiry', () => {
+check('doorway blocks escape and entry throughout 20s, free movement immediately after expiry', () => {
   const exit = {x: BOSS_ROOM.x0 - 100, y:1700};
   const captive = duelPosition(duel, 1, exit.x, exit.y, duel.until - 1);
   assert.ok(captive.x >= BOSS_ROOM.x0 + PLAYER_RADIUS); assert.ok(insideRoom(captive.x, captive.y));
@@ -37,6 +37,15 @@ check('doorway blocks escape and entry throughout 15s, free movement immediately
   assert.ok(!insideRoom(outsider.x, outsider.y, PLAYER_RADIUS));
   assert.deepEqual(duelPosition(duel, 1, exit.x, exit.y, duel.until), exit);
   assert.deepEqual(duelPosition(duel, 2, 3100, 1700, duel.until), {x:3100,y:1700});
+});
+check('apology requires the captive, current duel and 10 elapsed seconds before expiry', () => {
+  const at = duel.startedAt + 10000;
+  assert.ok(!canApologize(duel, near.id, duel.version, at - 1));
+  assert.ok(canApologize(duel, near.id, duel.version, at));
+  assert.ok(!canApologize(duel, inside.id, duel.version, at));
+  assert.ok(!canApologize(duel, near.id, duel.version - 1, at));
+  assert.ok(!canApologize(duel, near.id, duel.version, duel.until));
+  assert.ok(!canApologize(emptyDuel(), near.id, duel.version, at));
 });
 check('no overlapping duel; disconnect/reconnect retains lock, death or timeout clears it', () => {
   assert.equal(nextDuel(duel, 42000, [near,inside], true), null);

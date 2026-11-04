@@ -1,6 +1,6 @@
 'use strict';
 // Exercise the real realtime handlers and two instance runners with a socket transport stub.
-// A virtual clock keeps production's 15-second lock/40–60-second interval checks fast.
+// A virtual clock keeps production's 20-second lock/40–60-second interval checks fast.
 const assert = require('assert');
 const { EventEmitter } = require('events');
 const Module = require('module');
@@ -78,7 +78,7 @@ async function main() {
   }
   const cast = near.msgs.find(m=>m.t==='bduel' && m.state.target);
   assert.ok(cast,'boss cast 1:1'); assert.equal(cast.state.target, near.id);
-  assert.equal(cast.ms,15000); assert.ok(spectator.msgs.some(m=>m.t==='bduel' && m.state.version===cast.state.version));
+  assert.equal(cast.ms,20000); assert.ok(spectator.msgs.some(m=>m.t==='bduel' && m.state.version===cast.state.version));
   assert.equal(near.player.x,3100); assert.ok(spectator.player.x < world.BOSS_ROOM.x0);
   assert.equal(distant.player.x,1900); assert.equal(distant.player.y,1950);
   console.log('ok - one leader casts after 40s, pulls a nearby user and blows a remote occupant out');
@@ -90,7 +90,7 @@ async function main() {
   // A new socket takes over the same player on the other instance (as with refresh/renewal).
   const again = await join(b,'Near',{x:1900,y:1950},near.token);
   assert.equal(again.id,near.id); assert.equal(near.readyState,3);
-  assert.ok(again.welcome.duel.ms > 0 && again.welcome.duel.ms < 15000);
+  assert.ok(again.welcome.duel.ms > 0 && again.welcome.duel.ms < 20000);
   assert.ok(again.player.x >= world.BOSS_ROOM.x0 + world.PLAYER_RADIUS);
   await move(again,2750,1700); assert.ok(again.player.x >= world.BOSS_ROOM.x0 + world.PLAYER_RADIUS);
   console.log('ok - refresh on a different instance preserves capture and remaining time');
@@ -101,12 +101,54 @@ async function main() {
     await advance(Math.min(100,targetUntil-now));
   }
   assert.ok(again.msgs.some(m=>m.t==='bduel' && m.state.target===0 && m.state.version>cast.state.version));
-  await move(again,2750,1700); assert.ok(again.player.x < world.BOSS_ROOM.x0,'released at 15s');
+  await move(again,2750,1700); assert.ok(again.player.x < world.BOSS_ROOM.x0,'released at 20s');
   assert.equal((await base.duelGet('duel',{now})).target,0);
   assert.equal(again.msgs.filter(m=>m.t==='bduel' && m.state.target).length,0,'no replay on handover/reconnect');
-  console.log('ok - leader handover preserves the 15s timer, then unlocks without replaying the cast');
+  console.log('ok - leader handover preserves the 20s timer, then unlocks without replaying the cast');
+  // Keep the leader on a while the captive reconnects and apologizes on b.
+  const captive = await join(a,'Sorry',{x:2750,y:1700},undefined,'apology');
+  const keeper = await join(a,'Keeper',{x:1900,y:1950},undefined,'apology');
+  const watcher = await join(b,'Watcher',{x:3730,y:1700},undefined,'apology');
+  async function healthyAdvance(ms) {
+    for (let elapsed = 0; elapsed < ms; elapsed += 100) {
+      for (const host of [a,b]) for (const ws of host.wss.clients) if (ws.player) {
+        ws.player.hp=100; ws.player.hpAt=now; ws.player.deadUntil=0;
+      }
+      await advance(Math.min(100,ms-elapsed));
+    }
+  }
+  await healthyAdvance(1200);
+  const schedule = await base.duelGet('apology',{now});
+  await healthyAdvance(schedule.nextAt + 100 - now);
+  const active = await base.duelGet('apology',{now});
+  assert.equal(active.target,captive.id);
+  async function apologize(ws, version = active.version) {
+    ws.emit('message',Buffer.from(JSON.stringify({t:'duelApology',version})));
+    await flush(); await healthyAdvance(100);
+  }
+  await apologize(captive);
+  assert.equal((await base.duelGet('apology',{now})).target,captive.id,'early apology rejected');
+  const rejoined = await join(b,'Sorry',{x:1900,y:1950},captive.token,'apology');
+  assert.ok(rejoined.welcome.duel.apologyMs > 0,'refresh retains time until button');
+  assert.equal(rejoined.welcome.duel.apologyMs,active.startedAt + DUEL.apologyMs - now);
+  await healthyAdvance(active.startedAt + DUEL.apologyMs - now - 100);
+  await apologize(rejoined);
+  assert.equal((await base.duelGet('apology',{now})).target,captive.id,'request before 10s is not queued');
+  await apologize(watcher);
+  await apologize(rejoined,active.version - 1);
+  assert.equal((await base.duelGet('apology',{now})).target,captive.id,'spectator and stale request rejected');
+  await apologize(rejoined);
+  const released = await base.duelGet('apology',{now});
+  assert.equal(released.target,0); assert.equal(released.version,active.version + 1);
+  assert.ok(now < active.until,'released before 20s timeout');
+  assert.ok(keeper.msgs.some(m=>m.t==='bduel' && m.state.version===released.version));
+  assert.ok(rejoined.msgs.some(m=>m.t==='bduel' && m.state.version===released.version));
+  await move(rejoined,2750,1700); assert.ok(rejoined.player.x < world.BOSS_ROOM.x0);
+  await apologize(rejoined);
+  assert.equal((await base.duelGet('apology',{now})).version,released.version,'duplicate apology has no effect');
+  console.log('ok - apology after 10s releases across instances; early, spectator, stale and duplicate requests cannot release');
   for (const rt of instances) await rt.stop(); await base.close();
-  console.log('All 4 realtime duel checks passed');
+  console.log('All 5 realtime duel checks passed');
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{
   Date.now=clock; Math.random=random; global.setInterval=interval; global.clearInterval=clear;

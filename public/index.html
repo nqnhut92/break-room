@@ -79,13 +79,23 @@
     </div>
     <canvas id="minimap" width="200" height="125" role="img" aria-label="Bản đồ văn phòng (phím M để ẩn hoặc hiện)" title="Bản đồ (M)"></canvas>
     <div id="sideBtns">
-      <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog">?</button>
-      <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả phòng">💬</button>
-      <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true">🗺</button>
-      <button id="gfxBtn" class="btn" type="button" aria-label="Đồ họa cao" aria-pressed="true" title="Đồ họa cao (bật) / an toàn (tắt)">✨</button>
-      <div id="zoomBtns" role="group" aria-label="Thu phóng">
-        <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
-        <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ">−</button>
+      <button id="settingsBtn" class="btn" type="button" aria-label="Cài đặt và tiện ích" aria-haspopup="dialog" aria-controls="settingsDlg" aria-expanded="false">⚙</button>
+      <div id="sideTools">
+        <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog">?</button>
+        <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả phòng">💬</button>
+        <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true">🗺</button>
+        <button id="gfxBtn" class="btn" type="button" aria-label="Đồ họa cao" aria-pressed="true" title="Đồ họa cao (bật) / an toàn (tắt)">✨</button>
+        <div id="zoomBtns" role="group" aria-label="Thu phóng">
+          <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
+          <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ">−</button>
+        </div>
+      </div>
+    </div>
+    <div id="settingsDlg" hidden>
+      <div class="card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-head"><h2 id="settingsTitle">Cài đặt và tiện ích</h2><button id="settingsClose" class="btn" type="button" aria-label="Đóng cài đặt">✕</button></div>
+        <div id="settingsTools"></div>
+        <div id="settingsExtras"></div>
       </div>
     </div>
     <div id="help" hidden>
@@ -133,7 +143,10 @@
       </div>
     </div>
 
-    <div id="duelBanner" role="status" hidden></div>
+    <div id="duelBanner" role="status" hidden>
+      <span id="duelText"></span>
+      <button id="duelApologyBtn" class="btn" type="button" hidden>Em xin lỗi</button>
+    </div>
     <div id="hint">WASD / mũi tên để di chuyển · Space để đập · 1-3 đổi skill · I gọi IT · Enter hoặc / để chat (Esc thoát) · Shift+1-8 thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
   </div>
 
