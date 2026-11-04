@@ -271,6 +271,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // ---------------------------------------------------------------- state ----
   // A "bạn sếp" gives itself away when it stabs or when somebody hits it. From then on it carries a label and a health bar.
   const MOLE_HP = 8;
+  function setRage(v) {
+    S.rage = v;
+    const full = S.rageMax > 0 && v >= S.rageMax;
+    $('rageFill').style.transform = 'scaleX(' + Math.max(0, Math.min(1, v / (S.rageMax || 100))).toFixed(3) + ')';
+    $('ragePill').classList.toggle('full', full);
+    $('ultBtn').hidden = !full;
+  }
   function revealMole(id, hp) {
     const p = S.players.get(id);
     if (!p) return null;
@@ -438,6 +445,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.players = new Map();
         m.players.forEach(addPlayer);
         for (const f of m.moles || []) revealMole(f.id, f.hp);
+        S.rageMax = (m.rage && m.rage.max) || 100;
+        setRage((m.rage && m.rage.v) || 0);
         S.objects = m.objects.map(makeObject);
         S.snakes = new Map((m.snakes || []).map(s => [s.id, { ...s, tx: s.x, ty: s.y }]));
         initBoss(m.boss);
@@ -519,6 +528,20 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'bup':
         bossBack(m);
         break;
+      case 'rage':
+        setRage(m.v);
+        break;
+      case 'ult': {
+        const who = S.players.get(m.id);
+        if (who) { who.swing = 1; who.skill = 'hammer'; who.heading = Math.atan2(m.x - who.x, m.y - who.y); }
+        if (scene) {
+          scene.fx.sparks(m.x, 80, m.y, 30);
+          scene.fx.floatText(m.x, 190, m.y, m.target === 'boss' ? 'ULTI! -' + m.dmg : 'ULTI!', '#ffd24a', 28);
+        }
+        S.shake = Math.min(1.6, S.shake + 1.1 * volumeAt(m.x, m.y));
+        sfxHit(volumeAt(m.x, m.y));
+        break;
+      }
       case 'hp':
         playerHurt(m);
         break;
@@ -1620,6 +1643,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       chatOpen();
     } else if (k === 'i' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       $('resetBtn').click(); // call IT (replace everything with new stuff): the same as the button, with the same cooldown
+    } else if (k === 'r' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (!$('ultBtn').hidden) send({ t: 'ult' });
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
     } else if (/^(Digit|Numpad)[1-9]$/.test(e.code) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1817,6 +1842,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   $('skillBtn').addEventListener('click', () => setSkill(skillIndex() + 1));
 
   $('resetBtn').addEventListener('click', () => send({ t: 'reset' }));
+  $('ultBtn').addEventListener('click', () => send({ t: 'ult' }));
 
   const emoteBox = $('emotes');
   EMOTES.forEach((em, i) => {

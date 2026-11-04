@@ -766,3 +766,12 @@ canvas {
   #help .card { padding: 16px; gap: 10px; }
   #duelBanner { top: 56px; max-width: 42vw; padding: 5px 10px; font-size: 12px; }
 }
+
+/* personal ultimate: a bar that fills by hitting the boss or a mole, and a button that lights up when it is full */
+.pill.rage { display: inline-flex; align-items: center; gap: 6px; }
+.hp-track i#rageFill { background: #ff8a3d; transition: transform 0.15s; }
+.pill.rage.full { border-color: #ffd24a; box-shadow: 0 0 10px rgba(255, 190, 60, 0.7); }
+.pill.rage.full #rageFill { background: #ffd24a; }
+.btn.ult { font-weight: 800; color: #1a1205; background: linear-gradient(180deg, #ffd24a, #ff8a3d); border-color: #ffd24a; animation: ultPulse 0.9s ease-in-out infinite; }
+@keyframes ultPulse { 50% { box-shadow: 0 0 16px rgba(255, 190, 60, 0.9); transform: scale(1.04); } }
+@media (max-width: 640px) { .pill.rage { display: none; } }
