@@ -1357,15 +1357,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function showSkill(p, skill, target) {
     p.skill = SKILLS.some(s => s.id === skill) ? skill : 'hammer';
     if (p.skill === 'electric' && target) target.electricUntil = performance.now() + 500;
+    // The cup / the arcs leave the hand when the arm reaches the throw: the scene fires p.fxShot at that moment.
     if (p.skill === 'milkTea' && scene) {
       const distance = 100 * S.milkTeaRangeMultiplier;
-      const x = target ? target.x : p.x + Math.sin(p.heading) * distance;
-      const y = target ? target.y : p.y + Math.cos(p.heading) * distance;
-      scene.fx.milkTea(p.x, p.y, x, y);
+      p.fxShot = { skill: 'milkTea', tx: target ? target.x : p.x + Math.sin(p.heading) * distance, ty: target ? target.y : p.y + Math.cos(p.heading) * distance };
     } else if (p.skill === 'electric' && scene) {
-      const x = target ? target.x : p.x + Math.sin(p.heading) * 100;
-      const y = target ? target.y : p.y + Math.cos(p.heading) * 100;
-      scene.fx.electric(p.x, p.y, x, y);
+      p.fxShot = { skill: 'electric', tx: target ? target.x : p.x + Math.sin(p.heading) * 100, ty: target ? target.y : p.y + Math.cos(p.heading) * 100 };
     }
   }
 

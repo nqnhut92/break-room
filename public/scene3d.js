@@ -81,6 +81,7 @@ const _hammerAlongArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math
 const _hammerHeld = new THREE.Quaternion()
   .setFromEuler(new THREE.Euler(0.04, 0, 0.06))
   .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2));
+const _hand = new THREE.Vector3();
 const _heldCup = new THREE.Quaternion(); // the cup stays upright
 const _heldTaser = new THREE.Quaternion().setFromEuler(new THREE.Euler(1.3, 0, 0)); // the gun's barrel points forward and a little up
 const _qa = new THREE.Quaternion();
@@ -1562,9 +1563,24 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const item = skill === 'milkTea' ? rig.cup : rig.taser;
       _qa.copy(rig.armR.quaternion).multiply(rig.foreR.quaternion);
       item.quaternion.copy(_qa.invert()).multiply(q); // stays "up" (cup) or "forward" (gun) in the body's frame
+      // The shot leaves the hand at the moment of the throw / jab (not from the middle of the body when the swing starts):
+      // game.js leaves the target in p.fxShot, this fires it once the animation reaches the release point.
+      if (p.fxShot) {
+        const releaseAt = p.fxShot.skill === 'milkTea' ? 0.42 : 0.45;
+        if ((p.swing > 0 ? 1 - p.swing : 1) >= releaseAt) {
+          rig.g.updateMatrixWorld(true);
+          const milk = p.fxShot.skill === 'milkTea';
+          _hand.set(0, milk ? 6 : 33, 0); // the cup's middle, or the gun's prongs
+          (milk ? rig.cup : rig.taser).localToWorld(_hand);
+          if (milk) fxMilkTea(_hand.x, _hand.z, p.fxShot.tx, p.fxShot.ty, _hand.y);
+          else fxElectric(_hand.x, _hand.z, p.fxShot.tx, p.fxShot.ty, _hand.y);
+          p.fxShot = null;
+        }
+      }
     } else {
       rig.cup.visible = false;
       rig.taser.visible = false;
+      p.fxShot = null;
     }
     if (armed) {
       _qa.copy(rig.armR.quaternion).multiply(rig.foreR.quaternion);
@@ -1758,11 +1774,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return { mesh, life: 0, x: 0, z: 0, tx: 0, tz: 0 };
   });
   let teaNext = 0;
-  function fxMilkTea(x, z, tx, tz) {
+  function fxMilkTea(x, z, tx, tz, y = 65) {
     const cup = teaCups[teaNext];
     teaNext = (teaNext + 1) % teaCups.length;
-    Object.assign(cup, { life: 0.3, x, z, tx, tz });
-    cup.mesh.position.set(x, 65, z);
+    Object.assign(cup, { life: 0.3, x, z, tx, tz, y0: y });
+    cup.mesh.position.set(x, y, z);
     cup.mesh.rotation.set(0, 0, 0);
     cup.mesh.visible = true;
   }
@@ -1780,10 +1796,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return { mesh, positions, life: 0, x: 0, z: 0, tx: 0, tz: 0 };
   });
   let electricNext = 0;
-  function fxElectric(x, z, tx, tz) {
+  function fxElectric(x, z, tx, tz, y = 65) {
     const arc = electricArcs[electricNext];
     electricNext = (electricNext + 1) % electricArcs.length;
-    Object.assign(arc, { life: 0.25, x, z, tx, tz });
+    Object.assign(arc, { life: 0.25, x, z, tx, tz, y0: y });
     // Fill its reused buffer on the next update before making it visible.
     arc.mesh.visible = false;
     fxSparks(tx, 45, tz, 5);
@@ -1797,12 +1813,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (!arc.life) continue;
       let offset = 0;
       for (let branch = 0; branch < 3; branch++) {
-        let px = arc.x, py = 65, pz = arc.z;
+        let px = arc.x, py = arc.y0, pz = arc.z;
         for (let segment = 1; segment <= 8; segment++) {
           const t = segment / 8;
           const jitter = segment === 8 ? 0 : 12;
           const x = arc.x + (arc.tx - arc.x) * t + rand(-jitter, jitter);
-          const y = 65 - 20 * t + rand(-jitter, jitter);
+          const y = arc.y0 + (45 - arc.y0) * t + rand(-jitter, jitter);
           const z = arc.z + (arc.tz - arc.z) * t + rand(-jitter, jitter);
           arc.positions.set([px, py, pz, x, y, z], offset);
           offset += 6;
@@ -1817,7 +1833,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (cup.life <= 0) continue;
       cup.life = Math.max(0, cup.life - dt);
       const t = 1 - cup.life / 0.3;
-      cup.mesh.position.set(cup.x + (cup.tx - cup.x) * t, 65 - 30 * t + Math.sin(t * Math.PI) * 45, cup.z + (cup.tz - cup.z) * t);
+      cup.mesh.position.set(cup.x + (cup.tx - cup.x) * t, cup.y0 + (35 - cup.y0) * t + Math.sin(t * Math.PI) * 45, cup.z + (cup.tz - cup.z) * t);
       cup.mesh.rotation.z = t * Math.PI * 2;
       if (cup.life === 0) {
         cup.mesh.visible = false;
