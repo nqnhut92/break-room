@@ -74,7 +74,7 @@ The per-IP connection limit (10 connections per IP) lives in Redis too. In RAM e
 
 ### Steps
 
-1. Push the repo to GitHub, choose **Add New Project** on Vercel and import it. No build command is needed. `vercel.json` already sets the static directory to `public` and the `maxDuration` of `api/ws.js`.
+1. Push the repo to GitHub, choose **Add New Project** on Vercel and import it. `npm run build` stamps the static assets; `vercel.json` runs it automatically and sets the static directory to `public` and the `maxDuration` of `api/ws.js`.
 2. Create a Redis database (via **Storage > Marketplace**, for example Upstash Redis, or any provider, see below) and connect it. An integration adds `KV_URL` or `REDIS_URL` (a `rediss://...` TCP connection string, required for pub/sub). The game reads `REDIS_URL` first, then `KV_URL`. If your integration only provides REST variables (`KV_REST_API_URL`), add `REDIS_URL` by hand with the database's TCP/TLS connection string.
 3. Make sure **Fluid Compute** is on (default for projects created after 2025-04-23; for older ones enable it under Settings > Functions and redeploy).
 4. Deploy. Open `https://<domain>/api/health`: `{"ok":true,"store":"redis"}` means Redis is configured. Then open the main page and join from two browsers.
