@@ -2,7 +2,7 @@
 
 English · [Tiếng Việt](MOLES.vi.md)
 
-A mole is a fake player the server drives. It joins a room through the same door as everybody else (a slot, a random Vietnamese name, a role, a place in the online count and the ranking) and looks like any colleague. Nothing on the wire says what it is.
+A mole is a fake player the server drives. It joins a room through the same door as everybody else (a slot, a random name written the way people type them (nicknames, `tuan97`, `hoa_qa`, an initial), a role, a place in the online count and the ranking) and looks like any colleague. Nothing on the wire says what it is.
 
 - **Spawn.** The instance that leads a room (the one holding the boss lease) adds one every 1–3 minutes, never more than half the number of real players (3 moles at 6 players), and always leaves one slot free. A real player who finds the room full takes the place of a mole.
 - **Mingling.** For 20–90 s it walks the office (same navigation grid as the snakes) and smashes things like a player would. It does not chat or use emoji.

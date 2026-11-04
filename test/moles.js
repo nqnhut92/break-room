@@ -29,6 +29,10 @@ function unit() {
   assert.deepStrictEqual([0, 1, 2, 5, 6, 7, 19, 20].map((n) => cap(n, 20)), [0, 0, 1, 2, 3, 3, 0, 0]);
   assert.deepStrictEqual([13, 14].map((n) => cap(n, 20)), [6, 5], 'a slot always stays free for a real person');
   assert.ok(M.NAMES.every((n) => n.length <= 14));
+  const made = Array.from({ length: 2000 }, () => M.randomName());
+  assert.ok(made.every((n) => n.length >= 1 && n.length <= 14 && !/[<>]/.test(n)), 'every generated name fits the join box');
+  assert.ok(new Set(made).size > 150, 'and they are varied');
+  assert.ok(made.some((n) => n === n.toLowerCase()) && made.some((n) => /\d/.test(n)), 'some look like handles');
   // it idles near things, then walks to its victim and stabs once, then fights
   const humans = [{ id: 1, x: 1960, y: 1950 }];
   const mole = M.makeMole({ id: 9, connId: 'c', name: 'X', x: 1900, y: 1950 }, 0, { mingleMs: [0, 0] }, () => 0);
@@ -53,7 +57,7 @@ async function main() {
     await none(a, (m) => m.t === 'pj', 900);
     const b = await h.client(port, 'Bob', 'mo-a');
     const pj = await take(a, (m) => m.t === 'pj' && m.p.id !== b.id, 3000);
-    assert.ok(M.NAMES.includes(pj.p.name));
+    assert.ok(pj.p.name && pj.p.name.length <= 14);
     assert.strictEqual(pj.p.deadMs, 0);
     assert.ok(!JSON.stringify(pj).includes('mole'), 'nothing on the wire says what it is');
     const board = await take(a, (m) => m.t === 'board' && m.online === 3, 2000);
