@@ -391,13 +391,13 @@ async function main() {
         if (m.t === 'welcome') resolve({ ws, m });
       });
     });
-    const boss = await join('Sep', 'sep');
+    const boss = await join('Sep', 'ts');
     const bad = await join('Bad', '<script>');
     const watcher = await join('Watch', 'it');
     const seen = (w, name) => w.m.players.find((p) => p.name === name);
-    assert.strictEqual(seen(boss, 'Sep').role, 'sep');
+    assert.strictEqual(seen(boss, 'Sep').role, 'ts');
     assert.strictEqual(seen(bad, 'Bad').role, 'nv');
-    assert.strictEqual(seen(watcher, 'Sep').role, 'sep');
+    assert.strictEqual(seen(watcher, 'Sep').role, 'ts');
     assert.strictEqual(seen(watcher, 'Watch').role, 'it');
     for (const x of [boss, bad, watcher]) x.ws.close();
   });

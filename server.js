@@ -8,7 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS, MANA, manaAt } = require('./lib/realtime');
-const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv } = require('./lib/config');
+const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv, bossOptsFromEnv } = require('./lib/config');
 const { TYPES, ROOMS } = require('./lib/world');
 const { createRoomList } = require('./lib/room-list');
 
@@ -87,6 +87,7 @@ function createApp({ store = createStoreFromEnv(), env = process.env, ...overrid
     trustProxy: env.TRUST_PROXY === '1',
     renewAfterMs: renewAfterMsFromEnv(env),
     ...limitsFromEnv(env),
+    ...bossOptsFromEnv(env),
     ...overrides,
   });
   rt.attach(server, { path: WS_PATH });

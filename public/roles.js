@@ -4,7 +4,6 @@
 //   joke: the line added to the "X smashed Y" notice
 export const ROLES = [
   { id: 'nv', emoji: '😩', label: 'Nhân viên quèn', short: 'Nhân viên', hit: ['ỨC CHẾ!', 'LƯƠNG ƠI!', 'OT!'], joke: 'xả stress sau 3 tháng không tăng lương' },
-  { id: 'sep', emoji: '👔', label: 'Sếp', short: 'Sếp', hit: ['DUYỆT!', 'THÔI VIỆC!', 'CẮT LƯƠNG!'], joke: 'ký duyệt cú đập này' },
   { id: 'kt', emoji: '🧮', label: 'Kế toán', short: 'Kế toán', hit: ['QUYẾT TOÁN!', 'LỆCH SỔ!', 'VAT!'], joke: 'ghi vào sổ là chi phí hợp lý' },
   { id: 'hr', emoji: '🗂️', label: 'Nhân sự', short: 'HR', hit: ['CẢNH CÁO!', 'KỶ LUẬT!', 'PHỎNG VẤN!'], joke: 'lập biên bản chính mình' },
   { id: 'it', emoji: '🔧', label: 'IT', short: 'IT', hit: ['REBOOT!', 'TICKET!', 'ĐÃ TẮT BẬT!'], joke: 'bảo hành thế nào cũng được' },

@@ -7,7 +7,7 @@
 
 const http = require('http');
 const { createRealtime } = require('../lib/realtime');
-const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv } = require('../lib/config');
+const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv, bossOptsFromEnv } = require('../lib/config');
 
 const limits = limitsFromEnv();
 // With the kill switch on we never open a Redis connection at all.
@@ -25,6 +25,7 @@ createRealtime({
   trustProxy: true, // Vercel sets the client address headers itself
   renewAfterMs: renewAfterMsFromEnv(),
   ...limits,
+  ...bossOptsFromEnv(),
 }).attach(server);
 
 module.exports = server;

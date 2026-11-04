@@ -140,6 +140,91 @@ async function contract(label, makeStore) {
     assert.strictEqual(again.players.find((p) => p.id === a.id).gender, 'f');
   });
 
+  await step(label + ': player health and the knock-out timer are stored with the player and read back', async () => {
+    const r5 = room + '-hp';
+    const big = { ...base, max: 10 };
+    const a = await store.join(r5, { ...big, token: T(71), connId: 'h1', name: 'Hurt' });
+    let snap = await store.read(r5, { now: NOW, ttlMs: 5000 });
+    assert.strictEqual(snap.players.find((p) => p.id === a.id).hp, null, 'nothing stored yet: the caller treats it as full');
+    await store.setHp(r5, a.id, { hp: 0, at: NOW, deadUntil: NOW + 60000 });
+    snap = await store.read(r5, { now: NOW, ttlMs: 5000 });
+    const me = snap.players.find((p) => p.id === a.id);
+    assert.strictEqual(me.hp, 0);
+    assert.strictEqual(me.deadUntil, NOW + 60000);
+    await store.setHp(r5, a.id, { hp: 62.5, at: NOW + 1, deadUntil: 0 });
+    const again = (await store.read(r5, { now: NOW, ttlMs: 5000 })).players.find((p) => p.id === a.id);
+    assert.strictEqual(again.hp, 62.5);
+    assert.strictEqual(again.deadUntil, 0);
+  });
+
+  await step(label + ': boss: hits subtract, regenerate with time, and the killing blow pays the bounty by damage, once', async () => {
+    const r6 = room + '-boss';
+    const big = { ...base, max: 10 };
+    const a = await store.join(r6, { ...big, token: T(81), connId: 'b1', name: 'Ann' });
+    const b = await store.join(r6, { ...big, token: T(82), connId: 'b2', name: 'Ben' });
+    const cfg = { maxHp: 100, baseRegenPerSec: 1, regenPerSec: 10, regenDelayMs: 5000 };
+    const hitArgs = (id, dmg, now, respawnAt = now + 60000) => ({ playerId: id, dmg, now, cfg, respawnAt, bounty: 500 });
+    assert.deepStrictEqual(await store.bossGet(r6, { now: NOW, maxHp: 100 }), { hp: 100, at: NOW, dead: false, respawnAt: 0 });
+    let r = await store.bossHit(r6, hitArgs(a.id, 30, NOW));
+    assert.strictEqual(r.state, 'hit');
+    assert.strictEqual(Math.round(r.hp), 70);
+    // two seconds later it has recovered a little (1 hp per second), not yet the fast rate
+    r = await store.bossHit(r6, hitArgs(b.id, 10, NOW + 2000));
+    assert.strictEqual(Math.round(r.hp), 62);
+    // a long quiet moment: it heals fast, up to the maximum
+    r = await store.bossHit(r6, hitArgs(a.id, 10, NOW + 62000));
+    assert.strictEqual(Math.round(r.hp), 90);
+    // beat it: a does 70 more, b has done 10 so far (a: 30 + 10 + 10 = 50 before the last blow)
+    const total0 = (await store.read(r6, { now: NOW, ttlMs: 5000 })).total;
+    r = await store.bossHit(r6, hitArgs(a.id, 200, NOW + 62100, NOW + 80000));
+    assert.strictEqual(r.state, 'killed');
+    const shares = Object.fromEntries(r.shares.map((s) => [s.id, s]));
+    assert.ok(shares[a.id].bounty > shares[b.id].bounty, 'the bigger damage dealer gets the bigger share');
+    assert.ok(Math.abs(shares[a.id].bounty + shares[b.id].bounty - 500) <= 0.2, 'the whole bounty is paid out');
+    const after = await store.read(r6, { now: NOW, ttlMs: 5000 });
+    assert.ok(Math.abs(after.total - total0 - 500) < 0.01, 'the room total grows by the bounty');
+    assert.ok(Math.abs(after.players.find((p) => p.id === b.id).score - shares[b.id].bounty) < 0.01);
+    // already down: the next hit does nothing and pays nothing
+    assert.strictEqual((await store.bossHit(r6, hitArgs(b.id, 10, NOW + 62200))).state, 'dead');
+    assert.strictEqual((await store.read(r6, { now: NOW, ttlMs: 5000 })).total, after.total);
+    const st = await store.bossGet(r6, { now: NOW + 62300, maxHp: 100 });
+    assert.strictEqual(st.dead, true);
+    // it comes back only when its time is up, and exactly one caller brings it back
+    assert.strictEqual(await store.bossRespawn(r6, { now: NOW + 70000, maxHp: 100 }), false);
+    const both = await Promise.all([0, 1].map(() => store.bossRespawn(r6, { now: NOW + 81000, maxHp: 100 })));
+    assert.strictEqual(both.filter(Boolean).length, 1);
+    const back = await store.bossGet(r6, { now: NOW + 81000, maxHp: 100 });
+    assert.strictEqual(back.dead, false);
+    assert.strictEqual(Math.round(back.hp), 100);
+    // a fresh fight starts a fresh damage ledger
+    r = await store.bossHit(r6, hitArgs(b.id, 100, NOW + 81100));
+    assert.strictEqual(r.state, 'killed');
+    assert.deepStrictEqual(r.shares.map((s) => s.id), [b.id]);
+    assert.ok(Math.abs(r.shares[0].bounty - 500) < 0.01);
+  });
+
+  await step(label + ': boss: concurrent killing blows pay out exactly once', async () => {
+    const r7 = room + '-boss2';
+    const big = { ...base, max: 10 };
+    const ids = [];
+    for (let i = 0; i < 4; i++) ids.push((await store.join(r7, { ...big, token: T(90 + i), connId: 'q' + i, name: 'P' + i })).id);
+    const cfg = { maxHp: 40, baseRegenPerSec: 0, regenPerSec: 0, regenDelayMs: 5000 };
+    const results = await Promise.all(ids.map((id) => store.bossHit(r7, { playerId: id, dmg: 100, now: NOW, cfg, respawnAt: NOW + 1000, bounty: 500 })));
+    assert.strictEqual(results.filter((x) => x.state === 'killed').length, 1);
+    assert.strictEqual(results.filter((x) => x.state === 'dead').length, 3);
+    const snap = await store.read(r7, { now: NOW, ttlMs: 5000 });
+    assert.strictEqual(snap.total, 500);
+  });
+
+  await step(label + ': boss: one runner at a time holds the lease and keeps it by renewing', async () => {
+    const r8 = room + '-bosslock';
+    assert.strictEqual(await store.bossLock(r8, 'inst-a', { now: NOW, ttlMs: 3000 }), true);
+    assert.strictEqual(await store.bossLock(r8, 'inst-b', { now: NOW + 100, ttlMs: 3000 }), false);
+    assert.strictEqual(await store.bossLock(r8, 'inst-a', { now: NOW + 1000, ttlMs: 3000 }), true, 'the holder renews');
+    await sleep(3200); // real time passes: the lease of a store that does not see our fake clock must lapse too
+    assert.strictEqual(await store.bossLock(r8, 'inst-b', { now: NOW + 4300, ttlMs: 3000 }), true, 'a dead holder is replaced after the lease runs out');
+  });
+
   await step(label + ': compaction forgets offline players who never scored, keeps scorers and online players', async () => {
     const r4 = room + '-compact';
     const big = { ...base, max: 10 };
