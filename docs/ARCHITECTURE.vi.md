@@ -34,7 +34,7 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 | `own` | hash | id người chơi → id kết nối đang giữ chỗ |
 | `pos` | hash | id người chơi → vị trí đã lưu `x,y,d` |
 
-Sếp Tổng dùng thêm bốn key của cùng phòng (cùng hạn sống): `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: id người chơi → sát thương đã gây cho sếp hiện tại) và `blk` (hợp đồng của instance đang điều khiển sếp). Chúng không nằm trong bộ chín key ở trên; script của chúng chỉ nhận key cần dùng. Xem [BOSS.vi.md](BOSS.vi.md).
+Sếp Tổng dùng thêm ba key của cùng phòng (cùng hạn sống): `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: id người chơi → sát thương đã gây cho sếp hiện tại) và `blk` (hợp đồng của instance đang điều khiển sếp). Chúng không nằm trong bộ chín key ở trên; script của chúng chỉ nhận key cần dùng. Xem [BOSS.vi.md](BOSS.vi.md).
 
 Lease kết nối theo IP (mỗi IP một zset) và key `br:keepalive` của health check nằm ngoài phòng.
 

@@ -34,7 +34,7 @@ Redis  (single source of truth for each server's state)
 | `own` | hash | player id → id of the connection that owns the slot |
 | `pos` | hash | player id → last persisted `x,y,d` |
 
-The boss uses four more keys of the same room, each with the same expiry: `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: player id → damage dealt to the current boss), `blk` (the lease of the instance that runs the boss). They are not part of the nine-key set above; their scripts take only the keys they need. See [BOSS.md](BOSS.md).
+The boss uses three more keys of the same room, each with the same expiry: `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: player id → damage dealt to the current boss), `blk` (the lease of the instance that runs the boss). They are not part of the nine-key set above; their scripts take only the keys they need. See [BOSS.md](BOSS.md).
 
 Per-IP connection leases (one zset per IP) and the `br:keepalive` health key live outside the room.
 
