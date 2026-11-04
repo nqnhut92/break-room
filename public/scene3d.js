@@ -502,7 +502,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
   const ZOOM_MIN = 560;
   const ZOOM_MAX = 2300;
-  const ZOOM_START = 1300; // roughly the middle of the range: a whole meeting room fits, characters stay readable
+  // roughly the middle of the range on a computer (a whole meeting room fits, characters stay readable); closer on a phone,
+  // where the narrow screen already pulls the camera back (see `wide` below)
+  const ZOOM_START = coarse ? 900 : 1300;
   const cam = { x: 0, z: 0, dist: ZOOM_START, pitch: 0.97, ready: false };
   try {
     const saved = Number(localStorage.getItem('br-zoom'));
@@ -1604,7 +1606,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     const aspect = W / H;
     const wide = aspect < 1.25 ? 1 + (1.25 - aspect) * 0.9 : 1;
-    const d = cam.dist * wide;
+    const d = Math.min(cam.dist * wide, ZOOM_MAX * 1.45);
+    // the fog follows the camera: with fixed distances the far half of the screen went dark whenever we zoomed out,
+    // and a phone (which pulls the camera back further) was always dark
+    scene.fog.near = d * 1.8;
+    scene.fog.far = d * 4.5;
     const sh = S.shake;
     const jx = sh > 0 ? (Math.random() - 0.5) * sh * 14 : 0;
     const jy = sh > 0 ? (Math.random() - 0.5) * sh * 10 : 0;
