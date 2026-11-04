@@ -50,4 +50,4 @@ npm run test:redis
 
 ## License and credits
 
-Code: MIT. Floor textures: [ambientCG](https://ambientcg.com/), CC0 ([notice](public/assets/textures/License.txt)). Three.js: MIT ([license](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([license](public/vendor/lucide-LICENSE.txt)). Furniture and characters are built in code.
+Code: [MIT](LICENSE). Floor textures: [ambientCG](https://ambientcg.com/), CC0 ([notice](public/assets/textures/License.txt)). Three.js: MIT ([license](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([license](public/vendor/lucide-LICENSE.txt)). Furniture and characters are built in code.

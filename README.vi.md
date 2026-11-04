@@ -50,4 +50,4 @@ npm run test:redis
 
 ## Giấy phép và credits
 
-Code: MIT. Texture sàn: [ambientCG](https://ambientcg.com/), CC0 ([ghi chú](public/assets/textures/License.txt)). Three.js: MIT ([giấy phép](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([giấy phép](public/vendor/lucide-LICENSE.txt)). Đồ đạc và nhân vật dựng bằng code.
+Code: [MIT](LICENSE). Texture sàn: [ambientCG](https://ambientcg.com/), CC0 ([ghi chú](public/assets/textures/License.txt)). Three.js: MIT ([giấy phép](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([giấy phép](public/vendor/lucide-LICENSE.txt)). Đồ đạc và nhân vật dựng bằng code.
