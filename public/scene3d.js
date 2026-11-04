@@ -170,7 +170,7 @@ async function loadFloorTextures() {
   }));
 }
 
-function buildModel(type, types, largeScreen = false, arm = false, itDesk = false) {
+function buildModel(type, types, largeScreen = false, arm = false, itDesk = false, armSide = 1) {
   const body = [];
   const glow = [];
   let pick = null;
@@ -189,13 +189,18 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
   } else switch (type) {
     case 'monitor':
       if (arm) {
-        // Desk clamp, vertical pole and two jointed links to the screen's VESA mount.
-        body.push(box(12, 5, 14, '#354052', 0, 1.5, -22));
-        body.push(cyl(2.2, 2.2, 34, '#7c8da2', 0, 18, -22));
-        body.push(cyl(4, 4, 5, '#354052', 0, 30, -22));
-        body.push(box(5, 5, 16, '#7c8da2', 0, 30, -14));
-        body.push(cyl(3.5, 3.5, 7, '#354052', 0, 30, -7));
-        body.push(box(5, 12, 5, '#7c8da2', 0, 35, -5));
+        // Both arms converge on the single central pole carried by the desk.
+        const base = new THREE.Vector3(-30 * armSide, 30, -22);
+        const elbow = new THREE.Vector3(-14 * armSide, 30, -12);
+        const mount = new THREE.Vector3(0, 39, -3);
+        for (const [a, b] of [[base, elbow], [elbow, mount]]) {
+          const direction = b.clone().sub(a);
+          const link = box(5, direction.length(), 5, '#7c8da2');
+          link.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()));
+          link.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+          body.push(link);
+        }
+        body.push(cyl(3.5, 3.5, 7, '#354052', elbow.x, elbow.y, elbow.z));
         body.push(box(14, 14, 2, '#354052', 0, 39, -3));
       } else {
         body.push(cyl(11, 13, 3, '#2b3240', 0, 1.5, 0));
@@ -331,13 +336,13 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
       body.push(box(44, 3, 26, '#2b3240', 0, 1.5, 0));
       body.push(box(5, 40, 5, '#2b3240', 0, 22, -2));
       {
-        const w = largeScreen ? 2 : 1;
-        const h = largeScreen ? 1.8 : 1;
+        const w = largeScreen || 1;
+        const h = largeScreen ? largeScreen * 0.9 : 1;
         const cy = 46 + 28 * h; // keep the bottom edge at the top of the stand
         body.push(box(92 * w, 56 * h, 5, '#12151c', 0, cy, 0));
         glow.push(box(92 * w - 8, 56 * h - 8, 0.8, '#4aa8ff', 0, cy, 2.7));
         glow.push(box(60 * w, 4, 0.9, '#bfe3ff', 0, cy + 16 * h, 2.9));
-        if (largeScreen) pick = [192, 154, 36];
+        if (largeScreen) pick = [92 * w + 8, 46 + 56 * h + 8, 36];
       }
       break;
     case 'toilet':
@@ -378,13 +383,14 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
 // ------------------------------------------------------- static scenery ----
 function deskGeometry(it = false) {
   const DT = DESK_TOP;
-  const TOP = '#dcbc92';
-  const BODY = '#c29d72';
+  const TOP = it ? '#ffffff' : '#dcbc92';
+  const BODY = it ? '#e9edf2' : '#c29d72';
   return [
+    ...(it ? [box(12, 5, 14, '#354052', 0, DT + 1.5, -27), cyl(2.2, 2.2, 34, '#7c8da2', 0, DT + 18, -27), cyl(4, 4, 5, '#354052', 0, DT + 30, -27)] : []),
     box(158, 6, it ? 114 : 76, TOP, 0, DT - 3, 0),
     box(6, DT - 6, it ? 108 : 70, BODY, -72, (DT - 6) / 2, 0),
     box(6, DT - 6, it ? 108 : 70, BODY, 72, (DT - 6) / 2, 0),
-    box(142, 30, 4, '#a98156', 0, DT - 24, -32),
+    box(142, 30, 4, it ? '#e1e6ed' : '#a98156', 0, DT - 24, -32),
     box(38, 44, 64, BODY, 52, 28, 2),
     pill(1.5, 14, '#8a8f99', 52, 38, 35, 0, 0, Math.PI / 2),
     box(36, 2.6, 12, '#2f3646', -34, DT + 1.3, 16), // keyboard
@@ -1037,10 +1043,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     let rig = rigs.get(o.id);
     if (rig) return rig;
     // Meeting-room screens face the end of a conference table on the same axis.
-    const largeScreen = o.type === 'tv' && all.some(d =>
-      d.type === 'conference' && Math.abs(d.y - o.y) < 1 && Math.abs(d.x - o.x) < 650);
-    const modelKey = largeScreen ? 'meetingTv' : o.arm ? 'armMonitor' : o.itDesk ? 'itDesk' : o.type;
-    if (!models[modelKey]) models[modelKey] = buildModel(o.type, types, largeScreen, o.arm, o.itDesk);
+    const largeScreen = o.screenScale || (o.type === 'tv' && all.some(d =>
+      d.type === 'conference' && Math.abs(d.y - o.y) < 1 && Math.abs(d.x - o.x) < 650) ? 2 : 0);
+    const desk = o.arm && all.find(d => d.itDesk && Math.abs(d.x - o.x) <= 30 && Math.abs(d.y - o.y) <= 5);
+    const armSide = desk ? Math.sign((o.x - desk.x) * Math.cos(o.rot || 0)) : 1;
+    const modelKey = largeScreen ? 'tv-' + largeScreen : o.arm ? 'armMonitor-' + armSide : o.itDesk ? 'itDesk' : o.type;
+    if (!models[modelKey]) models[modelKey] = buildModel(o.type, types, largeScreen, o.arm, o.itDesk, armSide);
     const mod = models[modelKey];
     const group = new THREE.Group();
     group.position.set(o.x, lift(o.type), o.y);
@@ -1083,12 +1091,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   const snakeRigs = new Map();
-  let snakeGeometry = null;
+  const snakeGeometries = new Map();
   const snakeProxyGeo = new THREE.BoxGeometry(38, 30, 138);
   const snakeBarGeo = new THREE.BoxGeometry(28, 3, 2);
   const snakeBarMat = new THREE.MeshBasicMaterial({ color: 0x8af28a });
   const snakeBarBackMat = new THREE.MeshBasicMaterial({ color: 0x294834 });
   function makeSnake(s) {
+    const red = s.variant === 'red';
+    let snakeGeometry = snakeGeometries.get(red);
     if (!snakeGeometry) {
       // One tapered S-shaped body: no stacked round segments that read as a caterpillar.
       const curve = new THREE.CatmullRomCurve3([
@@ -1096,7 +1106,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         new THREE.Vector3(-9, 8, -39), new THREE.Vector3(9, 6, -65), new THREE.Vector3(0, 3, -92),
       ]);
       const positions = [], colors = [], indices = [], radial = 10, rings = 36;
-      const green = new THREE.Color('#3da85c'), belly = new THREE.Color('#c9e995');
+      const skin = new THREE.Color(red ? '#d13d45' : '#3da85c'), belly = new THREE.Color(red ? '#ffbb9e' : '#c9e995');
       for (let i = 0; i <= rings; i++) {
         const t = i / rings, c = curve.getPoint(t), tangent = curve.getTangent(t);
         const side = new THREE.Vector3(tangent.z, 0, -tangent.x).normalize();
@@ -1104,7 +1114,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         for (let j = 0; j <= radial; j++) {
           const angle = j / radial * Math.PI * 2, lateral = Math.cos(angle) * radius;
           positions.push(c.x + side.x * lateral, c.y + Math.sin(angle) * radius * 0.72, c.z + side.z * lateral);
-          const col = Math.sin(angle) < -0.2 ? belly : green;
+          const col = Math.sin(angle) < -0.2 ? belly : skin;
           colors.push(col.r, col.g, col.b);
           if (i < rings && j < radial) {
             const a = i * (radial + 1) + j, b = a + radial + 1;
@@ -1118,8 +1128,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       body.setIndex(indices); body.computeVertexNormals();
       snakeGeometry = merge([
         body,
-        ell(11, 6, 15, '#50bc69', 0, 14, 14),
-        ell(9, 2, 12, '#d0eaa0', 0, 10, 17),
+        ell(11, 6, 15, red ? '#ed5158' : '#50bc69', 0, 14, 14),
+        ell(9, 2, 12, red ? '#ffd0b0' : '#d0eaa0', 0, 10, 17),
         // Small sideways eyes, narrow pupils, a low muzzle and a forked tongue.
         ell(2.8, 2.8, 3.2, '#ffd65c', -8, 18, 17), ell(2.8, 2.8, 3.2, '#ffd65c', 8, 18, 17),
         ell(0.8, 2.4, 1.2, '#142b22', -9, 18, 19), ell(0.8, 2.4, 1.2, '#142b22', 9, 18, 19),
@@ -1128,6 +1138,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         box(1, 1, 6, '#eb586a', -1.7, 11, 38, 0, -0.5), box(1, 1, 6, '#eb586a', 1.7, 11, 38, 0, 0.5),
       ]);
       snakeGeometry.userData.rest = snakeGeometry.attributes.position.array.slice();
+      snakeGeometries.set(red, snakeGeometry);
     }
     const group = new THREE.Group(), body = new THREE.Mesh(snakeGeometry, bodyMat);
     body.castShadow = true; body.receiveShadow = true; group.add(body);
@@ -1136,10 +1147,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const back = new THREE.Mesh(snakeBarGeo, snakeBarBackMat), fill = new THREE.Mesh(snakeBarGeo, snakeBarMat);
     back.position.set(0, 38, 0); fill.position.set(0, 38, 1.5); group.add(back, fill);
     scene.add(group);
-    return { group, body, proxy, fill };
+    return { group, body, proxy, fill, geometry: snakeGeometry };
   }
   function updateSnakes(dt, S) {
-    if (snakeGeometry) {
+    for (const snakeGeometry of snakeGeometries.values()) {
       const position = snakeGeometry.attributes.position, rest = snakeGeometry.userData.rest;
       for (let i = 0; i < position.count; i++) {
         const z = rest[i * 3 + 2], weight = Math.max(0, -z / 92);
@@ -1157,7 +1168,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.group.rotation.y += diff * k;
       rig.body.rotation.z = Math.sin(time * 8 + id) * 0.025;
       rig.fill.scale.x = Math.max(0, s.hp / 4);
-      updateElectricTarget(rig, rig.group, snakeGeometry, s.electricUntil);
+      updateElectricTarget(rig, rig.group, rig.geometry, s.electricUntil);
     }
     for (const [id, rig] of snakeRigs) if (!S.snakes.has(id)) {
       scene.remove(rig.group);

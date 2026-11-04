@@ -110,7 +110,7 @@ Người chơi đánh nhau chỉ tạo hiệu ứng, không mất máu hoặc ma
 
 ## Rắn và đồng nghiệp mời nước
 
-Boss triệu hồi rắn tại 70%, 40%, 10% máu, mỗi mốc một lần mỗi lượt. Số rắn mỗi đợt bằng số người đang online trong server. Rắn xanh lá đuổi người sống gần nhất khắp bản đồ qua các cửa, có 4 máu, mỗi cú búa trừ 1, tốc độ 200 và cắn 5 sát thương mỗi 1,2 giây. Rắn còn lại được dọn khi boss hồi sinh. Redis đồng bộ mốc triệu hồi và máu rắn; một instance điều khiển di chuyển, lưu vị trí mỗi giây; trình duyệt dựng hiệu ứng.
+Boss triệu hồi rắn tại 70%, 40%, 10% máu, mỗi mốc một lần mỗi lượt. Số rắn mỗi đợt là số nguyên ngẫu nhiên từ `ceil(1,3 × số người online)` đến `2 × số người online` trong server ở mốc 70% và 40%. Riêng đợt cuối tại 10% máu thả rắn đỏ với số nguyên ngẫu nhiên từ `2 × số người online` đến `3 × số người online`. Mỗi đợt tối thiểu 1 con. Rắn xanh lá đuổi người sống gần nhất khắp bản đồ qua các cửa, có 4 máu, mỗi cú búa trừ 1, tốc độ 200 và cắn mỗi 1,2 giây: rắn xanh gây 5 sát thương, rắn đỏ gây 7 sát thương. Rắn còn lại được dọn khi boss hồi sinh. Redis đồng bộ mốc triệu hồi và máu rắn; một instance điều khiển di chuyển, lưu vị trí mỗi giây; trình duyệt dựng hiệu ứng.
 
 Mỗi 5 phút, nút “Đồng nghiệp mời nước” hiện trong 5 giây. Một người bấm sẽ hồi đầy máu và mana cho người đang kết nối trong server; người bị hạ hồi sinh ở sảnh. Lịch và lượt nhận dùng chung giữa các instance.
 

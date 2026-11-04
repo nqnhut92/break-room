@@ -44,7 +44,7 @@ Mỗi server có một boss trong phòng server. Bước vào là sếp chạy l
 
 ## Văn phòng
 
-Phòng rộng 4800×3000, camera bám theo người chơi (bản đồ nhỏ ở góc cho thấy cả văn phòng: bạn màu vàng, người khác màu trắng, đồ đã vỡ màu đỏ). Nửa phía bắc là khu bàn làm việc (32 bàn), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh với bàn họp, sofa. Cánh đông có toilet (mỗi bên ba ngăn và hai bồn rửa, tường đặc) và một hội trường xếp ghế hướng về màn hình. Cánh nam có hai phòng họp kính (bàn, ghế, tivi), phòng giám đốc (bàn lớn, két sắt trị giá 200 triệu, tivi, sofa) và phòng nghỉ có sofa, tivi và máy pha cà phê. Khoảng 285 món đập được: bàn, sofa, tivi, bồn cầu, bồn rửa, tủ sách, tủ lạnh, loa, đèn, thùng rác và két sắt đều đập được. Chỉ tường, kính, thảm và sàn là không đập được. Đồ cứng (bàn, tường, máy in, tủ server, bồn cầu, bồn rửa, két sắt...) là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`). Đồ cứng bị đập vỡ để lại đống đổ nát vẫn chặn đường (va chạm không đổi trong lúc chơi).
+Phòng rộng 4800×3000, camera bám theo người chơi (bản đồ nhỏ ở góc cho thấy cả văn phòng: bạn màu vàng, người khác màu trắng, đồ đã vỡ màu đỏ). Nửa phía bắc là khu bàn làm việc (16 bàn thường và 4 cụm bàn IT màu trắng, mỗi cụm 6 chỗ), pantry với máy in, bình nước, máy pha cà phê, phòng server có tường kính và cửa ở phía tây, và sảnh với bàn họp, sofa. Cánh đông có toilet (mỗi bên ba ngăn và hai bồn rửa, tường đặc) và một hội trường xếp ghế hướng về màn hình. Cánh nam có hai phòng họp kính (bàn, ghế, tivi), phòng giám đốc (bàn lớn, két sắt trị giá 200 triệu, tivi, sofa) và phòng nghỉ có sofa, tivi và máy pha cà phê. Khoảng 359 món đập được: bàn, sofa, tivi, bồn cầu, bồn rửa, tủ sách, tủ lạnh, loa, đèn, thùng rác và két sắt đều đập được. Chỉ tường, kính, thảm và sàn là không đập được. Đồ cứng (bàn, tường, máy in, tủ server, bồn cầu, bồn rửa, két sắt...) là vật cản: **cả client lẫn server** đều chặn, nên không ai đi xuyên qua được bằng cách sửa client (`slideMove` trong `lib/world.js`). Đồ cứng bị đập vỡ để lại đống đổ nát vẫn chặn đường (va chạm không đổi trong lúc chơi).
 
 Hình 3D gồm hai nguồn:
 
@@ -181,3 +181,5 @@ npm test
 ## Ghi chú thiết kế
 
 Server là nơi quyết định mọi thứ quan trọng: client chỉ gửi vị trí và yêu cầu đập, server kiểm tra khoảng cách, chống dịch chuyển tức thời, giới hạn tốc độ đập và số tin nhắn mỗi giây. Tên người chơi được làm sạch ở server và chỉ hiển thị bằng `textContent` hoặc canvas ở client. Token của người chơi chỉ để nhận lại chỗ cũ sau khi reconnect, nó không phải thông tin xác thực: không có tài khoản, và id công khai của người chơi là số nguyên không liên quan tới token.
+
+UI control icons use a bundled Lucide SVG subset (ISC/MIT); see `public/vendor/lucide-LICENSE.txt` and https://lucide.dev.

@@ -39,19 +39,29 @@ step('object ids are dense and every type is known', () => {
   assert.ok(W.OBJECTS.length > 100);
 });
 
-step('IT wing has two facing rows and two arm-mounted monitors per desk', () => {
+step('IT wing has four six-seat islands with facing rows and paired arm monitors', () => {
   const desks = W.OBJECTS.filter(o => o.itDesk);
-  assert.strictEqual(desks.length, 16);
-  assert.deepStrictEqual([...new Set(desks.map(d => d.y))].sort((a,b) => a-b), [600, 716]);
-  for (const d of desks) {
-    const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30 && Math.abs(o.y - d.y) <= 5);
-    assert.strictEqual(monitors.length, 2);
-    assert.ok(monitors.every(o => (o.rot || 0) === (d.rot || 0)));
-    const chair = W.OBJECTS[d.id + 3];
-    assert.strictEqual(chair.type, 'chair');
-    assert.ok(d.y === 600 ? chair.y < d.y : chair.y > d.y);
-    assert.strictEqual(d.rot || 0, d.y === 600 ? Math.PI : 0);
+  assert.strictEqual(desks.length, 24);
+  for (const cy of [380, 1020]) for (const cx of [1700, 2420]) {
+    const cluster = desks.filter(d => Math.abs(d.x - cx) <= 160 && Math.abs(d.y - cy) === 58);
+    assert.strictEqual(cluster.length, 6);
+    assert.strictEqual(cluster.filter(d => d.y < cy).length, 3);
+    assert.strictEqual(cluster.filter(d => d.y > cy).length, 3);
+    for (const d of cluster) {
+      const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30 && Math.abs(o.y - d.y) <= 5);
+      assert.strictEqual(monitors.length, 2);
+      assert.ok(monitors.every(o => (o.rot || 0) === (d.rot || 0)));
+      const chair = W.OBJECTS[d.id + 3];
+      assert.strictEqual(chair.type, 'chair');
+      assert.ok(d.y < cy ? chair.y < d.y : chair.y > d.y);
+      assert.strictEqual(d.rot || 0, d.y < cy ? Math.PI : 0);
+    }
   }
+});
+step('hall screen is enlarged with a matching server collision footprint', () => {
+  const tv = W.OBJECTS.find(o => o.type === 'tv' && o.screenScale);
+  assert.ok(tv && tv.screenScale === 3.5);
+  assert.ok(W.COLLIDERS.some(([x,y,hw,hh]) => x === tv.x && y === tv.y && hw === W.TYPES.tv.h / 2 && hh === 92 * tv.screenScale / 2));
 });
 
 step('spawn area is open floor', () => {

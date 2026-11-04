@@ -1,3 +1,4 @@
+import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js';
 import { createScene3D } from './scene3d.js';
 import { ROLES, ROLE_BY_ID } from './roles.js';
 
@@ -5,6 +6,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   'use strict';
 
   const $ = (id) => document.getElementById(id);
+  renderIcons();
 
   // The join button is only usable with a name, and not while a join is in flight.
   let joinBusy = false;
@@ -50,9 +52,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const EMOTES = ['😤', '😂', '💀', '🔥', '☕', '😭', '👍', '🫠'];
   const JOKES = ['KPI!', 'Deadline!', 'Họp lúc 5h!', 'Reply All!', 'OT miễn phí!', 'Task gấp!', 'Sếp ơi!', 'Còn bug!'];
   const SKILLS = [
-    { id: 'hammer', label: '🔨 Skill: Đập búa', action: 'ĐẬP!' },
-    { id: 'milkTea', label: '🧋 Skill: Ném ly trà sữa', action: 'NÉM!' },
-    { id: 'electric', label: '⚡ Skill: Chích điện', action: 'CHÍCH!' },
+    { id: 'hammer', icon: 'hammer', label: 'Skill: Đập búa', action: 'ĐẬP!' },
+    { id: 'milkTea', icon: 'cup-soda', label: 'Skill: Ném ly trà sữa', action: 'NÉM!' },
+    { id: 'electric', icon: 'zap', label: 'Skill: Chích điện', action: 'CHÍCH!' },
   ];
   const HIT_WORDS = ['BỐP!', 'RẦM!', 'CHÁT!', 'BỊCH!', 'RẮC!'];
   const RUBBLE = {
@@ -282,7 +284,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function makeObject(o) {
     const max = S.types[o.type].hp;
     return {
-      id: o.id, type: o.type, x: o.x, y: o.y, rot: o.rot || 0, arm: !!o.arm, itDesk: !!o.itDesk,
+      id: o.id, type: o.type, x: o.x, y: o.y, rot: o.rot || 0, arm: !!o.arm, itDesk: !!o.itDesk, screenScale: o.screenScale || 0,
       hp: o.hp, hpMax: max, broken: o.broken,
       shake: 0, flash: 0, pop: 0, smokeT: rand(0, 0.5),
     };
@@ -1384,7 +1386,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
       'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> (hoặc nút <b>Skill</b> cạnh Gọi IT). Dùng Space hoặc nút ra đòn trên màn hình cảm ứng.',
       'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b> để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
-      'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Rắn đuổi khắp bản đồ, cắn nhẹ và chịu 4 cú búa. Rắn còn lại biến mất khi boss hồi sinh.',
+      'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Đợt 70% và 40% có số rắn nguyên ngẫu nhiên từ 1,3 đến 2 lần số người online (làm tròn lên ở mức tối thiểu); đợt cuối ở 10% thả rắn đỏ, tăng lên 2–3 lần. Rắn xanh cắn 5 máu, rắn đỏ cắn 7 máu mỗi 1,2 giây; cả hai chịu 4 cú búa và đuổi khắp bản đồ. Rắn còn lại biến mất khi boss hồi sinh.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
@@ -1810,7 +1812,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function setSkill(i) {
     const next = SKILLS[(i + SKILLS.length) % SKILLS.length];
     S.skill = next.id;
-    $('skillBtn').textContent = next.label;
+    setButtonIcon($('skillBtn'), next.icon, next.label);
     $('smashBtn').textContent = next.action;
     send({ t: 'skill', skill: next.id }); // so the others see what is in your hand
     toast(next.label + ' · Space để dùng · phím 1-3 đổi skill');
@@ -1840,7 +1842,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   });
 
   function showMute() {
-    $('mute').textContent = S.muted ? '🔇' : '🔊';
+    setButtonIcon($('mute'), S.muted ? 'volume-x' : 'volume-2');
     $('mute').setAttribute('aria-pressed', String(!S.muted));
   }
   try {

@@ -106,7 +106,7 @@ Tests: `test/boss.js` (rules, balance), `test/boss-net.js` (a whole fight over W
 
 ## Hidden snake waves and drinks
 
-At 70%, 40% and 10% health, once per threshold per boss life, VKL summons one small green snake per online player in the server. Snakes follow the nearest living player through doorways across the entire office. Each has 4 health, takes one damage per hammer hit, moves at 200 units/second and bites for 5 damage with a 1.2-second cooldown. Remaining snakes are cleared when the boss respawns. Wave claims and snake health are atomic in Redis; one leader moves them, clients draw and interpolate them. Positions are saved once per second.
+At 70%, 40% and 10% health, once per threshold per boss life, VKL summons a random integer number of small green snakes between `ceil(1.3 × online players)` and `2 × online players` in the server at the 70% and 40% thresholds. The final wave at 10% instead summons red snakes, a random integer from `2 × online players` to `3 × online players`. Every wave has at least one snake. Snakes follow the nearest living player through doorways across the entire office. Each has 4 health, takes one damage per hammer hit, moves at 200 units/second and bites for 5 damage (green) or 7 damage (red) with a 1.2-second cooldown. Remaining snakes are cleared when the boss respawns. Wave claims and snake health are atomic in Redis; one leader moves them, clients draw and interpolate them. Positions are saved once per second.
 
 Every five minutes the room offers “Đồng nghiệp mời nước” for five seconds. One accepted click restores all connected players to full health and mana; downed players revive in the lobby. The schedule and claim are shared across instances.
 

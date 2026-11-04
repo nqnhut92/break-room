@@ -50,9 +50,9 @@
       <div id="topLeft">
         <span class="pill"><span class="wide-only">Server </span><b id="roomName">…</b></span>
         <span class="pill online cool" id="onlinePill"><b id="online">1</b><span class="wide-only"> online</span></span>
-        <button id="copyLink" class="pill btn" type="button" aria-label="Copy link server"><span class="wide-only">Copy link server</span><span class="narrow-only" aria-hidden="true">🔗</span></button>
-        <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh">🔇</button>
-        <span class="pill hp" title="Máu của bạn"><span aria-hidden="true">❤</span><span class="hp-track"><i id="hpFill"></i></span><b id="hpNum">100</b></span>
+        <button id="copyLink" class="pill btn" type="button" aria-label="Copy link server"><span class="wide-only">Copy link server</span><span data-icon="link"></span></button>
+        <button id="mute" class="pill btn" type="button" aria-label="Bật tắt âm thanh"><span data-icon="volume-x"></span></button>
+        <span class="pill hp" title="Máu của bạn"><span data-icon="heart"></span><span class="hp-track"><i id="hpFill"></i></span><b id="hpNum">100</b></span>
       </div>
 
       <div id="board">
@@ -70,30 +70,30 @@
       <div id="emotes"></div>
       <form id="chatForm" autocomplete="off">
         <input id="chatInput" maxlength="120" placeholder="Nhắn cả phòng… (Enter hoặc /)" aria-label="Tin nhắn cho cả phòng" enterkeyhint="send">
-        <button id="chatSend" class="btn" type="submit" aria-label="Gửi">➤</button>
+        <button id="chatSend" class="btn" type="submit" aria-label="Gửi"><span data-icon="send"></span></button>
       </form>
-      <button id="drinkBtn" class="btn drink" type="button" hidden>🧃 Đồng nghiệp mời nước</button>
-      <button id="resetBtn" class="btn it" type="button" title="Phím I">Gọi IT thay đồ mới</button>
-      <button id="skillBtn" class="btn it" type="button" aria-label="Đổi skill" title="Bấm để đổi skill">🔨 Skill: Đập búa</button>
+      <button id="drinkBtn" class="btn drink" type="button" hidden><span data-icon="cup-soda"></span> Đồng nghiệp mời nước</button>
+      <button id="resetBtn" class="btn it" type="button" title="Phím I"><span data-icon="refresh-cw"></span> Gọi IT thay đồ mới</button>
+      <button id="skillBtn" class="btn it" type="button" aria-label="Đổi skill" title="Bấm để đổi skill"><span data-icon="hammer"></span> Skill: Đập búa</button>
       <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
     </div>
     <canvas id="minimap" width="200" height="125" role="img" aria-label="Bản đồ văn phòng (phím M để ẩn hoặc hiện)" title="Bản đồ (M)"></canvas>
     <div id="sideBtns">
-      <button id="settingsBtn" class="btn" type="button" aria-label="Cài đặt và tiện ích" aria-haspopup="dialog" aria-controls="settingsDlg" aria-expanded="false">⚙</button>
+      <button id="settingsBtn" class="btn" type="button" aria-label="Cài đặt và tiện ích" aria-haspopup="dialog" aria-controls="settingsDlg" aria-expanded="false"><span data-icon="settings"></span></button>
       <div id="sideTools">
-        <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog">?</button>
-        <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả phòng">💬</button>
-        <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true">🗺</button>
-        <button id="gfxBtn" class="btn" type="button" aria-label="Đồ họa cao" aria-pressed="true" title="Đồ họa cao (bật) / an toàn (tắt)">✨</button>
+        <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog"><span data-icon="circle-help"></span></button>
+        <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả phòng"><span data-icon="message-circle"></span></button>
+        <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true"><span data-icon="map"></span></button>
+        <button id="gfxBtn" class="btn" type="button" aria-label="Đồ họa cao" aria-pressed="true" title="Đồ họa cao (bật) / an toàn (tắt)"><span data-icon="sparkles"></span></button>
         <div id="zoomBtns" role="group" aria-label="Thu phóng">
-          <button id="zoomIn" class="btn" type="button" aria-label="Phóng to">+</button>
-          <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ">−</button>
+          <button id="zoomIn" class="btn" type="button" aria-label="Phóng to"><span data-icon="zoom-in"></span></button>
+          <button id="zoomOut" class="btn" type="button" aria-label="Thu nhỏ"><span data-icon="zoom-out"></span></button>
         </div>
       </div>
     </div>
     <div id="settingsDlg" hidden>
       <div class="card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-        <div class="settings-head"><h2 id="settingsTitle">Cài đặt và tiện ích</h2><button id="settingsClose" class="btn" type="button" aria-label="Đóng cài đặt">✕</button></div>
+        <div class="settings-head"><h2 id="settingsTitle">Cài đặt và tiện ích</h2><button id="settingsClose" class="btn" type="button" aria-label="Đóng cài đặt"><span data-icon="x"></span></button></div>
         <div id="settingsTools"></div>
         <div id="settingsExtras"></div>
       </div>
@@ -183,7 +183,7 @@
 
   <div id="rotateOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rotateTitle">
     <div class="card">
-      <span class="rotate-icon" aria-hidden="true">↻ ▭</span>
+      <span class="rotate-icon" data-icon="rotate-ccw"></span>
       <h2 id="rotateTitle">Xoay ngang điện thoại</h2>
       <p>Chơi ở màn hình ngang để di chuyển bằng núm bên trái và đập bằng tay phải.</p>
       <button id="landscapeBtn" class="btn smash" type="button">Chơi toàn màn hình</button>
