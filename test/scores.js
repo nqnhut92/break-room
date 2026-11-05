@@ -109,7 +109,7 @@ async function main() {
         clock.now = BASE;
       });
 
-      await step(`${label}: guest transfer moves today's points once, including unsynced events; late events follow`, async () => {
+      await step(`${label}: guest transfer moves today's points once, including unsynced events; later guest play stays with the guest`, async () => {
         const room = uniq('t');
         clock.now = BASE;
         const G = guestActor(room, 'abcdefghijklmnop0001'), C = characterActor('00000000-0000-4000-8000-0000000000c1'), C2 = characterActor('00000000-0000-4000-8000-0000000000c2');
@@ -127,12 +127,12 @@ async function main() {
         assert.equal((await sb.transfer(room, G, C2, 'Khác')).state, 'exists', 'logout + another account cannot move it again');
         await store.hit(room, { objId: 'd', defaultHp: 1, cost: 1, playerId: g, now: BASE });           // a late hit by the old guest connection
         let board = await top(room);
-        assert.deepEqual(byName(board), { Chi: 100 + 50 + 20 + 10, Khách7: 0 }, 'points moved; the guest row stays at 0 and gets nothing new');
+        assert.deepEqual(byName(board), { Chi: 100 + 50 + 20, Khách7: 10 }, 'points moved once; what the guest earns afterwards is the guest\'s');
         await Promise.all([sb.sync(room), sb2.sync(room)]);
         const rows = await sqlRows(room), d = dayDate(dayOf(BASE));
-        assert.deepEqual([rows[G + '@' + d].s, rows[G + '@' + d].breaks, rows[G + '@' + d].deaths], [0, 0, 2], 'knock-outs stay with the guest');
-        assert.equal(rows[C + '@' + d].s, 180);
-        assert.equal(rows[C + "@" + d].breaks, 4);
+        assert.deepEqual([rows[G + '@' + d].s, rows[G + '@' + d].breaks, rows[G + '@' + d].deaths], [10, 1, 2], 'knock-outs and later points stay with the guest');
+        assert.equal(rows[C + '@' + d].s, 170);
+        assert.equal(rows[C + "@" + d].breaks, 3);
         assert.equal(rows[C + '@' + d].deaths, 1);
         assert.deepEqual((await sb.deaths(room)).rows.map((r) => [r.name, r.n]), [['Khách7', 2], ['Chi', 1]], 'knock-outs are not transferred');
         assert.equal((await pool.query('SELECT count(*)::int AS n FROM score_transfers WHERE room_id=$1', [room])).rows[0].n, 1);

@@ -14,7 +14,7 @@ Scores were transient Redis counters that died with the room's 30-minute TTL, so
 - **Atomic credit + event.** Every payout script updates gameplay state, the day board and appends an event to a TTL-free, bounded Redis list in one Lua execution. Score is an integer in tenths; the daily knock-out count rides on the same events. The day is taken from the committing instance's clock at payout time.
 - **Sync.** A worker applies batches in one SQL transaction (event ledger primary key, per-room advisory lock, ordered transfers) and acknowledges with a conditional trim only after commit. Delivery is at-least-once; the ledger makes it effectively once.
 - **Live board is derived.** `SQL rows + queued events not in the ledger`, rebuilt by one Lua script while holding the queue lock whenever a day's board is missing. SQL and Redis totals are never summed blindly.
-- **Guest transfer** is a Lua move plus a queued transfer event applied in order; a per-day redirect keeps late guest events off the guest row; one transfer per guest participant.
+- **Guest transfer** is a Lua move plus a queued transfer event applied in order; a per-day marker allows one transfer per guest participant, and nothing is redirected afterwards (queue order already puts the guest's earlier events before the transfer).
 - **Chat** is inserted first (idempotent on `(room, actor, client id)`), then acknowledged and broadcast; history is read by `(at_ms, id)` cursor, filtered by age in the query.
 - **Cleanup** is an idempotent job (CLI and protected HTTP endpoint) that also drains the queue; no scheduler is assumed or provisioned.
 
