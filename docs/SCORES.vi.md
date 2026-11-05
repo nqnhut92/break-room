@@ -65,11 +65,11 @@ Không có gì tự cấu hình scheduler cho bạn. Gọi job ít nhất vài p
 ```bash
 npm run maintenance                  # chạy một lần: xả hàng đợi, xóa dữ liệu hết hạn, ghi kết quả
 npm run maintenance -- --status      # backlog, số bị bỏ, kết quả gần nhất, dung lượng
-curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/maintenance           # tương tự qua HTTP (GET hoặc POST)
+curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/maintenance           # tương tự qua HTTP (GET, HEAD hoặc POST)
 curl -H "Authorization: Bearer $MAINTENANCE_SECRET" "https://<domain>/api/maintenance?status=1"
 ```
 
-Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET mỗi 5 phút; secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Endpoint tắt trừ khi có secret dài từ 8 ký tự: `MAINTENANCE_SECRET`, nếu không thì `CRON_SECRET` (Vercel Cron gửi sẵn), nếu không nữa thì dùng luôn `HEALTH_KEY` đang có. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
+Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET hoặc HEAD mỗi 5 phút (HEAD cũng chạy job); secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Endpoint tắt trừ khi có secret dài từ 8 ký tự: `MAINTENANCE_SECRET`, nếu không thì `CRON_SECRET` (Vercel Cron gửi sẵn), nếu không nữa thì dùng luôn `HEALTH_KEY` đang có. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
 
 ## Cấu hình
 

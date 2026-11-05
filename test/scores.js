@@ -258,13 +258,15 @@ async function main() {
 
     await step('maintenance endpoint falls back to HEALTH_KEY and stays closed without any key', async () => {
       const { maintenanceHandler } = require('../lib/maintenance-http');
-      const call = async (env, url) => {
+      const call = async (env, url, method = 'GET') => {
         const out = {};
-        await maintenanceHandler({ persistence: { status: async () => ({ queue: {} }) }, env })({ method: 'GET', url, headers: {} }, { setHeader() {}, end(b) { out.body = b; }, set statusCode(v) { out.code = v; } });
+        await maintenanceHandler({ persistence: { status: async () => ({ queue: {} }) }, env })({ method, url, headers: {} }, { setHeader() {}, end(b) { out.body = b; }, set statusCode(v) { out.code = v; } });
         return out.code;
       };
       assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?status=1&key=health-key-1'), 200);
       assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?status=1&key=nope'), 401);
+      assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?status=1&key=health-key-1', 'HEAD'), 200, 'HEAD from an uptime monitor');
+      assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?key=health-key-1', 'DELETE'), 405);
       assert.equal(await call({}, '/api/maintenance?status=1&key=anything'), 503);
     });
 

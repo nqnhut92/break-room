@@ -65,11 +65,11 @@ Nothing configures a scheduler for you. Call the job at least every few minutes 
 ```bash
 npm run maintenance                  # run once: drain the queue, delete expired rows, record the result
 npm run maintenance -- --status      # backlog, drops, last result, sizes
-curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/maintenance           # same via HTTP (GET or POST)
+curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/maintenance           # same via HTTP (GET, HEAD or POST)
 curl -H "Authorization: Bearer $MAINTENANCE_SECRET" "https://<domain>/api/maintenance?status=1"
 ```
 
-Monitors that cannot set headers (for example UptimeRobot) can use `https://<domain>/api/maintenance?key=<secret>` with GET every 5 minutes; the secret then appears in URLs and logs, and only lets someone run this idempotent job. The endpoint is disabled unless a secret of 8+ characters exists: `MAINTENANCE_SECRET`, else `CRON_SECRET` (which Vercel Cron sends), else the existing `HEALTH_KEY`. It is idempotent and safe to run concurrently. On Vercel add a cron entry yourself, for example `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; this repository does not add one. Sizes: a row in `daily_scores` is small; expect rows ≈ players per room per day, an event row per queued event for ≤ 2 days, chat ≤ 24 h of lines.
+Monitors that cannot set headers (for example UptimeRobot) can use `https://<domain>/api/maintenance?key=<secret>` with GET or HEAD every 5 minutes (HEAD runs the job too); the secret then appears in URLs and logs, and only lets someone run this idempotent job. The endpoint is disabled unless a secret of 8+ characters exists: `MAINTENANCE_SECRET`, else `CRON_SECRET` (which Vercel Cron sends), else the existing `HEALTH_KEY`. It is idempotent and safe to run concurrently. On Vercel add a cron entry yourself, for example `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; this repository does not add one. Sizes: a row in `daily_scores` is small; expect rows ≈ players per room per day, an event row per queued event for ≤ 2 days, chat ≤ 24 h of lines.
 
 ## Configuration
 
