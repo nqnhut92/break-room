@@ -314,6 +314,12 @@ async function main() {
       assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?status=1&key=health-key-1', 'HEAD'), 200, 'HEAD from an uptime monitor');
       assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?key=health-key-1', 'DELETE'), 405);
       assert.equal(await call({}, '/api/maintenance?status=1&key=anything'), 503);
+      // serverless: nothing is opened for a wrong key, and what was opened is always closed
+      let opened = 0, closed = 0;
+      const open = async () => { opened++; return { persistence: { status: async () => ({ queue: {} }) }, close: async () => { closed++; } }; };
+      const run = async (url) => { const o = {}; await maintenanceHandler({ open, env: { HEALTH_KEY: 'health-key-1' } })({ method: 'GET', url, headers: {} }, { setHeader() {}, end() {}, set statusCode(v) { o.code = v; } }); return o.code; };
+      assert.equal(await run('/api/maintenance?key=nope'), 401); assert.equal(opened, 0, 'wrong key opens no connection');
+      assert.equal(await run('/api/maintenance?status=1&key=health-key-1'), 200); assert.deepEqual([opened, closed], [1, 1]);
     });
 
     await step('maintenance: an idle run does not touch Postgres; cleanup runs once per interval, or when forced', async () => {
