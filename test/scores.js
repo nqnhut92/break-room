@@ -316,6 +316,22 @@ async function main() {
       assert.equal(await call({}, '/api/maintenance?status=1&key=anything'), 503);
     });
 
+    await step('maintenance: an idle run does not touch Postgres; cleanup runs once per interval, or when forced', async () => {
+      const { createPersistence } = require('../lib/persistence');
+      let used = 0;
+      const spy = new Proxy(pool, { get(t, k) { const v = t[k]; return typeof v === 'function' ? (...a) => { if (k === 'query' || k === 'connect') used++; return v.apply(t, a); } : v; } });
+      const store = createMemoryStore({ persistScores: true });
+      const p = createPersistence({ profiles: { pool: spy, ready: async () => {} }, store, env: {}, log: () => {} });
+      const first = await p.maintain({ rooms: ['idle-room'] });
+      assert.equal(first.cleanupRan, true); assert.ok(used > 0, 'first run does the cleanup');
+      used = 0;
+      const idle = await p.maintain({ rooms: ['idle-room'] });
+      assert.equal(idle.cleanupRan, false); assert.equal(used, 0, 'no database round trip while idle');
+      const forced = await p.maintain({ rooms: ['idle-room'], force: true });
+      assert.equal(forced.cleanupRan, true);
+      await store.close();
+    });
+
     // ---- real WebSockets against the app
     await step('websocket: day board rows, chat acknowledged only after the insert, history on join, failures not shown as sent', async () => {
       const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1', MAINTENANCE_SECRET: 'maintenance-test-secret' } });

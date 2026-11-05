@@ -69,7 +69,7 @@ curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/mainten
 curl -H "Authorization: Bearer $MAINTENANCE_SECRET" "https://<domain>/api/maintenance?status=1"
 ```
 
-Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET hoặc HEAD mỗi 5 phút (HEAD cũng chạy job); secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Endpoint tắt trừ khi có secret dài từ 8 ký tự: `MAINTENANCE_SECRET`, nếu không thì `CRON_SECRET` (Vercel Cron gửi sẵn), nếu không nữa thì dùng luôn `HEALTH_KEY` đang có. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
+Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET hoặc HEAD mỗi 5 phút (HEAD cũng chạy job); secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Lần chạy khi hàng đợi rỗng chỉ chạm Redis, nên lịch gọi dày không giữ Postgres serverless thức mãi: phần dọn SQL chạy tối đa 6 giờ một lần (các instance dùng chung cổng này) và dòng status chỉ ghi khi có việc; `npm run maintenance` luôn ép chạy dọn. Endpoint tắt trừ khi có secret dài từ 8 ký tự: `MAINTENANCE_SECRET`, nếu không thì `CRON_SECRET` (Vercel Cron gửi sẵn), nếu không nữa thì dùng luôn `HEALTH_KEY` đang có. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
 
 ## Cấu hình
 

@@ -16,7 +16,7 @@ const { createStoreFromEnv } = require('../lib/config');
   const persistence = createPersistence({ profiles, store, env });
   let code = 0;
   try {
-    const out = process.argv.includes('--status') ? await persistence.status() : await persistence.maintain();
+    const out = process.argv.includes('--status') ? await persistence.status() : await persistence.maintain({ force: true });
     console.log(JSON.stringify(out, null, 2));
     if (out.errors?.length) code = 1;
   } catch (e) { console.error(e.message); code = 1; }
