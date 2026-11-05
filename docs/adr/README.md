@@ -16,6 +16,8 @@ Records 0001–0004 document decisions already present in the code and project n
 
 | [0006](0006-account-identity.md) | Accepted | Separate Google accounts, durable Postgres characters and Redis session/control ownership |
 
+| [0007](0007-dynamic-actor-collision.md) | Accepted | Share swept boss-body collision across client/server while players and bots remain nonblocking |
+
 ## Adding or changing a decision
 
 Copy [template.md](template.md) to the next unused `NNNN-short-title.md`. Start new proposals as **Proposed**; mark them **Accepted** when agreed or implemented. Explain context, the choice, alternatives and consequences, and link code, relevant guides and verification evidence. Do not invent historical dates, benchmarks or rejected experiments.

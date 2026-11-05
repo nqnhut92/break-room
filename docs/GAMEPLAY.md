@@ -70,3 +70,7 @@ Room names in the overview are layout annotations; the game no longer renders fl
 ## Guest and saved characters
 
 Guests still join immediately. [Google sign-in](IDENTITY.md#player-behavior) saves one independent character in each room. Create/restore/edit outside the room; edits apply on the next join and are blocked while that character is playing elsewhere. Registered names remain reserved offline, case-insensitively. Sign-in does not autojoin or transfer guest points. Scores are not saved long-term; daily boards and 24-hour chat are planned later.
+
+## Character collision
+
+Living VKL and TML/DMM have solid bodies: walk around them rather than through them. Defeated bosses do not block movement. Bosses and mini-bosses avoid living characters while walking. Players can pass through other players and disguised bots, preventing doorway blocking and preserving the same visible rules for both. Body contact alone does not provoke a neutral mini-boss. Damage, attack range, telegraphs and map layout are unchanged.

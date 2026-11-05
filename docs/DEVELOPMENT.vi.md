@@ -86,3 +86,5 @@ Dùng Node 20+ (đã kiểm tra Node 24). Chạy `npm run test:identity` với P
 Trên máy cloud hạn chế tài nguyên, `TEST_WAIT_FACTOR=3 npm test` (hoặc `TEST_WAIT_FACTOR=3 npm run test:redis`) chỉ tăng thời gian chờ kết quả mạng/join trong helper. Không đổi cooldown game, assertion phủ định hay timing mặc định của test.
 
 Schema tự khởi tạo khi dùng DB hồ sơ lần đầu. `test:identity` kiểm tra các instance chạy đồng thời, khởi động lại giữ nguyên dữ liệu và rollback/retry transaction. Lệnh tùy chọn `npm run db:migrate` dùng `MIGRATION_DATABASE_URL` hoặc `DATABASE_URL`; test chỉ dùng DB bỏ đi.
+
+Bộ browser test account kiểm tra cột ngang laptop/cảm ứng, gửi Google login, màu số online và một nút chính tạo/sửa/vào phòng. `test/actor-collision.js` kiểm tra thân actor chia bước, trượt, tránh xuyên tường, NPC trung lập tránh người và đi qua trước/sau boss chết bằng WebSocket thật; được chạy trong `npm test`.

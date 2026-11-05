@@ -66,3 +66,7 @@ Tên phòng trong ảnh là chú thích bố cục; game không còn biển tên
 ## Khách và nhân vật đã lưu
 
 Khách vẫn vào chơi ngay. [Google login](IDENTITY.vi.md#hành-vi-người-chơi) lưu một nhân vật độc lập ở mỗi phòng. Tạo/khôi phục/sửa ở ngoài phòng; chỉnh sửa áp dụng lần vào tiếp theo và bị chặn khi nhân vật đang chơi ở nơi khác. Tên đăng ký được giữ cả offline, không phân biệt hoa/thường. Đăng nhập không tự vào phòng hay chuyển điểm khách. Điểm chưa lưu lâu dài; BXH ngày và chat giữ 24 giờ thuộc các đợt sau.
+
+## Va chạm nhân vật
+
+VKL và TML/DMM còn sống có thân rắn: phải đi vòng, không đi xuyên. Boss đã chết không chặn đường. Boss và mini-boss tránh nhân vật còn sống khi di chuyển. Người chơi và bot ngụy trang đi xuyên nhau để không chặn cửa và giữ cùng quy tắc thể hiện cho cả hai. Chỉ chạm thân không làm mini-boss trung lập nổi giận. Không đổi sát thương, tầm đánh, báo đòn hay bố cục map.

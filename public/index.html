@@ -171,16 +171,20 @@
       <h1>Office Rage Room</h1>
       <p class="sub">Vào văn phòng, xả stress cùng đồng nghiệp. Đập laptop, màn hình, máy in thoải mái, IT sẽ thay đồ mới sau.</p>
       </div>
-      <div class="joinFields">
       <div id="accountBox" hidden>
-        <p id="accountNote" class="sub" role="status"></p>
+        <div class="account-copy"><span id="accountStatus" class="account-status" hidden>Đã đăng nhập Google</span><p id="accountNote" class="sub" role="status"></p></div>
         <div class="account-actions">
-          <button id="googleLogin" class="btn" type="button" hidden>Đăng nhập Google</button>
+          <button id="googleLogin" class="btn google-login" type="button" hidden>
+            <svg class="google-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.73-.06-1.42-.19-2.09H12v3.96h5.92a5.07 5.07 0 0 1-2.2 3.32v2.76h3.57c2.09-1.93 3.27-4.77 3.27-7.95Z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.8l-3.57-2.76c-.98.66-2.24 1.06-3.71 1.06-2.87 0-5.3-1.94-6.17-4.54H2.14v2.84A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.83 13.96A6.6 6.6 0 0 1 5.48 12c0-.68.12-1.34.35-1.96V7.2H2.14A11 11 0 0 0 1 12c0 1.77.42 3.44 1.14 4.8l3.69-2.84Z"/><path fill="#EA4335" d="M12 5.5c1.62 0 3.06.56 4.21 1.64l3.16-3.16A10.6 10.6 0 0 0 12 1a11 11 0 0 0-9.86 6.2l3.69 2.84C6.7 7.44 9.13 5.5 12 5.5Z"/></svg>
+            <span>Đăng nhập với Google</span>
+            <svg class="google-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button id="accountLogout" class="btn" type="button" hidden>Đăng xuất</button>
-          <button id="characterRestore" class="btn" type="button" hidden>Khôi phục hồ sơ</button>
-          <button id="characterSave" class="btn" type="button" hidden>Tạo nhân vật từ hồ sơ này</button>
+          <button id="characterRestore" class="btn" type="button" hidden>Hủy chỉnh sửa</button>
+          <button id="characterSave" class="btn" type="button" hidden>Sửa nhân vật</button>
         </div>
       </div>
+      <div class="joinFields">
 
       <label>Tên của bạn
         <input id="nameInput" maxlength="14" placeholder="Ví dụ: Nick" required>
@@ -206,6 +210,7 @@
         <div id="roomList" class="roomlist" role="group" aria-label="Chọn server" aria-busy="true"><div class="roomskel" aria-hidden="true"></div><div class="roomskel" aria-hidden="true"></div></div>
       </div>
       <button id="joinBtn" class="btn smash" type="submit" disabled>Vào văn phòng</button>
+      <p id="scoreNote" class="join-disclaimer">Điểm chưa được lưu lâu dài. Chưa chuyển điểm khách.</p>
       <p id="joinErr" class="err" role="alert"></p>
       </div>
     </form>

@@ -824,7 +824,7 @@ canvas {
 @keyframes ultPulse { 50% { box-shadow: 0 0 16px rgba(255, 190, 60, 0.9); transform: scale(1.04); } }
 @media (max-width: 640px) { .pill.rage .hp-track { width: 44px; } } /* the phone keeps the bar, only shorter */
 
-/* Native orientation: a short landscape entry form, with the primary action always visible. */
+/* Shared horizontal join form on laptops and touch landscape screens. */
 .joinIntro, .joinFields, .joinRooms { display: contents; }
 #emoteBtn, #emoteTray { display: none; }
 #rotateOverlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: var(--bg); }
@@ -851,9 +851,9 @@ canvas {
   #mobileBottomControls { gap: 6px; max-width: calc(100% - 300px); }
   #mobileBottomControls #skillBtn { padding: 8px; }
 }
-@media (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
+@media (min-width: 760px), (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
   #overlay { padding: 12px; }
-  #joinForm { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px 20px; width: min(820px, 100%); max-height: calc(100dvh - 24px); padding: 16px 20px; overflow-y: auto; }
+  #joinForm { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); grid-template-rows: auto auto minmax(0, 1fr); gap: 12px 20px; width: min(920px, 100%); max-height: calc(100dvh - 24px); padding: 16px 20px; overflow-y: auto; }
   .joinIntro { display: grid; grid-column: 1 / -1; grid-template-columns: 40px 1fr; align-items: center; gap: 0 12px; }
   #joinForm .logo { width: 40px; height: 40px; grid-row: span 2; margin: 0; }
   #joinForm h1 { font-size: 22px; text-align: left; }
@@ -885,11 +885,51 @@ canvas {
   #sideBtns #zoomBtns { flex-direction: row; }
 }
 
-.account-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
-.account-actions .btn { min-height:44px; white-space:normal; }
-#accountNote { line-height:1.5; }
+#accountBox { display: flex; flex-direction: column; gap: 12px; }
+.account-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.account-actions .btn { min-height: 44px; white-space: normal; }
+#accountNote { line-height: 1.5; }
+#googleLogin { display: grid; grid-template-columns: 20px minmax(0, 1fr) 20px; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 14px 18px; border: 1px solid #dadce0; border-radius: 12px; background: #fff; color: #3c4043; font-weight: 500; font-size: 15px; box-shadow: 0 2px 6px #0000000a; transition: background .15s, box-shadow .15s, border-color .15s; }
+#googleLogin:hover { background: #f8faff; border-color: #b9c9e5; box-shadow: 0 3px 12px #00000018; }
+#googleLogin:focus-visible { outline: 3px solid #8ab4f8; outline-offset: 3px; }
+.google-mark, .google-arrow { width: 20px; height: 20px; }
+.google-arrow { color: #94a3b8; }
+.join-disclaimer { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#joinErr:empty { display: none; }
 
-@media (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
+@media (min-width: 760px), (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
   #joinForm .joinFields { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
-  #accountBox { grid-column: 1 / -1; }
+  #accountBox { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "note actions"; align-items: center; gap: 12px 24px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .account-copy { grid-area: note; }
+  .account-actions { grid-area: actions; justify-content: flex-end; max-width: 400px; }
+  #googleLogin { width: 290px; }
 }
+
+@media (min-width: 760px) and (min-height: 560px) {
+  #overlay { padding: 24px; }
+  #joinForm { padding: 28px; gap: 22px 28px; max-height: calc(100dvh - 48px); }
+  #joinForm .logo { width: 48px; height: 48px; }
+  #joinForm .joinIntro { grid-template-columns: 48px 1fr; gap: 4px 16px; }
+  #joinForm h1 { font-size: 26px; }
+  #joinForm .sub { font-size: 13px; }
+  #joinForm label, #joinForm .lbl { font-size: 13px; }
+  #joinForm input, #joinForm select { padding: 12px; }
+  #joinForm .gender span { padding: 12px; }
+  #joinForm .joinFields { gap: 18px 14px; padding-right: 24px; border-right: 1px solid var(--line); }
+  #joinForm .roomcard { min-height: 48px; }
+  #roomList { max-height: 160px; }
+  #joinBtn { min-height: 48px; }
+}
+@media (max-height: 559px) and (min-width: 600px) {
+  #accountBox { padding: 8px 0; max-height: 88px; overflow-y: auto; }
+  #googleLogin { width: 250px; min-height: 44px; padding: 10px 14px; font-size: 14px; }
+  .account-actions { max-width: 380px; gap: 6px; }
+  .account-actions .btn:not(.google-login) { padding: 6px 10px; min-height: 36px; font-size: 12px; }
+  .join-disclaimer { font-size: 11px; }
+}
+
+.account-copy { min-width: 0; }
+.account-status { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 7px; font-size: 12px; font-weight: 600; color: #7dd3a7; }
+.account-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+#joinForm input:disabled, #joinForm select:disabled { opacity: 1; color: #cbd5e1; border-color: #ffffff0d; background-color: #121721; cursor: default; }
+#joinForm .gender input:disabled + span { cursor: default; }

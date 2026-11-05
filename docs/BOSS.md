@@ -119,3 +119,5 @@ For 20 seconds the captive can move and fight inside but cannot leave. Spectator
 Snakes have a continuous S-shaped body, a tapered tail and a forked tongue. Summoning raises the boss's hands and displays green spell rings, using reused geometry without post-processing.
 
 Tests: `test/duel.js` (rules, timing, boundaries), `test/duel-realtime.js` (two instances, reconnects and leader handover), `test/shared.js` (memory/Redis store contract).
+
+VKL has a solid living body for player movement and avoids living targets when walking; its defeated body is nonblocking. Body collision does not change attack timing or damage.

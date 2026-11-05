@@ -123,3 +123,5 @@ Trong 20 giây, người bị bắt được di chuyển và chiến đấu tron
 Rắn có thân liền uốn chữ S, đuôi thuôn và lưỡi chẻ. Khi triệu hồi, boss giơ tay cùng vòng phép xanh. Hiệu ứng dùng hình học tái sử dụng, không thêm post-processing.
 
 Test: `test/duel.js` (luật, lịch, cửa khóa), `test/duel-realtime.js` (hai instance, tải lại trang, đổi leader), `test/shared.js` (hợp đồng store trên memory và Redis).
+
+VKL còn sống chặn đường người chơi và tránh mục tiêu còn sống khi bước đi; thân đã chết không chặn đường. Va chạm thân không đổi timing hay sát thương đòn đánh.

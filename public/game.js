@@ -1,3 +1,4 @@
+import './actor-collision.js';
 import { accountUI } from './account.js';
 import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js';
 import { createScene3D } from './scene3d.js';
@@ -13,7 +14,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // The join button is only usable with a name, and not while a join is in flight.
   let joinBusy = false;
   function syncJoin() {
-    $('joinBtn').disabled = joinBusy || !$('nameInput').value.trim();
+    $('joinBtn').disabled = joinBusy || $('joinBtn').dataset.accountBusy === 'true' || !$('nameInput').value.trim();
   }
   function setJoinBusy(b) {
     joinBusy = b;
@@ -1806,6 +1807,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     return true;
   }
 
+  function solidBosses() {
+    const circles = [];
+    if (S.boss && !S.boss.dead) circles.push({ x:S.boss.tx ?? S.boss.x, y:S.boss.ty ?? S.boss.y, r:S.boss.cfg.radius });
+    for (const b of S.minis.values()) if (b.hp > 0) circles.push({ x:b.tx ?? b.x, y:b.ty ?? b.y, r:b.cfg.radius || 22 });
+    return circles;
+  }
+
   // Same push-out maths as lib/world.js resolveCollisions, so the client slides
   // along furniture exactly where the server would stop it.
   function resolve(x, y) {
@@ -2276,9 +2284,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
     $('joinForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      try { await account.beforeJoin(); } catch (err) { $('joinErr').textContent = err.message; return; }
+      if (joinBusy) return;
+      if (!scene) { $('joinErr').textContent = 'Thiết bị hoặc trình duyệt này không bật được WebGL nên chưa chơi được bản 3D.'; return; }
+      setJoinBusy(true);
+      try { await account.beforeJoin(); } catch (err) { $('joinErr').textContent = err.message; setJoinBusy(false); return; }
       const name = $('nameInput').value.trim();
-      if (!name) return;
+      if (!name) { setJoinBusy(false); return; }
       if (!scene) {
         $('joinErr').textContent = 'Thiết bị hoặc trình duyệt này không bật được WebGL nên chưa chơi được bản 3D.';
         return;
@@ -2406,9 +2417,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const oy = me.y;
     if (len > 0) {
       const step = SPEED * dt * Math.min(1, len);
-      const r = resolve(
+      const r = globalThis.BreakRoomActorCollision.slide(me.x, me.y,
         clamp(me.x + (dx / len) * step, 20, S.world.w - 20),
-        clamp(me.y + (dy / len) * step, 20, S.world.h - 20)
+        clamp(me.y + (dy / len) * step, 20, S.world.h - 20), 16, solidBosses(), resolve
       );
       const allowed = constrainDuel(me, r.x, r.y);
       me.x = clamp(allowed.x, 20, S.world.w - 20);

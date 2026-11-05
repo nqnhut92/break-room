@@ -97,3 +97,7 @@ Quy tắc thay đồ nằm ở `lib/object-respawn.js`; script Lua lấy hệ s�
 [Identity đợt 1](IDENTITY.vi.md) tách account Google đã xác thực và nhân vật Postgres theo phòng khỏi gameplay, hiệu lực phiên và quyền kết nối Redis. Tên đăng ký được giữ cả khi offline. Join/mutation hồ sơ phối hợp SQL với khách và bot online; Redis write có fence connection/session. Không query Postgres theo frame hay heartbeat. Điểm ngày và chat giữ 24 giờ vẫn là kế hoạch.
 
 Khi cấu hình hồ sơ lâu dài có giữ tên, heartbeat phải gia hạn trước khi lease hết. Heartbeat đến muộn không tạo lại owner đã hết hạn hoặc bị prune; client phải join lại và kiểm tra tên đã giữ.
+
+## Thân va chạm động
+
+`public/actor-collision.js` cung cấp cùng phép di chuyển chia bước theo hình tròn cho dự đoán ở browser và xác minh ở server. Đồ đạc vẫn dùng hình học tĩnh có thẩm quyền. Tâm boss/mini-boss còn sống lấy từ snapshot runner/pubsub hiện có; không thêm database, heartbeat hay field identity. Server sửa vị trí bị chặn và tách phần chồng lấn còn lại sau cập nhật snapshot. Người/người và người/bot không chặn nhau. Animation kéo/thổi trong duel hoàn tất trước khi tách thân thông thường tiếp tục. Xem [ADR 0007](adr/0007-dynamic-actor-collision.md).

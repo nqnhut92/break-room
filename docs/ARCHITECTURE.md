@@ -95,3 +95,7 @@ Object replacement policy lives in `lib/object-respawn.js`; Lua embeds the same 
 [Phase 1 identity](IDENTITY.md) separates verified Google accounts and Postgres room characters from Redis gameplay, session validity and connection ownership. Offline registered names remain reserved. Join/profile mutations coordinate SQL reservations with online guests and bots; Redis writes carry connection/session fences. No Postgres queries occur per frame or heartbeat. Daily scores and 24-hour chat persistence remain planned.
 
 With persistent profile reservations configured, presence renewal must arrive before its lease expires. A delayed heartbeat cannot recreate a pruned/expired owner; the client must rejoin and recheck name reservations.
+
+## Dynamic actor bodies
+
+`public/actor-collision.js` supplies the same swept circle movement to browser prediction and server validation. Furniture remains authoritative static geometry. Living boss/mini-boss centers come from the existing runner/pubsub snapshots; no new database, heartbeat or identity fields are needed. Servers correct blocked movement and separate residual overlaps after snapshot changes. Player/player and player/bot bodies remain nonblocking. Forced duel animations complete before ordinary body separation resumes. See [ADR 0007](adr/0007-dynamic-actor-collision.md).

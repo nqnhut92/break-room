@@ -20,3 +20,5 @@ A kill pays the bounty proportionally to actual damage, capped at remaining HP; 
 `lib/miniboss.js` holds rules and navigation. `lib/realtime.js` drives the room on its existing boss lease, independently of VKL's life or `BOSS_DISABLED`. The memory and Redis stores use a versioned compare-and-swap document for both mini-bosses. Hits retry conflicting writes; simulation commits are fenced by the lease. HP, threat, damage credit, windup/recovery and respawn deadlines survive reconnects and leader handover. Payout and the killing state commit atomically. Clients interpolate snapshots; single-instance movement snapshots bypass Redis pub/sub, while state still persists in the store.
 
 Verification: `test/miniboss.js` covers rules/navigation and real WebSocket combat. `test/shared.js` exercises the store contract against both memory and Redis, plus two-server kills and respawn. Run `npm run test:redis` for the complete suite.
+
+Living TML/DMM bodies block player movement and avoid living characters while wandering/chasing. Defeated bodies are nonblocking. Touching a neutral mini-boss does not add threat or cause retaliation; only the existing aggression rules do.

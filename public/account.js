@@ -7,9 +7,10 @@ export function accountUI({ room, read, fill }) {
   const save = document.getElementById('characterSave');
   const restore = document.getElementById('characterRestore');
   const join = document.getElementById('joinBtn');
-  let state = null, character = null, loadedRoom = null, busy = false;
+  const status = document.getElementById('accountStatus');
+  const fields = document.querySelectorAll('.joinFields input, .joinFields select');
+  let state = null, character = null, loadedRoom = null, busy = false, editing = false, profileError = false, loadVersion = 0;
   const guestNote = 'Chơi khách không bảo đảm giữ nhân vật. Đăng nhập Google để lưu nhân vật và dùng trên thiết bị khác.';
-  const scoreNote = 'Điểm chưa được lưu lâu dài và chưa chuyển từ khách sang tài khoản.';
   async function api(path, options = {}) {
     const r = await fetch(path, { cache: 'no-store', ...options });
     const body = await r.json();
@@ -18,26 +19,38 @@ export function accountUI({ room, read, fill }) {
   }
   function render() {
     box.hidden = false;
+    status.hidden = !state?.authenticated;
     login.hidden = !state?.enabled || !!state.authenticated;
-    save.hidden = restore.hidden = !state?.authenticated;
+    save.hidden = !state?.authenticated || !character || editing || busy || profileError;
+    restore.hidden = !state?.authenticated || (!editing && !profileError);
     logout.hidden = !state?.authenticated && !state?.expired;
-    join.textContent = state?.authenticated ? 'Vào văn phòng' : 'Chơi khách';
-    save.textContent = character ? 'Lưu chỉnh sửa' : 'Tạo nhân vật từ hồ sơ này';
-    restore.textContent = 'Khôi phục hồ sơ';
-    note.textContent = state?.authenticated ? ('Đã đăng nhập Google. ' + (character ? 'Nhân vật của phòng đã được khôi phục. ' : 'Phòng này chưa có nhân vật. Kiểm tra hồ sơ rồi bấm tạo. ') + scoreNote) : guestNote + ' ' + scoreNote;
+    save.textContent = 'Sửa nhân vật';
+    restore.textContent = profileError ? 'Thử tải lại' : 'Hủy chỉnh sửa';
+    join.textContent = !state?.authenticated ? 'Chơi khách' : busy ? 'Đang tải…' : !character ? 'Tạo nhân vật & vào phòng' : editing ? 'Lưu & vào phòng' : 'Vào văn phòng';
+    join.dataset.accountBusy = String(busy || profileError);
+    for (const field of fields) field.disabled = !!state?.authenticated && (busy || (!!character && !editing));
+    if (busy || profileError) join.disabled = true;
+    else document.getElementById('nameInput').dispatchEvent(new Event('input'));
+    if (profileError) return;
+    note.textContent = !state?.authenticated ? guestNote : busy ? 'Đang tải nhân vật của phòng…' : !character
+      ? 'Bạn chưa có nhân vật ở phòng này. Điền thông tin rồi bấm “Tạo nhân vật & vào phòng”.'
+      : editing ? 'Chỉnh thông tin rồi bấm “Lưu & vào phòng”.'
+      : 'Nhân vật đã sẵn sàng. Chọn phòng rồi bấm “Vào văn phòng”.';
   }
   async function loadProfile() {
     if (!state?.authenticated) return;
-    busy = true;
+    const version = ++loadVersion;
+    const selected = room();
+    busy = true; editing = false; profileError = false; render();
     try {
-      const selected = room();
       const data = await api('/api/profile?room=' + encodeURIComponent(selected));
-      if (selected !== room()) return;
+      if (version !== loadVersion || selected !== room()) return;
       character = data.character; loadedRoom = selected;
       if (character) fill(character);
-      render();
-    } catch (e) { loadedRoom = null; note.textContent = e.message; }
-    finally { busy = false; }
+    } catch (e) {
+      if (version !== loadVersion) return;
+      loadedRoom = null; profileError = true; note.textContent = e.message;
+    } finally { if (version === loadVersion) { busy = false; render(); } }
   }
   async function init() {
     try { state = await api('/api/auth/status'); if (state.authenticated) document.documentElement.classList.remove('autojoin'); render(); await loadProfile(); if (new URLSearchParams(location.search).has('error')) note.textContent = 'Chưa đăng nhập được. Thử lại sau nhé; bạn vẫn có thể chọn chơi khách.'; }
@@ -56,27 +69,36 @@ export function accountUI({ room, read, fill }) {
   }
   login.addEventListener('click', () => authAction('signin/google').catch(e => { note.textContent = e.message; }));
   logout.addEventListener('click', () => authAction('signout').catch(e => { note.textContent = e.message; }));
-  restore.addEventListener('click', loadProfile);
-  save.addEventListener('click', async () => {
-    if (busy) return;
-    if (loadedRoom !== room()) { await loadProfile(); return; }
-    busy = true; save.disabled = true;
-    try {
-      const data = await api('/api/profile?room=' + encodeURIComponent(room()), { method: character ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(read()) });
-      character = data.character; fill(character); render();
-      note.textContent = 'Đã lưu nhân vật. Thay đổi áp dụng khi vào phòng tiếp theo. ' + scoreNote;
-    } catch (e) { note.textContent = e.message; }
-    finally { busy = false; save.disabled = false; }
+  restore.addEventListener('click', () => {
+    if (profileError) { loadProfile(); return; }
+    editing = false; if (character) fill(character); render();
+  });
+  save.addEventListener('click', () => {
+    if (busy || !character) return;
+    editing = true; render(); document.getElementById('nameInput').focus();
   });
   const ready = init();
   return {
     ready,
-    roomChanged() { loadedRoom = null; character = null; loadProfile(); },
+    roomChanged() { loadedRoom = null; character = null; editing = false; loadProfile(); },
     async beforeJoin() {
       await ready;
       if (state?.expired) throw Error('Phiên cũ đã hết hạn. Đăng xuất để chơi khách hoặc đăng nhập Google lại nhé.');
-      if (state?.authenticated && (busy || loadedRoom !== room() || !character)) throw Error('Khôi phục hoặc tạo nhân vật cho phòng này trước khi vào nhé.');
-      if (character && state?.authenticated) fill(character);
+      if (!state?.authenticated) return;
+      if (busy || loadedRoom !== room() || profileError) throw Error('Chưa tải được nhân vật. Bấm “Thử tải lại” nhé.');
+      if (!character || editing) {
+        const selected = room();
+        const input = read();
+        busy = true; render();
+        try {
+          const data = await api('/api/profile?room=' + encodeURIComponent(selected), {
+            method: character ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+          });
+          if (selected !== room()) throw Error('Phòng đã thay đổi. Kiểm tra nhân vật trước khi vào nhé.');
+          character = data.character; editing = false; fill(character);
+        } finally { busy = false; render(); }
+      }
+      fill(character);
     },
     authenticated: () => !!state?.authenticated,
   };
