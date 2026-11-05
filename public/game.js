@@ -937,6 +937,16 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.minis.set(item.id, b);
       }
       const wasDead = b.hp <= 0;
+      // Snapshots arrive about five times a second. Chasing each one with a plain ease makes a walker lurch and stall, so
+      // keep the speed the server just showed us and keep walking at it until the next snapshot corrects the course.
+      const at = performance.now(), dtSnap = (at - (b.snapT || 0)) / 1000;
+      const walking = item.mode === 'chase' || item.mode === 'wander';
+      if (walking && b.snapT && dtSnap > 0.04 && dtSnap < 1 && item.hp > 0 && b.hp > 0) {
+        const vx = (item.x - b.tx) / dtSnap, vy = (item.y - b.ty) / dtSnap;
+        b.vx = Math.hypot(vx, vy) < 700 ? vx : 0; // a respawn teleport is not a speed
+        b.vy = Math.hypot(vx, vy) < 700 ? vy : 0;
+      } else { b.vx = 0; b.vy = 0; }
+      b.snapT = at;
       b.cfg = item.cfg; b.hp = item.hp; b.mode = item.mode; b.tx = item.x; b.ty = item.y; b.d = item.d;
       if (wasDead && item.hp > 0) { b.x = item.x; b.y = item.y; }
       b.wind = item.wind ? { ...item.wind, t0: performance.now() - (item.wind.ms - item.wind.remainingMs) } : null;
@@ -944,10 +954,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   function miniTick(dt) {
     for (const b of S.minis.values()) {
-      b.x += (b.tx - b.x) * Math.min(1, dt * 13); b.y += (b.ty - b.y) * Math.min(1, dt * 13);
+      const age = Math.min(0.35, (performance.now() - (b.snapT || 0)) / 1000); // never run on past a missed snapshot
+      const gx = b.tx + (b.vx || 0) * age, gy = b.ty + (b.vy || 0) * age;
+      const ox = b.x, oy = b.y, k = Math.min(1, dt * 10);
+      b.x += (gx - b.x) * k; b.y += (gy - b.y) * k;
       const p = b.pl;
       p.x = b.x; p.y = b.y; p.heading = b.d; p.dead = b.hp <= 0;
-      p.moving = b.mode === 'chase' || b.mode === 'wander';
+      p.moving = Math.hypot(b.x - ox, b.y - oy) > 0.15; // legs move when the body does
       p.swing = Math.max(0, p.swing - dt * 3.5);
       p.hpFrac = b.hp / b.cfg.maxHp;
       p.hpLabel = Math.ceil(b.hp).toLocaleString('vi-VN') + ' / ' + b.cfg.maxHp.toLocaleString('vi-VN');
