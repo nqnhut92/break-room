@@ -15,7 +15,7 @@ Redis  (single source of truth for each server's state)
 ```
 
 - `lib/realtime.js` holds the game rules and WebSocket handling. It talks to a *store* interface and does not know where it runs.
-- Two stores implement that interface: `lib/store-redis.js` (shared, used on Vercel) and `lib/store-memory.js` (RAM, for `npm start` and tests). `lib/config.js` picks one; on Vercel without `REDIS_URL` the game refuses to start instead of falling back to RAM.
+- Two stores implement that interface: `lib/store-redis.js` (shared, used on Vercel) and `lib/store-memory.js` (RAM, for `npm start` and tests). `lib/config.js` picks one; on Vercel without `REDIS_URL` or `KV_URL`, the game refuses joins instead of falling back to RAM.
 - A WebSocket is pinned to the instance that accepted it. A reconnect may land on a different instance. That is why shared state cannot live in RAM.
 
 ## What Redis does
@@ -34,7 +34,7 @@ Redis  (single source of truth for each server's state)
 | `own` | hash | player id → id of the connection that owns the slot |
 | `pos` | hash | player id → last persisted `x,y,d` |
 
-The boss uses three more keys of the same room, each with the same expiry: `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: player id → damage dealt to the current boss), `blk` (the lease of the instance that runs the boss). They are not part of the nine-key set above; their scripts take only the keys they need. See [BOSS.md](BOSS.md).
+The boss uses three more room keys: `boss` (hash: current/max HP, health revision, timestamps and feature state), `bdmg` (hash: damage dealt to the current boss) and `blk` (runner lease). Boss data uses the room expiry when written; `blk` has a separate three-second lease renewed by its holder. These are outside the base nine-key set; each feature script takes the keys it needs. See [Boss](BOSS.md) and [population health](#population-scaled-boss-health).
 
 Feature state also uses `mini`, `snakes`, `rage` and `moles`; captured duels live in the `boss` hash field `duel`. These do not change the base nine-key set. Each personal ultimate bar uses a `rage:<participant id>` string key (character or guest tab), not the recycled player id, with its own seven-day TTL from the last save. Other players and reads do not renew it. The bar follows the character across devices and renewals; it is not copied from a guest to the character on sign-in. Existing `rage` hash fields migrate on the next read or save and are removed from the old hash; unread fields expire with the legacy hash. See [TML/DMM](MINIBOSSES.md), [VKL](BOSS.md) and `lib/store-redis.js` for individual operations.
 
@@ -60,7 +60,7 @@ Redis is not written to forever. Everything has an expiry or a bounded size:
 
 Compaction: housekeeping also runs a small compaction at most every 2 minutes per room (`lastCompact` in `meta`). It forgets the token, name, gender, role, company, last position and slot of every player who is offline and never scored. Players with a score stay until the room expires so the leaderboard keeps them. This bounds the per-token entries by the number of people who actually played, not by everyone who ever visited.
 
-Rough size (estimate, not measured): the state of one room is tens of KB. Redis Cloud counts its own baseline overhead too, which is why an almost empty database already shows about 2 MB.
+Measure room-state memory using Redis diagnostics and the provider dashboard. Baseline database overhead is separate from game keys; do not infer a player limit from an almost-empty database’s displayed memory usage.
 
 ## Capacity and limits
 

@@ -47,7 +47,7 @@ This model starts at the population tier for that group and excludes ultimates, 
 
 **A separate damage scale, not "100 to 1000 times the health".** The first idea was a boss with 100 to 1000 times a player's health. Taken literally that is 10,000 to 100,000 health, but everything a player does is 1 damage per hit and the whole group manages about four hits a second, so such a boss could never die. What matters is the *time to kill*, not the ratio. Hits on the boss use their own damage scale (10 for a hammer); maximum HP now follows the population tiers above.
 
-**Why it does not heal (any more).** It used to recover 5 per second plus 20 per second after a pause, so one or two players could never win and a group had to stay on it. In play that was too hard and no fun: nobody could chip at it and leave. Now damage sticks, which makes hit and run a real tactic. The fight is still hard because of the punches, and the health is higher (6,000) so it stays a group effort. The regeneration code (`bossHpAt`) is still there and the two numbers are in `BOSS` (`baseRegenPerSec`, `regenPerSec`): a value above 0 brings it back, and the client uses the same formula.
+**Why it does not heal (any more).** It used to recover 5 per second plus 20 per second after a pause, so one or two players could never win and a group had to stay on it. In play that was too hard and no fun: nobody could chip at it and leave. Now damage sticks, which makes hit and run a real tactic. The fight is still hard because of the punches, and the base health is 6,000 before population growth so it stays a group effort. The regeneration code (`bossHpAt`) is still there and the two numbers are in `BOSS` (`baseRegenPerSec`, `regenPerSec`): a value above 0 brings it back, and the client uses the same formula.
 
 ### Population health
 
@@ -71,7 +71,7 @@ Only current/max HP and a health revision reach clients. No human count, tier ti
 
 **Why a hammer needs a clear line.** The server used to check only distance. With a boss behind glass, anyone outside the wall could hit it while it could not touch them. A swing now needs `clearLine` between the two (walls and furniture block it).
 
-**Why no "Sếp" role any more.** There is now exactly one boss. The role list lost "Sếp"; old saved choices fall back to a normal employee.
+**Why no "Sếp" player role any more.** VKL is a dedicated NPC rather than a selectable player appearance. The role list lost "Sếp"; old saved choices fall back to a normal employee. TML and DMM are separate NPC mini-bosses.
 
 **The boss's look.** The boss is drawn with the same code-built body as the players (`makePlayer` in `scene3d.js`, `gender: 'boss'`): navy suit, red tie, silver spiky hair and a gold crown, scaled by `BOSS_SCALE`. Players only choose `m` or `f`; the join screen and the server accept only those.
 
@@ -136,7 +136,7 @@ VKL has a solid living body for player movement and avoids living targets when w
 
 All six server racks retain 8 object HP and the 120-million break reward. Each accepted hit returns 5 player HP per point of actual object damage, capped by the rack's remaining HP; milk tea therefore shocks for 2.5 HP across 16 half-damage hits. A full rack costs 40 HP and 40 mana with hammer/electric, or 40 HP and 80 mana with milk tea. A refused hit on an already broken rack costs neither health nor mana. Sparks and a short electric arc connect the rack to the attacker, alongside the normal HP-loss feedback. No extra action is required.
 
-Breaking a rack removes 2% of VKL's maximum HP (120 of 6,000), once per physical rack per boss life. Six racks contribute at most 12% (720 HP). IT replacement, manual reset, reconnects and runner changes do not re-arm this damage; boss respawn does. Damage stops at 1 boss HP, contributes no ultimate charge or boss-bounty credit, and is not banked while VKL is dead. The normal rack reward still applies. The rack break, money, consumed support marker and boss damage commit in the same gameplay Lua script (or RAM operation). A lethal shock still permits the already committed break/reward/support. Existing snake thresholds also react to support damage.
+Breaking a rack removes 2% of VKL’s stored maximum HP at that moment, once per physical rack per boss life. At the base 6,000 maximum this is 120 HP per rack and 720 HP for all six; at 9,000 it is 180 per rack. Previously consumed racks are not recalculated when population raises the maximum. Six racks contribute at most 12% of the life’s highest maximum. IT replacement, manual reset, reconnects and runner changes do not re-arm this damage; boss respawn does. Damage stops at 1 boss HP, contributes no ultimate charge or boss-bounty credit, and is not banked while VKL is dead. The normal rack reward still applies. The rack break, money, consumed support marker and boss damage commit in the same gameplay Lua script (or RAM operation). A lethal shock still permits the already committed break/reward/support. Existing snake thresholds also react to support damage.
 
 ## Office patrol
 

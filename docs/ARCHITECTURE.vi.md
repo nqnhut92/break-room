@@ -15,7 +15,7 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 ```
 
 - `lib/realtime.js` giữ luật chơi và xử lý WebSocket. Nó chỉ nói chuyện với một giao diện *store* và không biết mình đang chạy ở đâu.
-- Có hai store cùng giao diện: `lib/store-redis.js` (dùng chung, chạy trên Vercel) và `lib/store-memory.js` (RAM, cho `npm start` và test). `lib/config.js` chọn store; trên Vercel mà thiếu `REDIS_URL` thì game từ chối chạy chứ không lùi về RAM.
+- Có hai store cùng giao diện: `lib/store-redis.js` (dùng chung, chạy trên Vercel) và `lib/store-memory.js` (RAM, cho `npm start` và test). `lib/config.js` chọn store; trên Vercel mà thiếu cả `REDIS_URL` lẫn `KV_URL` thì game từ chối vào phòng chứ không lùi về RAM.
 - Mỗi WebSocket bị ghim vào instance nhận nó, còn reconnect có thể rơi vào instance khác. Vì thế state dùng chung không thể nằm trong RAM.
 
 ## Redis làm gì
@@ -34,7 +34,7 @@ Redis  (nguồn sự thật duy nhất cho state của mỗi server)
 | `own` | hash | id người chơi → id kết nối đang giữ chỗ |
 | `pos` | hash | id người chơi → vị trí đã lưu `x,y,d` |
 
-VKL dùng thêm ba key của cùng phòng (cùng hạn sống): `boss` (hash: `hp`, `at`, `dead`, `respawnAt`), `bdmg` (hash: id người chơi → sát thương đã gây cho sếp hiện tại) và `blk` (hợp đồng của instance đang điều khiển sếp). Chúng không nằm trong bộ chín key ở trên; script của chúng chỉ nhận key cần dùng. Xem [BOSS.vi.md](BOSS.vi.md).
+VKL dùng thêm ba key trong room: `boss` (hash: HP hiện tại/tối đa, phiên bản máu, mốc thời gian và state tính năng), `bdmg` (hash: sát thương đã gây cho boss hiện tại) và `blk` (lease runner). Dữ liệu boss dùng hạn sống room khi ghi; riêng `blk` là lease ba giây, được chủ lease gia hạn. Chúng nằm ngoài bộ chín key cơ bản; script tính năng nhận các key cần dùng. Xem [Boss](BOSS.vi.md) và [máu theo dân số](#máu-boss-theo-dân-số).
 
 Bạn sếp dùng thêm key `moles` (hash: id người chơi → `{hp, rev, conn}`), cũng nằm ngoài bộ chín key. Xem [MOLES.vi.md](MOLES.vi.md).
 
@@ -62,7 +62,7 @@ Redis không bị ghi vô hạn. Mọi thứ đều có hạn dùng hoặc kích
 
 Dọn nén (compaction): khi dọn dẹp, mỗi phòng còn chạy một lượt dọn nén nhỏ tối đa mỗi 2 phút (`lastCompact` trong `meta`). Nó quên token, tên, giới tính, vai trò, vị trí cuối và chỗ của mọi người chơi đã offline mà chưa từng ghi điểm. Người có điểm ở lại đến khi phòng hết hạn để bảng xếp hạng vẫn giữ họ. Nhờ vậy số mục theo token bị chặn bởi số người thật sự đã chơi chứ không phải mọi người từng ghé qua.
 
-Kích thước ước lượng (ước tính, chưa đo): state của một phòng vài chục KB. Redis Cloud còn tính cả phần overhead nền của nó, nên một database gần như trống vẫn hiện khoảng 2 MB.
+Đo dung lượng state bằng công cụ chẩn đoán Redis và dashboard nhà cung cấp. Overhead nền của database khác với dữ liệu game; không suy ra giới hạn người chơi từ dung lượng hiển thị của database gần như trống.
 
 ## Sức chứa và giới hạn
 

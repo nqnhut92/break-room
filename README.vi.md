@@ -21,6 +21,8 @@ Mở http://localhost:3000. Chạy một tiến trình không cần Redis; state
 
 Chọn cùng **BR-1** hoặc **BR-2**, tối đa 20 người mỗi server, rồi dùng nút copy link để mời đồng nghiệp. Nhập tên, chọn vai trò và diện mạo; trên điện thoại dùng joystick và xoay máy sang ngang.
 
+Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn vào chơi được không cần đăng nhập. Khi có database, BXH là bảng xếp hạng ngày theo từng phòng (về 0 lúc 00:00 giờ Việt Nam, không có BXH all-time) và chat phòng được giữ 24 giờ; không có lịch sử điểm dài hạn. [Cấu hình identity](docs/IDENTITY.vi.md) · [BXH ngày](docs/SCORES.vi.md).
+
 | Hành động | Điều khiển |
 | --- | --- |
 | Di chuyển | WASD / mũi tên; joystick trên màn hình cảm ứng |
@@ -54,5 +56,3 @@ npm run test:scores   # BXH ngày + lịch sử chat, Postgres/Redis dùng-một
 ## Giấy phép và credits
 
 Code: [MIT](LICENSE). Texture sàn: [ambientCG](https://ambientcg.com/), CC0 ([ghi chú](public/assets/textures/License.txt)). Three.js: MIT ([giấy phép](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([giấy phép](public/vendor/lucide-LICENSE.txt)). Đồ đạc và nhân vật dựng bằng code.
-
-Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn vào chơi được không cần đăng nhập. Khi có database, BXH là bảng xếp hạng ngày theo từng phòng (về 0 lúc 00:00 giờ Việt Nam, không có BXH all-time) và chat phòng được giữ 24 giờ; không có lịch sử điểm dài hạn. [Cấu hình identity](docs/IDENTITY.vi.md) · [BXH ngày](docs/SCORES.vi.md).

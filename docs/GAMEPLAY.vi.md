@@ -8,7 +8,7 @@ Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối 
 
 Rời phòng bằng cửa thoát thì lần vào sau xuất hiện ở sảnh; tải lại trang hoặc mất kết nối thì quay lại đúng chỗ đang đứng.
 
-Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, sale, marketing, designer, thực tập sinh, bảo vệ, tạp vụ hoặc nhân viên quèn; hiện dưới tên, một số vai có mũ hoặc tai nghe, và có câu hô riêng khi đập) và diện mạo nhân vật (nam hoặc nữ). Danh sách vai trò nằm ở `public/roles.js` và phải khớp `ROLE_IDS` trong `lib/world.js` (có test kiểm tra). Có thể nhập thêm tên công ty (không bắt buộc, tối đa 20 ký tự, trình duyệt nhớ lại), hiện cạnh vai trò dưới tên người chơi. Tên là bắt buộc, và tên đã có người đang online dùng ở cùng server (trùng y hệt, phân biệt hoa thường) sẽ bị từ chối.
+Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, sale, marketing, designer, thực tập sinh, bảo vệ, tạp vụ hoặc nhân viên quèn; hiện dưới tên, một số vai có mũ hoặc tai nghe, và có câu hô riêng khi đập) và diện mạo nhân vật (nam hoặc nữ). Danh sách vai trò nằm ở `public/roles.js` và phải khớp `ROLE_IDS` trong `lib/world.js` (có test kiểm tra). Có thể nhập thêm tên công ty (không bắt buộc, tối đa 20 ký tự, trình duyệt nhớ lại), hiện cạnh vai trò dưới tên người chơi. Tên là bắt buộc. Khi không có Postgres, tên trùng online được kiểm tra theo chuỗi chính xác, có phân biệt hoa thường. Khi bật identity qua Postgres, tên được chuẩn hóa và kiểm tra không phân biệt hoa thường với người/bot online và tên đăng ký được giữ cả lúc offline; xem [Identity](IDENTITY.vi.md#tên-và-xử-lý-lỗi).
 
 ## Điều khiển
 
@@ -50,7 +50,7 @@ Nút Gọi IT vẫn thay ngay khi hết cooldown như cũ. Đặt `RESPAWN_MS` d
 
 ## Boss và nội gián
 
-VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. New Process đánh dấu vòng tròn cố định bán kính 350, báo trước 1,2 giây rồi gây 20 sát thương. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/200/180; tốc độ đuổi là 480/460/440, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
+VKL canh phòng server và chủ động đánh người bước vào. Ngoài đợt đi tuần toàn văn phòng, TML/DMM đi quanh map và chỉ trả đũa người đánh mình; trong đợt đi tuần đã báo trước, chúng chủ động săn mục tiêu ở gần. New Process đánh dấu vòng tròn cố định bán kính 350, báo trước 1,2 giây rồi gây 20 sát thương. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/200/180; tốc độ đuổi là 480/460/440, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
 
 - [VKL, rắn, đấu 1:1 và chiêu New Process](BOSS.vi.md)
 - [TML và DMM](MINIBOSSES.md) (tiếng Anh)

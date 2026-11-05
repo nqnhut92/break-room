@@ -13,15 +13,10 @@ Records 0001–0004 document decisions already present in the code and project n
 | [0003](0003-direct-rendering.md) | Accepted; safe-mode shadow detail amended by 0005 | Render directly without a post-processing composer |
 | [0004](0004-static-world.md) | Accepted | Share a static world and collision model with stable object IDs |
 | [0005](0005-safe-mode-shadows.md) | Accepted | Disable real-time shadow passes in safe mode |
-
 | [0006](0006-account-identity.md) | Accepted | Separate Google accounts, durable Postgres characters and Redis session/control ownership |
-
 | [0007](0007-dynamic-actor-collision.md) | Accepted | Share swept boss-body collision across client/server while players and bots remain nonblocking |
-
 | [0008](0008-daily-scores-and-chat.md) | Accepted | Persist daily room scores through a durable Redis queue into Postgres, and store 24-hour chat |
-
 | [0009](0009-office-patrol-and-rack-support.md) | Accepted | Share the NPC lease for office patrol and commit bounded rack support atomically |
-
 | [0010](0010-population-boss-health.md) | Accepted | Keep additive boss population HP and private timers in the shared store, with ordered health revisions |
 
 ## Adding or changing a decision

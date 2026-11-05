@@ -1,6 +1,6 @@
 # TML and DMM
 
-Each room has one of each mini-boss. They wander throughout reachable floor, including the main boss area, and never initiate combat. TML has a compact silhouette; DMM is broader. Both are smaller than VKL and use the existing rounded, code-built character rig.
+Each room has one of each mini-boss. They wander throughout reachable floor, including the main boss area, and initiate combat only during the announced [office patrol](BOSS.md#office-patrol). TML has a compact silhouette; DMM is broader. Both are smaller than VKL and use the existing rounded, code-built character rig.
 
 | Setting | TML | DMM |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ A hammer/electric hit does 10 damage; milk tea does 5 with twice the reach. Ordi
 
 Both mini-bosses chase faster than players (420) on clear floor. Dodge their fixed telegraphs and counter during recovery; windup and recovery durations are unchanged.
 
-Only people who damage a mini-boss enter its threat list. The other mini-boss stays neutral. Damage over the recent eight seconds determines target priority; proximity breaks ties. Telegraph circles stay fixed through the windup, so players can dodge. Strikes can only hurt living aggressors in the circle with an unobstructed line from the mini-boss. Bystanders cannot be harmed by dragging one over them. Dead/disconnected players leave the threat list. After eight seconds without taking damage, if all aggressors are at least 600 units away, the mini-boss forgets them and resumes wandering.
+Outside the office patrol event, only people who damage a mini-boss enter its threat list. The other mini-boss stays neutral. Damage over the recent eight seconds determines target priority; proximity breaks ties. Telegraph circles stay fixed through the windup, so players can dodge. Strikes can only hurt living aggressors in the circle with an unobstructed line from the mini-boss. Bystanders cannot be harmed by dragging one over them. Dead/disconnected players leave the threat list. After eight seconds without taking damage, if all aggressors are at least 600 units away, the mini-boss forgets them and resumes wandering.
 
 A kill pays the bounty proportionally to actual damage, capped at remaining HP; it credits the regular damage board. After exactly 30 seconds it becomes eligible to respawn with full HP and a fresh threat/damage ledger. The next simulation tick (normally within 200 ms) chooses another random floor position, at least 240 units from the death location/other living mini-boss and 180 from living players when possible. Positions are selected from a collision-tested navigation graph connected to the lobby. Movement shortcuts the route along body-width-tested clear segments, allowing diagonal pursuit/wandering without cutting wall or furniture corners; diagonal speed is normalized. A room without an active runner resumes overdue respawns when a runner returns.
 

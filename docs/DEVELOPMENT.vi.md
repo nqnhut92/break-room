@@ -58,7 +58,7 @@ Hai mức đồ họa vẽ thẳng ra màn hình, không dùng EffectComposer. L
 
 ## Kiểm tra renderer và hiệu năng mobile
 
-Kiểm tra WebGL tách khỏi bộ test server, dùng Playwright ở dev dependency (ghim phiên bản để hỗ trợ Node 18) và Chromium:
+Kiểm tra WebGL tách khỏi bộ test server, dùng Playwright ghim phiên bản trong dev dependency và Chromium. Dùng Node.js 20+ theo yêu cầu của dự án:
 
 ```bash
 npx playwright install chromium

@@ -8,7 +8,7 @@ The game has **two fixed servers**, **BR-1** and **BR-2**, with at most 20 playe
 
 Leaving through the exit door puts you back in the lobby on your next visit; a reload or a dropped connection returns you exactly where you stood.
 
-The join screen also asks for a company role (accountant, HR, IT, dev, sale, marketing, designer, intern, security, cleaner or plain employee; shown under the name, with a hat or headphones for some, and role-specific shout-outs when smashing) and the character's look (male or female skin). The role list lives in `public/roles.js` and must match `ROLE_IDS` in `lib/world.js` (a test checks it). An optional company name (up to 20 characters, remembered in the browser) is shown next to the role under the player's name. Names are required, and a name that is already used by someone online on the same server (exact match, case-sensitive) is refused.
+The join screen also asks for a company role (accountant, HR, IT, dev, sale, marketing, designer, intern, security, cleaner or plain employee; shown under the name, with a hat or headphones for some, and role-specific shout-outs when smashing) and the character's look (male or female skin). The role list lives in `public/roles.js` and must match `ROLE_IDS` in `lib/world.js` (a test checks it). An optional company name (up to 20 characters, remembered in the browser) is shown next to the role under the player's name. Names are required. Without Postgres, online duplicate names use an exact, case-sensitive check. With Postgres identity enabled, names are normalized and checked without case sensitivity against online actors and registered names reserved while offline; see [Identity](IDENTITY.md#names-and-failure-behavior).
 
 ## Controls
 
@@ -54,7 +54,7 @@ Call IT still replaces everything immediately when its existing cooldown permits
 
 ## Bosses and moles
 
-VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. New Process marks a fixed circle of radius 350, with a 1.2-second warning before dealing 20 damage. Patrol/wander speeds are 220/200/180 for VKL/TML/DMM; chase speeds are 480/460/440, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. Detailed rules and balance:
+VKL guards the server room and attacks intruders. Outside office patrols, TML and DMM roam the map and retaliate only against their aggressors; during the announced patrol they hunt nearby targets without provocation. New Process marks a fixed circle of radius 350, with a 1.2-second warning before dealing 20 damage. Patrol/wander speeds are 220/200/180 for VKL/TML/DMM; chase speeds are 480/460/440, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. Detailed rules and balance:
 
 - [VKL, snakes, captured duels and New Process](BOSS.md)
 - [TML and DMM](MINIBOSSES.md)

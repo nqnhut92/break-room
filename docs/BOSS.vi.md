@@ -45,7 +45,7 @@ Mô hình bắt đầu ở mức máu tương ứng số người, không tính 
 
 **Thang sát thương riêng, không phải "gấp 100 đến 1000 lần máu".** Ý đầu tiên là sếp có máu gấp 100 đến 1000 lần người chơi. Hiểu đúng nghĩa thì là 10.000 đến 100.000 máu, mà mỗi cú đập chỉ 1 sát thương và cả nhóm chỉ đập được khoảng bốn cú mỗi giây, nên sếp như vậy không bao giờ chết. Điều quan trọng là *thời gian hạ sếp*, không phải tỉ lệ. Cú đánh vào sếp có thang sát thương riêng (búa gây 10); máu tối đa hiện theo nhóm người như bảng trên.
 
-**Vì sao sếp không hồi máu (nữa).** Trước đây sếp hồi 5 mỗi giây, thêm 20 mỗi giây sau một lúc yên, nên một hay hai người không bao giờ thắng và cả nhóm phải bám sát. Chơi thật thì quá khó và mất vui: không ai đánh bớt rồi rút lui được. Giờ sát thương được giữ lại, đánh rồi chạy là chiến thuật thật. Trận vẫn khó vì sếp đấm, và máu sếp tăng lên 6.000 để vẫn là việc của cả nhóm. Code hồi máu (`bossHpAt`) vẫn còn và hai con số nằm trong `BOSS` (`baseRegenPerSec`, `regenPerSec`): đặt lớn hơn 0 là hồi máu trở lại, client dùng cùng công thức.
+**Vì sao sếp không hồi máu (nữa).** Trước đây sếp hồi 5 mỗi giây, thêm 20 mỗi giây sau một lúc yên, nên một hay hai người không bao giờ thắng và cả nhóm phải bám sát. Chơi thật thì quá khó và mất vui: không ai đánh bớt rồi rút lui được. Giờ sát thương được giữ lại, đánh rồi chạy là chiến thuật thật. Trận vẫn khó vì sếp đấm, và máu gốc là 6.000 trước khi tăng theo dân số, để vẫn là việc của cả nhóm. Code hồi máu (`bossHpAt`) vẫn còn và hai con số nằm trong `BOSS` (`baseRegenPerSec`, `regenPerSec`): đặt lớn hơn 0 là hồi máu trở lại, client dùng cùng công thức.
 
 ### Máu theo số người
 
@@ -69,7 +69,7 @@ Client chỉ nhận HP hiện tại/tối đa và phiên bản máu. Không gử
 
 **Vì sao cú búa cần đường thẳng không bị chắn.** Server trước đây chỉ kiểm tra khoảng cách. Sếp ở sau kính thì ai đứng ngoài tường cũng đánh được trong khi sếp không đụng được họ. Giờ mỗi cú cần `clearLine` giữa hai bên (tường và đồ đạc chắn được).
 
-**Vì sao bỏ vai "Sếp".** Giờ chỉ có đúng một sếp. Danh sách vai trò không còn "Sếp"; lựa chọn đã lưu cũ tự về nhân viên thường.
+**Vì sao không còn vai "Sếp" cho người chơi.** VKL là NPC riêng, không phải diện mạo người chơi được chọn. Vai "Sếp" đã bỏ khỏi danh sách; lựa chọn cũ được đưa về nhân viên quèn. TML và DMM là hai NPC mini boss riêng.
 
 **Diện mạo của sếp.** Sếp dùng cùng thân dựng bằng code như người chơi (`makePlayer` trong `scene3d.js`, `gender: 'boss'`): vest xanh navy, cà vạt đỏ, tóc bạc dựng và vương miện vàng, phóng to bằng `BOSS_SCALE`. Người chơi chỉ chọn `m` hoặc `f`; màn hình vào phòng và server chỉ nhận hai giá trị đó.
 
@@ -100,7 +100,7 @@ Từ client: `bhit` (một cú búa vào sếp; server kiểm tra tầm, đườ
 
 ## Thử và chỉnh
 
-Biến môi trường (đều không bắt buộc): `BOSS_DISABLED=1`, `BOSS_MAX_HP=300` (sếp gục sau 30 cú), `BOSS_RESPAWN_MS=5000`, `PLAYER_RESPAWN_MS=5000`.
+Biến môi trường (đều không bắt buộc): `BOSS_DISABLED=1`, `BOSS_MAX_HP=300` (máu gốc cho 1–4 người thật; mỗi nhóm tiếp theo cộng 50% máu gốc), `BOSS_RESPAWN_MS=5000`, `PLAYER_RESPAWN_MS=5000`.
 
 Test: `test/boss.js` (luật, cân bằng), `test/boss-net.js` (cả một trận qua WebSocket), `test/shared.js` (cùng hợp đồng store trên memory và Redis thật, cộng một trận giữa hai instance).
 
@@ -140,7 +140,7 @@ VKL còn sống chặn đường người chơi và tránh mục tiêu còn số
 
 Sáu tủ server giữ 8 HP đồ vật và thưởng 120 triệu khi vỡ. Mỗi hit hợp lệ phản 5 HP người chơi cho mỗi đơn vị damage thực sự gây lên tủ, không vượt HP còn lại; trà sữa phản 2,5 HP qua 16 hit nửa damage. Phá trọn một tủ tốn 40 HP và 40 mana bằng búa/điện, hoặc 40 HP và 80 mana bằng trà sữa. Đánh tủ đã vỡ không mất máu hay mana. Tủ tóe điện và có tia điện ngắn nối tới người đánh, kèm phản hồi trừ máu thông thường. Không thêm thao tác.
 
-Tủ vỡ rút 2% máu tối đa VKL (120/6.000), mỗi tủ vật lý chỉ một lần trong mỗi mạng sếp. Sáu tủ hỗ trợ tối đa 12% (720 HP). IT thay đồ, reset thủ công, reconnect hay đổi runner không khôi phục lượt hỗ trợ; sếp hồi sinh thì có. Damage dừng ở 1 HP sếp, không nạp ulti, không tính phần chia bounty sếp và không tích sẵn khi VKL đã chết. Tiền phá tủ vẫn nhận như cũ. Tủ vỡ, tiền, dấu đã hỗ trợ và damage sếp commit cùng một script Lua gameplay (hoặc thao tác RAM). Người đánh bị điện giật gục ở hit cuối vẫn nhận kết quả phá tủ đã commit. Các ngưỡng gọi rắn vẫn phản ứng với damage hỗ trợ.
+Phá một tủ trừ 2% max HP VKL trong store tại thời điểm đó, một lần mỗi tủ vật lý trong mỗi mạng boss. Với max HP gốc 6.000, mỗi tủ trừ 120 và cả sáu trừ 720; ở mức 9.000 thì mỗi tủ trừ 180. Tủ đã dùng không được tính lại khi dân số làm tăng max HP. Tổng sáu tủ tối đa bằng 12% mức max HP cao nhất của mạng boss. IT tự thay, reset thủ công, reconnect và đổi runner không làm mới lượt hỗ trợ; boss hồi sinh mới làm mới. Sát thương dừng ở 1 HP boss, không cộng nộ hay công chia bounty boss, không để dành khi boss đã chết. Tiền thưởng tủ vẫn giữ nguyên. Vỡ tủ, tiền, dấu đã dùng và sát thương boss chốt trong cùng script Lua (hoặc thao tác RAM). Bị điện giật chết vẫn giữ lần vỡ/thưởng/hỗ trợ đã chốt. Ngưỡng gọi rắn cũng phản ứng với sát thương hỗ trợ.
 
 ## Sếp đi tuần
 

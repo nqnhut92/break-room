@@ -21,6 +21,8 @@ Open http://localhost:3000. One local process needs no Redis; RAM state resets o
 
 Pick the same **BR-1** or **BR-2** server (20 players each), then share its link. Enter a name and choose a role and appearance. On phones, use the joystick and rotate to landscape.
 
+Optional Google login saves a separate character per room; guests remain available. With a database the board is a per-room daily ranking (resets 00:00 Vietnam time, no all-time board) and room chat keeps 24 hours; there is no long-term score history. [Identity setup](docs/IDENTITY.md) · [Scores](docs/SCORES.md).
+
 | Action | Controls |
 | --- | --- |
 | Move | WASD / arrows; joystick on touch screens |
@@ -49,11 +51,8 @@ npm run test:scores   # daily scoreboard + chat history, disposable Postgres/Red
 - [Development](docs/DEVELOPMENT.md) — code, tests, rendering.
 - [ADR](docs/adr/README.md) — architecture decisions and their rationale.
 - [Scores and chat history](docs/SCORES.md) — daily board, Postgres persistence, maintenance job.
-- [Scores and chat history](docs/SCORES.md) — daily board, Postgres persistence, maintenance job.
 - [Mobile](docs/MOBILE.md) — viewport, gestures and device verification.
 
 ## License and credits
 
 Code: [MIT](LICENSE). Floor textures: [ambientCG](https://ambientcg.com/), CC0 ([notice](public/assets/textures/License.txt)). Three.js: MIT ([license](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([license](public/vendor/lucide-LICENSE.txt)). Furniture and characters are built in code.
-
-Optional Google login saves a separate character per room; guests remain available. With a database the board is a per-room daily ranking (resets 00:00 Vietnam time, no all-time board) and room chat keeps 24 hours; there is no long-term score history. [Identity setup](docs/IDENTITY.md) · [Scores](docs/SCORES.md).

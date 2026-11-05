@@ -58,7 +58,7 @@ Both graphics modes render directly to the screen without EffectComposer. Ration
 
 ## Renderer checks and mobile performance
 
-WebGL checks run separately from the server suite, using the Playwright dev dependency (pinned for Node 18 support) and Chromium:
+WebGL checks run separately from the server suite, using the pinned Playwright dev dependency and Chromium. Use the project’s Node.js 20+ runtime:
 
 ```bash
 npx playwright install chromium
