@@ -951,7 +951,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (b.hp > 0) {
         updatePlayer(rig, b.pl, dt, false, S);
         updateElectricTarget(rig, rig.torsoM, rig.torsoM.geometry, b.pl.electricUntil);
-        animateMini(rig, b, dt);
+        // Walking, standing and the punch come from the same rig code as players and VKL (updatePlayer above). The
+        // mini-boss pose only takes over for the wind-up and the slam, which that code has no telegraph for.
+        if (b.wind || (b.pl.swing || 0) > 0 || (rig.miniWindPose || 0) > 0.01) animateMini(rig, b, dt);
       }
       rig.miniWind.visible = !!b.wind && b.hp > 0;
       if (b.wind) {
