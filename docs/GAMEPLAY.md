@@ -63,7 +63,7 @@ VKL guards the server room and attacks intruders. TML and DMM roam the map and r
 
 The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall and toilets in the north. Reception/breakout is in the middle, with the server room to its east and the lounge beside it. Two meeting rooms, the director's office and the pantry occupy the south wing. Rooms connect through corridors and designated doors; shared walls leave no walkable slivers.
 
-There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The mini map shows you in yellow, other players in white and broken objects in red.
+There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The mini map shows you in yellow, other players in white, broken objects in red, VKL as a large red dot and the living mini-bosses TML (orange) and DMM (purple) as smaller dots.
 
 [View the current layout](../artifacts/map-overview.png).
 

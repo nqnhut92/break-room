@@ -1621,6 +1621,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.fill();
       c.stroke();
     }
+    // mini-bosses (TML orange, DMM purple) while they are alive, like the boss's red dot but a little smaller
+    for (const b of S.minis.values()) {
+      if (!(b.hp > 0)) continue;
+      c.fillStyle = 'hsl(' + b.pl.hue + ', 85%, 58%)';
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.2 * mm.dpr;
+      c.beginPath();
+      c.arc(b.x * mm.k, b.y * mm.k, 3.8 * mm.dpr, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
     const me = S.players.get(S.me);
     if (me) {
       c.fillStyle = '#ffd34d';

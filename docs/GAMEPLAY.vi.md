@@ -59,7 +59,7 @@ VKL canh phòng server và chủ động đánh người bước vào. TML/DMM �
 
 Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn IT sáu chỗ, hội trường và WC. Sảnh/breakout ở giữa; phòng server ở phía đông sảnh, lounge nằm cạnh server. Dãy phía nam gồm hai phòng họp, phòng giám đốc và pantry. Các phòng nối bằng hành lang và cửa riêng; tường chung không chừa khe luồn.
 
-Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Bản đồ nhỏ hiển thị bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ.
+Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Bản đồ nhỏ hiển thị bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL là chấm đỏ lớn, còn TML (cam) và DMM (tím) còn sống là các chấm nhỏ hơn.
 
 [Xem map hiện tại](../artifacts/map-overview.png).
 
