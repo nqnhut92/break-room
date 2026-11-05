@@ -67,7 +67,7 @@ Kích thước ước lượng (ước tính, chưa đo): state của một phò
 ## Sức chứa và giới hạn
 
 - **Dung lượng.** State đồ vật bị chặn bởi số phòng và số đồ vật trong map (hiện 2 phòng × 359 món), cộng state người chơi và NPC. Chỉ lưu đồ đã bị đập hoặc vỡ. Khi thiếu bộ nhớ, chính sách eviction của Redis có thể xoá key có TTL và làm mất state; kiểm tra cấu hình thực tế của provider.
-- **Throughput và kết nối.** Mỗi instance dùng kết nối lệnh và subscriber nạp trễ. Theo dõi housekeeping, pub/sub và số lệnh khi đánh đồ; đo tải thực tế thay vì suy ra sức chứa từ dung lượng Redis.
+- **Throughput và kết nối.** Mỗi instance game dùng kết nối lệnh và subscriber nạp trễ; phần login dùng chung kết nối lệnh đó. Các route ngắn (`/api/profile`, `/api/auth/*`, `/api/rooms`, `/api/maintenance`) chỉ mở Redis khi cần và đóng trước khi kết thúc, nên instance serverless bị thu hồi không để lại kết nối rò so với giới hạn kết nối của gói. Theo dõi housekeeping, pub/sub và số lệnh khi đánh đồ; đo tải thực tế thay vì suy ra sức chứa từ dung lượng Redis.
 - **Độ trễ.** Đặt function và Redis cùng region. Tin vị trí ở cùng instance đi nội bộ; thao tác state dùng chung vẫn cần Redis. Dùng health check sâu từ bản deploy để đo `pingMs`.
 - **Vận hành.** Hạn mức, TLS, eviction và chính sách xoá database phụ thuộc gói đang dùng. Xem [Deploy](DEPLOYMENT.vi.md).
 

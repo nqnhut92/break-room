@@ -338,6 +338,22 @@ async function main() {
       await store.close();
     });
 
+    await step('redis: the login code shares the store connection, and its session commands ignore an active player fence', async () => {
+      const { createIdentity } = require('../lib/identity');
+      const id = createIdentity({ env: {}, store: rstore, profiles: {} });
+      const before = (await raw.client('LIST')).split('\n').filter(Boolean).length;
+      const token = { accountId: 'acct', sid: 'sid-share-0001', until: Date.now() + 60000 };
+      await id.issue(token.sid, token.until);
+      assert.equal(await id.valid(token, 'br-1'), true);
+      const ctx = { room: 'br-2', id: 987, conn: 'not-the-owner', sid: 'other', valid: () => true };   // a fence that would reject any write
+      assert.equal(await context.run(ctx, () => id.valid(token, 'br-1')), true);
+      await context.run(ctx, () => id.revoke(token.sid));
+      assert.equal(await id.valid(token, 'br-1'), false);
+      assert.equal((await raw.client('LIST')).split('\n').filter(Boolean).length, before, 'no extra Redis connection was opened');
+      await id.release();
+      assert.equal((await rstore.queueStat('shared-conn-room')).len, 0, 'the store connection survives the identity being released');
+    });
+
     await step('serverless routes leave no Redis connection behind (rooms list, auth/profile handler)', async () => {
       const count = async () => (await raw.client('LIST')).split('\n').filter(Boolean).length;
       const saved = { ...process.env };

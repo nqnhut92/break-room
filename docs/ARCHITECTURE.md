@@ -65,7 +65,7 @@ Rough size (estimate, not measured): the state of one room is tens of KB. Redis 
 ## Capacity and limits
 
 - **Storage.** Object state is bounded by the room and object counts (currently 2 rooms × 359 objects), plus player and NPC state. Only damaged or broken objects are stored. Under memory pressure Redis eviction may remove expiring keys and lose room state; check the actual provider configuration.
-- **Throughput and connections.** Each instance uses a command connection and a lazy subscriber. Monitor housekeeping, pub/sub and hit traffic; measure load instead of inferring capacity from Redis storage alone.
+- **Throughput and connections.** Each game instance uses a command connection and a lazy subscriber; the login code shares that command connection. The short-lived routes (`/api/profile`, `/api/auth/*`, `/api/rooms`, `/api/maintenance`) open Redis only when they need it and close it before finishing, so recycled serverless instances cannot leak connections against a plan's connection limit. Monitor housekeeping, pub/sub and hit traffic; measure load instead of inferring capacity from Redis storage alone.
 - **Latency.** Put the function and Redis in the same region. Positions stay local on one instance; shared-state operations still use Redis. Measure `pingMs` through the deployed deep health check.
 - **Operations.** Quotas, TLS, eviction and idle-deletion policies depend on the current provider plan. See [Deployment](DEPLOYMENT.md).
 
