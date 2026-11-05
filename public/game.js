@@ -1306,8 +1306,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     b.pl.hpLabel = Math.ceil(Math.max(0, bossHpNow())).toLocaleString('vi-VN') + ' / ' + b.cfg.maxHp.toLocaleString('vi-VN');
   }
 
-  // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
-  // while in a frame under the system toasts, and each message also shows as a bubble over the speaker for 3 seconds.
+  // Room chat: live lines and optional durable history share one native scrolling log.
+  // Mobile keeps a wider fixed-height log; long messages wrap and older lines use native scrolling.
   const CHAT_LINES = 60; // kept in the frame, scrolled to the newest (history pages raise it while they are loaded)
   const chatPending = new Map(); // client message id -> text, until the server confirms it was stored
   const chatSeen = new Map(); // message id -> its <li>: de-duplicates live lines, history pages and server retries
@@ -1677,15 +1677,20 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       const joystickTop = $('joystick').getBoundingClientRect().top;
       const mapTop = parseFloat(mm.cv.style.top) || 56;
       const aspect = S.world.w / S.world.h;
-      const mapWidth = Math.max(32, Math.min(112, Math.floor((joystickTop - mapTop - 48) * aspect)));
+      const mapWidth = Math.max(32, Math.min(112, Math.floor((joystickTop - mapTop - 60) * aspect)));
       if (mm.cv.style.getPropertyValue('--mobile-map-width') !== mapWidth + 'px') {
         mm.cv.style.setProperty('--mobile-map-width', mapWidth + 'px');
         if (mm.source) mmBuild(mm.source.world, mm.source.props, mm.source.zones);
       }
       const chatTop = mm.on ? mm.cv.getBoundingClientRect().bottom + 8 : Math.max(56, Math.round(bottom) + 8);
-      const available = joystickTop - chatTop - 8;
-      $('leftCol').style.setProperty('--mobile-chat-top', Math.round(chatTop) + 'px');
-      $('leftCol').style.setProperty('--mobile-chat-height', Math.max(24, Math.min(58, Math.floor(available))) + 'px');
+      const chatBottom = joystickTop - 8;
+      const availableHeight = Math.max(24, Math.min(112, Math.floor(chatBottom - chatTop)));
+      const lines = Math.max(1, Math.min(4, Math.floor((availableHeight - 16) / 22)));
+      const height = Math.min(availableHeight, lines * 22 + 16);
+      const wasAtEnd = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40;
+      $('leftCol').style.setProperty('--mobile-chat-top', Math.round(chatBottom - height) + 'px');
+      $('leftCol').style.setProperty('--mobile-chat-height', height + 'px');
+      if (wasAtEnd) chatLog.scrollTop = chatLog.scrollHeight;
     }
 
   }

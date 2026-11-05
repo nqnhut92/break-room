@@ -100,3 +100,6 @@ Saved characters render as a read-only summary; edit mode reveals the form. Acco
 
 
 `CHROMIUM_PATH=/path/to/chromium npm run test:minimap` covers hidden-HUD sizing, auto-rejoin, resizing and map/chat/joystick separation. `npm run test:mobile-safe-area` uses injected cutout/navigation insets and stale-height fault injection; real-WebGL safe-area previews are in `npm run test:office-ui`. See [Mobile](MOBILE.md#safe-areas-and-rotation-previews) for sources and physical-device checks.
+
+
+`npm run test:mobile-chat` (Chromium/`CHROMIUM_PATH`) verifies populated fixed-size mobile chat, long-message wrapping and unchanged tap behavior; `CHAT_REAL_RENDERER=1` captures the Pro Max-size layout with actual WebGL. See [mobile chat layout](MOBILE.md#mobile-chat-layout) for interaction and hardware limits.

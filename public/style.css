@@ -773,8 +773,10 @@ canvas {
   #sideBtns .btn { width: 36px; height: 36px; font-size: 18px; }
   #zoomBtns { flex-direction: row; gap: 4px; }
   #minimap { left: max(10px, var(--safe-left)); width: var(--mobile-map-width, 112px); height: 70px; }
-  #leftCol { left: max(10px, var(--safe-left)); top: var(--mobile-chat-top, 150px); bottom: auto; max-width: 220px; }
-  #chatLog { width: 220px; height: var(--mobile-chat-height, 58px); }
+  #leftCol { left: max(10px, var(--safe-left)); top: var(--mobile-chat-top, 150px); bottom: auto; width: min(320px, calc(var(--safe-width) - 24px)); max-width: none; }
+  #chatLog { width: 100%; height: var(--mobile-chat-height, 104px); padding: 8px 10px; }
+  #chatLog .chatline { flex-shrink: 0; font-size: 14px; line-height: 20px; }
+  #chatLog:empty { visibility: hidden; }
   #toasts { gap: 3px; }
   .toast { padding: 4px 8px; font-size: 11px; }
 }

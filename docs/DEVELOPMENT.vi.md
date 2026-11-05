@@ -100,3 +100,6 @@ Nhân vật đã lưu hiển thị dạng thông tin chỉ đọc; chế độ s
 
 
 `CHROMIUM_PATH=/path/to/chromium npm run test:minimap` kiểm tra kích thước khi HUD ẩn, auto-rejoin, resize và map/chat/joystick không đè nhau. `npm run test:mobile-safe-area` mô phỏng inset camera/thanh điều hướng và lỗi chiều cao cũ; preview safe area với WebGL thật nằm trong `npm run test:office-ui`. Xem [Mobile](MOBILE.md#safe-areas-and-rotation-previews) để tra nguồn và kiểm tra trên máy thật.
+
+
+`npm run test:mobile-chat` (Chromium/`CHROMIUM_PATH`) kiểm tra chat mobile cố định, tin dài xuống dòng và thao tác chạm không đổi kích thước; `CHAT_REAL_RENDERER=1` chụp bố cục ở cỡ Pro Max bằng WebGL thật. Xem [bố cục chat mobile](MOBILE.md#mobile-chat-layout) để tra thao tác và giới hạn kiểm tra máy thật.

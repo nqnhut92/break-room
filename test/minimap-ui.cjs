@@ -26,7 +26,7 @@ async function main() {
     await page.keyboard.press('m');
     await page.waitForFunction(() => {
       const c = document.getElementById('chatLog').getBoundingClientRect();
-      return document.getElementById('minimap').classList.contains('off') && c.top < 100;
+      return document.getElementById('minimap').classList.contains('off') && c.height >= 100 && c.bottom <= document.getElementById('joystick').getBoundingClientRect().top - 6;
     });
     await page.keyboard.press('m');
     await page.waitForFunction(() => document.getElementById('chatLog').getBoundingClientRect().top >= document.getElementById('minimap').getBoundingClientRect().bottom + 6);
