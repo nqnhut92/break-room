@@ -6,6 +6,8 @@
 
 Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối đa 20 người. Màn hình vào hiển thị "x online" của từng server, màu xanh lá (dưới 50% sức chứa), cam (từ 50%), đỏ (từ 80%), và tự chọn sẵn server đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một server; nút "Copy link server" tạo link `/?room=br-1` hoặc `/?room=br-2` để chọn sẵn. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
 
+Rời phòng bằng cửa thoát thì lần vào sau xuất hiện ở sảnh; tải lại trang hoặc mất kết nối thì quay lại đúng chỗ đang đứng.
+
 Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, sale, marketing, designer, thực tập sinh, bảo vệ, tạp vụ hoặc nhân viên quèn; hiện dưới tên, một số vai có mũ hoặc tai nghe, và có câu hô riêng khi đập) và diện mạo nhân vật (nam hoặc nữ). Danh sách vai trò nằm ở `public/roles.js` và phải khớp `ROLE_IDS` trong `lib/world.js` (có test kiểm tra). Có thể nhập thêm tên công ty (không bắt buộc, tối đa 20 ký tự, trình duyệt nhớ lại), hiện cạnh vai trò dưới tên người chơi. Tên là bắt buộc, và tên đã có người đang online dùng ở cùng server (trùng y hệt, phân biệt hoa thường) sẽ bị từ chối.
 
 ## Điều khiển

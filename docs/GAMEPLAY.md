@@ -6,6 +6,8 @@ English · [Tiếng Việt](GAMEPLAY.vi.md) · [Documentation](README.md)
 
 The game has **two fixed servers**, **BR-1** and **BR-2**, with at most 20 players each. The join screen shows "x online" per server, coloured green (under 50% full), orange (from 50%) and red (from 80%), and preselects the busiest server that still has room. To play with colleagues, pick the same server; the "Copy server link" button produces `/?room=br-1` or `/?room=br-2`. There are no private rooms: an unknown room name in an old link falls back to the first server. Rename or add servers in the `ROOMS` list in `lib/world.js` (`id` lowercase ASCII, `name` is the display name).
 
+Leaving through the exit door puts you back in the lobby on your next visit; a reload or a dropped connection returns you exactly where you stood.
+
 The join screen also asks for a company role (accountant, HR, IT, dev, sale, marketing, designer, intern, security, cleaner or plain employee; shown under the name, with a hat or headphones for some, and role-specific shout-outs when smashing) and the character's look (male or female skin). The role list lives in `public/roles.js` and must match `ROLE_IDS` in `lib/world.js` (a test checks it). An optional company name (up to 20 characters, remembered in the browser) is shown next to the role under the player's name. Names are required, and a name that is already used by someone online on the same server (exact match, case-sensitive) is refused.
 
 ## Controls

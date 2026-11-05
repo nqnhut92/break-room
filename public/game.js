@@ -1501,6 +1501,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.target = null;
     S.attackId = null;
     chatLog.hidden = true;
+    if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ t: 'leave' })); // deliberate exit: come back in the lobby
     for (const ws of [S.pendingWs, S.ws]) if (ws) ws.close(1000);
     S.pendingWs = null;
     $('conn').hidden = true;

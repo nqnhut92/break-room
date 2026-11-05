@@ -375,6 +375,27 @@ async function main() {
     });
 
     // ---- real WebSockets against the app
+    await step('websocket: leaving through the exit door returns to the lobby, a dropped connection keeps the position', async () => {
+      const { WORLD } = require('../lib/world');
+      const { walkTo } = require('./helpers');
+      const app = createApp({ store: createMemoryStore(), env: { MOLE_DISABLED: '1', BOSS_DISABLED: '1' } });
+      const port = await app.start(0);
+      const nearLobby = (c) => Math.abs(c.welcome.players.find((p) => p.id === c.welcome.you).x - WORLD.spawn.x) <= WORLD.spawn.rx + 1 && Math.abs(c.welcome.players.find((p) => p.id === c.welcome.you).y - WORLD.spawn.y) <= WORLD.spawn.ry + 1;
+      try {
+        const token = 'leave-token-0000000001';
+        const a = await client(port, 'Lia', 'br-1', token);
+        await walkTo(a, { x: WORLD.spawn.x, y: WORLD.spawn.y - 400 }, 20);
+        assert.ok(Math.abs(a.y - WORLD.spawn.y) > 200, 'walked away from the lobby');
+        a.ws.close(); await sleep(300);                                                              // connection lost: same place on return
+        const b = await client(port, 'Lia', 'br-1', token);
+        assert.equal(nearLobby(b), false, 'a plain reconnect keeps the position');
+        send(b, { t: 'leave' }); b.ws.close(1000); await sleep(300);                                // exit door
+        const c = await client(port, 'Lia', 'br-1', token);
+        assert.equal(nearLobby(c), true, 'after the exit door the player appears in the lobby');
+        c.ws.close();
+      } finally { await app.stop(); }
+    });
+
     await step('websocket: day board rows, chat acknowledged only after the insert, history on join, failures not shown as sent', async () => {
       const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1', MAINTENANCE_SECRET: 'maintenance-test-secret' } });
       const port = await app.start(0);
