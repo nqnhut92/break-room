@@ -378,7 +378,8 @@ async function main() {
     await step('websocket: leaving through the exit door returns to the lobby, a dropped connection keeps the position', async () => {
       const { WORLD } = require('../lib/world');
       const { walkTo } = require('./helpers');
-      const app = createApp({ store: createMemoryStore(), env: { MOLE_DISABLED: '1', BOSS_DISABLED: '1' } });
+      // with a database configured (as in production) messages go through the ordered action queue: this is the path that mattered
+      const app = createApp({ store: createMemoryStore(), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1' } });
       const port = await app.start(0);
       const nearLobby = (c) => Math.abs(c.welcome.players.find((p) => p.id === c.welcome.you).x - WORLD.spawn.x) <= WORLD.spawn.rx + 1 && Math.abs(c.welcome.players.find((p) => p.id === c.welcome.you).y - WORLD.spawn.y) <= WORLD.spawn.ry + 1;
       try {
