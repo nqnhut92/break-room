@@ -27,6 +27,8 @@ async function main() {
       const messages=text.map((text,i)=>({mid:crypto.randomUUID(),at:Date.now()-60000+i*1000,name:i%2?'tam Co':'Nick2',text}));
       chatTestSocket.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({t:'chatHist',dir:'latest',messages,more:false})}));
     });
+    // mmPlace() sizes the log on a 250 ms timer; measure the settled layout, not the CSS fallback.
+    await page.waitForFunction(()=>document.getElementById('leftCol').style.getPropertyValue('--mobile-chat-height'));
     const buttons=await page.locator('button').count();
     await page.waitForFunction(()=>document.getElementById('chatLog').clientHeight>=100);
     const initial=await page.locator('#chatLog').boundingBox();

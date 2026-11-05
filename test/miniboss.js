@@ -1,11 +1,11 @@
 'use strict';
 const assert = require('assert');
 const M = require('../lib/miniboss');
-const { WORLD, resolveCollisions } = require('../lib/world');
+const { WORLD, resolveCollisions, SERVER_ROOM, LAYOUT_SCALE: K, layoutPoint } = require('../lib/world');
 const h = require('./helpers');
 let passed = 0;
 async function check(name, fn) { await fn(); console.log('ok - ' + name); passed++; }
-const at = { x: 1920, y: 1950 };
+const at = layoutPoint(1920,1950);
 const player = (id, extra = {}) => ({ id, ...at, dead: false, ...extra });
 const state = () => ({ version: 1, list: [{ ...M.createMini('TML'), ...at }] });
 async function main() {
@@ -75,9 +75,9 @@ async function main() {
     }
   });
   await check('a wall blocks starting retaliation even when the target is close', () => {
-    const s = state(), b = s.list[0]; Object.assign(b, { x: 2910, y: 1500 });
+    const s = state(), b = s.list[0]; Object.assign(b, { x: SERVER_ROOM.x0+40, y: 1500*K });
     M.hitMini(b, 1, 10, 1000);
-    M.stepMini(s, [player(1, { x: 2830, y: 1500 })], 1000, 0.1);
+    M.stepMini(s, [player(1, { x: SERVER_ROOM.x0-40, y: 1500*K })], 1000, 0.1);
     assert.strictEqual(b.wind, null);
   });
   await check('both minis travel diagonally at their configured speed on clear floor and cannot cut wall corners', () => {
@@ -87,9 +87,9 @@ async function main() {
       const before={...b}; M.move(b,goal,.1,M.MINI[id].speed,1000);
       assert.ok(b.x>before.x && b.y>before.y,'both axes advance in the same tick');
       assert.ok(Math.abs(Math.hypot(b.x-before.x,b.y-before.y)-M.MINI[id].speed*.1)<.01,'normalized diagonal speed');
-      Object.assign(b,{x:2830,y:1500});
+      Object.assign(b,{x:SERVER_ROOM.x0-50,y:1500*K});
       for(let tick=0;tick<100;tick++) {
-        M.move(b,{x:3100,y:1580},.1,M.MINI[id].speed,2000+tick*100);
+        M.move(b,layoutPoint(3100,1580),.1,M.MINI[id].speed,2000+tick*100);
         const q=resolveCollisions(b.x,b.y,M.RADIUS);
         assert.ok(Math.hypot(q.x-b.x,q.y-b.y)<.1,'body stays off walls/furniture');
       }

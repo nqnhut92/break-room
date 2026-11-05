@@ -69,7 +69,7 @@ Verify the primary action after rotating; use `npm run test:orientation` and `np
 The office-patrol warning/countdown sits below the measured header, wraps within the landscape viewport and never captures taps. It adds no action button. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` checks 844×390 touch and desktop layouts with real WebGL, including visible rack electricity and player HP loss.
 
 
-Minimap sizing resolves its CSS width while the welcome HUD is still hidden, then rebuilds its backing canvas on layout-viewport changes. In touch landscape, chat starts below the visible map and fits above the joystick; hiding the map reclaims that space. `CHROMIUM_PATH=/path/to/chromium node test/minimap-ui.cjs` covers join/auto-rejoin, 740×320, 844×390, 956×440, resize and map toggling.
+Minimap sizing resolves its CSS width while the welcome HUD is still hidden, then rebuilds its backing canvas on layout-viewport changes. In touch landscape the radar's square bounding box (the circle is drawn inside it) is capped at 84px so the chat log keeps at least four lines (104px); chat starts below the visible map and fits above the joystick; hiding the map reclaims that space. `CHROMIUM_PATH=/path/to/chromium node test/minimap-ui.cjs` covers join/auto-rejoin, 740×320, 844×390, 956×440, resize and map toggling.
 
 
 ## Safe areas and rotation previews
@@ -89,6 +89,6 @@ On landscape touch screens, chat anchors immediately above the joystick with a w
 
 ## Local map and full-room overview
 
-The mini map follows the player and covers a nearby rectangle about 1.75 times the camera's ground-view extent, recalculated with zoom and layout-viewport aspect. Distant boss/mini-boss markers are clipped from this view. Tap the mini map to open the full-room overview; tap it again or use the 44px close target to close. No permanent extra HUD button is added. The existing map utility and desktop M still hide/show the mini map. Desktop players can hold Tab for the overview and release to close; click-to-open remains available, with Esc/× to close. Blur clears the held overview, and typing chat retains normal keyboard behavior.
+The mini map is a circular radar centered on the player, magnifying a fixed 600-unit radius. Its center stays clear while the outer area fades toward the rim. Camera zoom does not change its scale or shrink the full office into its center. Boss/mini-boss markers outside the circle are omitted. Tap the mini map to open the full-room overview; tap it again or use the 44px close target to close. No permanent extra HUD button is added. The existing map utility and desktop M still hide/show the mini map. Desktop players can hold Tab for the overview and release to close; click-to-open remains available, with Esc/× to close. Blur clears the held overview, and typing chat retains normal keyboard behavior.
 
 The overview does not pause simulation or clear held movement. Its backdrop/canvas do not capture joystick or attack input; only the close button takes pointer input. The overview canvas fits within the landscape screen and uses the existing safe content layout around controls. Desktop boss mottos appear immediately below names; coarse-pointer mobile labels omit them entirely. `npm run test:minimap` covers touch and desktop input/layout; also verify real phones for readability while running and turning.

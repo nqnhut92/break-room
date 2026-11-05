@@ -148,4 +148,4 @@ Concealed moles are valid patrol targets and flee instead of stabbing during the
 
 The office schedule/version and roaming pose live in the existing boss hash and use the existing boss lease. Transitions are broadcast; active/returning poses save once a second for runner handover. Joining/reconnecting receives the current event and its original deadline. Idle schedules do not write every tick, and empty rooms run no patrol loop or extra Redis connection. `lib/office-patrol.js` owns timing; tests can override `patrolOpts` without production environment switches.
 
-On desktop, VKL displays “Mọi người nghĩ dì dẫy?” directly under its name. Touch/mobile labels omit the motto.
+On desktop, VKL displays “Mọi người nghĩ dì dẫy?” on one line directly under its name. Touch/mobile labels omit the motto.

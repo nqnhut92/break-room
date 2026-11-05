@@ -29,4 +29,4 @@ Living TML/DMM bodies block player movement and avoid living characters while wa
 
 Exception: during the 30-second [office patrol](BOSS.md#office-patrol), living TML/DMM hunt nearby players and disguised moles without provocation, preferring separate targets. No dead mini-boss is revived for the event. Patrol targeting adds no lasting threat; pending patrol windups are cancelled when it ends.
 
-Desktop labels show TML’s “Tranh công, chối tội, đổ lỗi, thanh minh” and DMM’s “Thiên hạ đệ nhất thái giám” directly below their names. Touch/mobile labels omit these display-only mottos.
+Desktop labels show TML’s “Tranh công, chối tội, đổ lỗi, thanh minh” and DMM’s “Thiên hạ đệ nhất thái giám” on one line directly below their names. Touch/mobile labels omit these display-only mottos.

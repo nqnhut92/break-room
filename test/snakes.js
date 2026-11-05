@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('assert');
 const { SNAKE, stepSnakes, snakeWaveCount } = require('../lib/snakes');
-const { BOSS_HOME, inBossZone } = require('../lib/world');
+const { BOSS_HOME, inBossZone, layoutPoint } = require('../lib/world');
 const { createMemoryStore } = require('../lib/store-memory');
 (async () => {
   assert.strictEqual(snakeWaveCount(0, 70, () => 0), 1);
@@ -22,10 +22,11 @@ const { createMemoryStore } = require('../lib/store-memory');
     }
   }
   const snake = { id: 1, x: BOSS_HOME.x, y: BOSS_HOME.y, hp: 4 };
-  const target = { id: 1, x: 2600, y: 1800 };
+  const target = { id: 1, ...layoutPoint(2600, 1800) };
   for (let t = 0; t < 450; t++) stepSnakes([snake], 0.1, [target], t * 100);
   assert.ok(!inBossZone(snake.x, snake.y), 'snake exits the server room through its door');
   assert.ok(Math.hypot(snake.x - target.x, snake.y - target.y) < 60, 'snake reaches a player outside the boss room');
+  target.x += 30; // the snake now stands on the player; step aside so `close` is unambiguously nearer
   const close = { id: 2, x: snake.x, y: snake.y };
   const bites = stepSnakes([snake], 0.01, [target, close], 50000);
   assert.strictEqual(bites[0].target, 2);

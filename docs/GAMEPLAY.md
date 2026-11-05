@@ -64,9 +64,9 @@ VKL maximum HP grows by groups of four real online players: 6,000 for 1–4, the
 
 ## The office
 
-The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall and toilets in the north. Reception/breakout is in the middle, with the server room to its east and the lounge beside it. Two meeting rooms, the director's office and the pantry occupy the south wing. Rooms connect through wider designated doors and corridors; new workspace–IT–town-hall, lounge and meeting-room links create circulation loops. Pantry tables are spaced farther apart. Shared walls leave no unintended walkable slivers; the world dimensions and saved object IDs stay unchanged.
+The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall and toilets in the north. Reception/breakout is in the middle, with the server room to its east and the lounge beside it. Two meeting rooms, the director's office and the pantry occupy the south wing. Rooms retain their original walls, one designated doorway each and connecting corridors. No extra openings connect the workspace, IT, town hall or meeting rooms. The world dimensions, furniture positions and saved object IDs are unchanged.
 
-There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The mini map follows you and covers a nearby region about 1.75 times the ground-view extent, including zoom/aspect changes. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that region. The full-room overview shows the whole layout. Neither view pauses the game.
+There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The circular mini map keeps you at its center and magnifies the nearby floor within a fixed 600-unit radius. The center is clear and the outer area fades toward the rim; camera zoom does not change the radar scale. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that circle. The full-room overview shows the whole layout. Neither view pauses the game.
 
 [View the current layout](../artifacts/map-overview.png).
 

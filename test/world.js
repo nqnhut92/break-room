@@ -6,6 +6,7 @@
 const assert = require('assert');
 const W = require('../lib/world.js');
 
+const K = W.LAYOUT_SCALE;
 const G = 20;
 const nx = Math.ceil(W.WORLD.w / G);
 const ny = Math.ceil(W.WORLD.h / G);
@@ -30,6 +31,16 @@ step('rooms: unique url-safe ids, readable names, at least one', () => {
   }
 });
 
+step('rooms and corridors expand while furniture dimensions and closed partitions stay intact', () => {
+  assert.deepStrictEqual([W.WORLD.w,W.WORLD.h],[6480,4050]);
+  const it=W.FLOOR_ROOMS.find(r=>r.name==='IT WORKSPACE');
+  const server=W.FLOOR_ROOMS.find(r=>r.name==='SERVER / VKL');
+  assert.ok(server.x0-it.x1>=243,'service corridor widens from 180 to 243');
+  assert.deepStrictEqual([server.x1-server.x0,server.y1-server.y0],[1296,1215]);
+  assert.deepStrictEqual([W.TYPES.desk.w,W.TYPES.desk.h],[150,115],'furniture does not grow with the room');
+  assert.ok(W.FLOOR_ROOMS.every(r=>!r.passages),'no new holes through the partitions');
+});
+
 step('object ids are dense and every type is known', () => {
   W.OBJECTS.forEach((o, i) => {
     assert.strictEqual(o.id, i);
@@ -43,18 +54,18 @@ step('IT wing has four six-seat islands with facing rows and paired arm monitors
   const desks = W.OBJECTS.filter(o => o.itDesk);
   assert.strictEqual(desks.length, 24);
   for (const cy of [380, 1020]) for (const cx of [1700, 2360]) {
-    const cluster = desks.filter(d => Math.abs(d.x - cx) <= 160 && Math.abs(d.y - cy) === 58);
+    const cluster = desks.filter(d => Math.abs(d.x - cx*K) <= 160*K+.001 && Math.abs(Math.abs(d.y-cy*K)-58*K)<.001);
     assert.strictEqual(cluster.length, 6);
-    assert.strictEqual(cluster.filter(d => d.y < cy).length, 3);
-    assert.strictEqual(cluster.filter(d => d.y > cy).length, 3);
+    assert.strictEqual(cluster.filter(d => d.y < cy*K).length, 3);
+    assert.strictEqual(cluster.filter(d => d.y > cy*K).length, 3);
     for (const d of cluster) {
-      const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30 && Math.abs(o.y - d.y) <= 5);
+      const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30*K+.001 && Math.abs(o.y - d.y) <= 5*K+.001);
       assert.strictEqual(monitors.length, 2);
       assert.ok(monitors.every(o => (o.rot || 0) === (d.rot || 0)));
       const chair = W.OBJECTS[d.id + 3];
       assert.strictEqual(chair.type, 'chair');
-      assert.ok(d.y < cy ? chair.y < d.y : chair.y > d.y);
-      assert.strictEqual(d.rot || 0, d.y < cy ? Math.PI : 0);
+      assert.ok(d.y < cy*K ? chair.y < d.y : chair.y > d.y);
+      assert.strictEqual(d.rot || 0, d.y < cy*K ? Math.PI : 0);
     }
   }
 });
@@ -118,7 +129,7 @@ step('every breakable object can be reached from the spawn point', () => {
   assert.deepStrictEqual(unreachable.map((o) => o.type + '#' + o.id), []);
 });
 
-step('every room has continuous walls around intentional doorways and loop passages', () => {
+step('every room has continuous walls and a single intentional doorway', () => {
   const walls = W.PROPS.filter(p => p.k === 'wall');
   for (const r of W.FLOOR_ROOMS) {
     for (const [side, lo, hi, c, horizontal] of [
@@ -127,20 +138,19 @@ step('every room has continuous walls around intentional doorways and loop passa
     ]) {
       if (c === 0 || c === (horizontal ? W.WORLD.h : W.WORLD.w)) continue;
       for (let v = lo + 2; v < hi; v += 4) {
-        const inDoor = [r.door, ...(r.passages || [])].some(d => side === d.side && Math.abs(v-d.at)<d.w/2);
+        const inDoor = side === r.door.side && Math.abs(v - r.door.at) < r.door.w / 2;
         if (inDoor) continue;
         const x = horizontal ? v : c, y = horizontal ? c : v;
         assert.ok(walls.some(p => Math.abs(p.x-x) <= p.w/2 && Math.abs(p.y-y) <= p.h/2), r.name + ': sealed ' + side + ' at ' + v);
       }
     }
-    for (const d of [r.door, ...(r.passages || [])]) {
+    const d = r.door;
     const x = d.side === 'w' ? r.x0 : d.side === 'e' ? r.x1 : d.at;
     const y = d.side === 'n' ? r.y0 : d.side === 's' ? r.y1 : d.at;
     const dx = d.side === 'w' || d.side === 'e' ? 1 : 0, dy = 1-dx;
     const from = { x:x-dx*55, y:y-dy*55 }, to = { x:x+dx*55, y:y+dy*55 };
     const end = W.slideMove(from.x, from.y, to.x, to.y);
     assert.ok(Math.hypot(end.x-to.x,end.y-to.y) < 0.5, r.name + ': doorway is walkable');
-    }
   }
 });
 

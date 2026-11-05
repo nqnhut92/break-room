@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const { emptyPatrol, nextPatrol, patrolActive } = require('../lib/office-patrol');
 const { BOSS, createBossState, stepBoss } = require('../lib/boss');
-const { BOSS_HOME, inBossZone, resolveCollisions, OBJECTS, WORLD } = require('../lib/world');
+const { BOSS_HOME, inBossZone, resolveCollisions, OBJECTS, WORLD, layoutPoint } = require('../lib/world');
 const { createMini, stepMini } = require('../lib/miniboss');
 const { makeMole, stepMole } = require('../lib/moles');
 const { createMemoryStore } = require('../lib/store-memory');
@@ -32,8 +32,10 @@ async function main() {
   await check('VKL exits the server through the doorway, returns without teleporting and cannot cast New Process', () => {
     const b = createBossState();
     let outside = false;
+    // During the event VKL no longer wanders on its own: it hunts a player anywhere, so lure it through the door.
+    const prey = [{ id: 1, ...layoutPoint(2200, 1700) }];
     for (let i = 0; i < 300; i++) {
-      const events = stepBoss(b, .1, [], () => .5, { office: true });
+      const events = stepBoss(b, .1, prey, () => .5, { office: true });
       assert.ok(events.every(e => e.skill !== 'newProcess'));
       const p = resolveCollisions(b.x, b.y, BOSS.radius);
       assert.ok(Math.hypot(p.x - b.x, p.y - b.y) < .1);

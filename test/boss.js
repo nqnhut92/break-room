@@ -6,6 +6,7 @@
 const assert = require('assert');
 const W = require('../lib/world.js');
 const B = require('../lib/boss.js');
+const K = W.LAYOUT_SCALE;
 const { MANA, manaAt, HIT_COOLDOWN_MS } = require('../lib/realtime.js');
 
 let passed = 0;
@@ -59,18 +60,18 @@ step('boss layout: home, patrol loop and the room are open floor, inside the ser
     assert.ok(free(x, y, B.BOSS.radius + 4), 'free for the boss at ' + x + ',' + y);
   }
   // the door gap is wide enough for the boss to stand in the doorway
-  assert.ok(free(W.SERVER_ROOM.x0, 1700, B.BOSS.radius));
+  assert.ok(free(W.SERVER_ROOM.x0, 1700*K, B.BOSS.radius));
   // the glass walls outside the door gap are not in the zone, the racks' room is
-  assert.ok(!W.inBossZone(W.SERVER_ROOM.x0 - 200, 1700));
-  assert.ok(!W.inBossZone(W.SERVER_ROOM.x0 - 60, 1400));
-  assert.ok(W.inBossZone(3300, 1700));
+  assert.ok(!W.inBossZone(W.SERVER_ROOM.x0 - 200, 1700*K));
+  assert.ok(!W.inBossZone(W.SERVER_ROOM.x0 - 60, 1400*K));
+  assert.ok(W.inBossZone(3300*K, 1700*K));
 });
 
 step('line of sight: furniture and glass walls stop a hammer swing, open floor does not', () => {
-  assert.ok(W.clearLine(3200, 1700, 3300, 1700));
-  assert.ok(!W.clearLine(2700, 1400, 3000, 1400), 'through the west wall');
-  assert.ok(!W.clearLine(3080, 1380, 3080, 1500), 'through a rack');
-  assert.ok(W.clearLine(2820, 1700, 2940, 1700), 'through the door gap');
+  assert.ok(W.clearLine(3200*K, 1700*K, 3300*K, 1700*K));
+  assert.ok(!W.clearLine(2700*K, 1400*K, 3000*K, 1400*K), 'through the west wall');
+  assert.ok(!W.clearLine(3080*K, 1380*K, 3080*K, 1500*K), 'through a rack');
+  assert.ok(W.clearLine(2820*K, 1700*K, 2940*K, 1700*K), 'through the door gap');
 });
 
 step('patrol: for two minutes the boss stays in its room, off the furniture, and visits every waypoint', () => {
@@ -110,9 +111,9 @@ step('chase: a player anywhere in the room is reached and punched within seconds
 
 step('punch: the red circle appears first, the strike lands after the windup, and the boss then recovers', () => {
   const b = B.createBossState();
-  b.x = 3300;
-  b.y = 1700;
-  const target = [{ id: 1, x: 3300, y: 1760 }]; // right next to it
+  b.x = 3300*K;
+  b.y = 1700*K;
+  const target = [{ id: 1, x: 3300*K, y: 1760*K }]; // right next to it
   let ev = [];
   let t = 0;
   const log = [];

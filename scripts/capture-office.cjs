@@ -20,8 +20,9 @@ async function main() {
     await page.route('**/scene3d.js', r => {
       const source = fs.readFileSync(path.join(__dirname,'../public/scene3d.js'),'utf8');
       return r.fulfill({contentType:'application/javascript',body:source
-        .replace('const ZOOM_MAX = 2300;', 'const ZOOM_MAX = 6000;')
-        .replace('const ZOOM_START = coarse ? 900 : 1300;', 'const ZOOM_START = 5300;')});
+        .replace('new THREE.PerspectiveCamera(42, 1, 20, 7000)', `new THREE.PerspectiveCamera(42, 1, 20, ${Math.round(7000 * W.LAYOUT_SCALE)})`)
+        .replace('const ZOOM_MAX = 2300;', `const ZOOM_MAX = ${Math.round(6000 * W.LAYOUT_SCALE)};`)
+        .replace('const ZOOM_START = coarse ? 900 : 1300;', `const ZOOM_START = ${Math.round(5300 * W.LAYOUT_SCALE)};`)});
     });
     const data = JSON.stringify({world:W.WORLD,props:W.PROPS,zones:W.ZONES,objects:W.OBJECTS,types:W.TYPES,rooms:W.FLOOR_ROOMS});
     await page.route('**/office-overview', r => r.fulfill({contentType:'text/html',body:`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#0d1017}canvas{display:block;width:100vw;height:100vh}#labels{display:none}</style><canvas id="view"></canvas><div id="labels"></div><script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script><script type="module">

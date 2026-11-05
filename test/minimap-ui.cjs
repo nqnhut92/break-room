@@ -27,9 +27,9 @@ async function main() {
       await page.waitForFunction(({width,height}) => GameViewport.width===width && GameViewport.height===height, {width,height});
       await page.waitForFunction(() => {
         const m = document.getElementById('minimap').getBoundingClientRect(), c = document.getElementById('chatLog').getBoundingClientRect(), j = document.getElementById('joystick').getBoundingClientRect();
-        return Math.abs(m.width / m.height - 1.6) < .03 && c.top >= m.bottom + 6 && c.bottom <= j.top - 6;
+        return Math.abs(m.width / m.height - 1) < .03 && c.top >= m.bottom + 6 && c.bottom <= j.top - 6;
       });
-      console.log(`ok - ${width}x${height}: map keeps its aspect ratio; chat clears map and joystick after join/resize`);
+      console.log(`ok - ${width}x${height}: radar stays circular; chat clears map and joystick after join/resize`);
     }
     await page.keyboard.press('m');
     await page.waitForFunction(() => {
@@ -50,7 +50,7 @@ async function main() {
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
     await page.waitForFunction(() => {
       const m = document.getElementById('minimap').getBoundingClientRect(), c = document.getElementById('chatLog').getBoundingClientRect();
-      return Math.abs(m.width / m.height - 1.6) < .03 && c.top > m.bottom;
+      return Math.abs(m.width / m.height - 1) < .03 && c.top > m.bottom;
     });
     await page.close();
     page = await browser.newPage({viewport:{width:1280,height:800}});
@@ -80,6 +80,17 @@ async function main() {
       finally {proto.arc=original; S.boss=old; mmFull(false);}
     });
     assert.ok(!markers.includes('minimap') && markers.includes('fullMapCanvas'),'distant boss only appears on full map');
+    const radar=await page.evaluate(()=>{
+      const {mm,mmDraw,S}=mapProbe;
+      mmDraw(); const cv=mm.cv, c=cv.getContext('2d'), r=cv.width/2;
+      const alpha=(x,y)=>c.getImageData(Math.round(x),Math.round(y),1,1).data[3];
+      const me=S.players.get(S.me), original=me.x;
+      const center=alpha(r,r), middle=alpha(r*.5,r), edge=alpha(r*.05,r), corner=alpha(0,0);
+      me.x+=200;mmDraw();const followed=alpha(r,r);me.x=original;
+      return {center,middle,edge,corner,followed};
+    });
+    assert.ok(radar.center>240 && radar.middle>230 && radar.edge<100 && radar.corner===0 && radar.followed>240,JSON.stringify(radar));
+    console.log('ok - radar keeps player centered, transparent corners and a clear center fading toward the circular edge');
     const health=await page.evaluate(()=>{
       const {S,bossHit,bossBack}=mapProbe, old=S.boss;
       S.boss={cfg:{maxHp:6000},hp:300,hpRev:1,pl:{}};

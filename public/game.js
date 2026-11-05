@@ -1611,7 +1611,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     // The HUD is hidden during welcome: clientWidth is zero even on a phone.
     const cw = parseFloat(getComputedStyle(mm.cv).width) || 200;
     mm.source = { world, props, zones };
-    const ch = Math.round((cw * world.h) / world.w);
+    const ch = Math.round(cw);
     mm.cv.style.height = ch + 'px';
     mm.cv.width = Math.round(cw * dpr);
     mm.cv.height = Math.round(ch * dpr);
@@ -1650,15 +1650,20 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const me = S.players.get(S.me), world = mm.source.world;
     if (!me) return;
     const c = canvas.getContext('2d'), aspect = canvas.width / canvas.height;
-    const view = scene?.groundView?.() || { w: 1200, h: 750 };
-    const width = full ? world.w : Math.max(500, view.w * 1.75, view.h * 1.75 * aspect);
+    // A steady local scale prevents camera zoom from shrinking the whole office into the radar.
+    const range = 600;
+    const width = full ? world.w : range * 2;
     const height = full ? world.h : width / aspect;
     const x0 = full ? 0 : me.x - width / 2, y0 = full ? 0 : me.y - height / 2;
     const k = Math.min(canvas.width / width, canvas.height / height);
     const ox = (canvas.width - width*k)/2, oy = (canvas.height - height*k)/2;
     const x = value => ox + (value-x0)*k, y = value => oy + (value-y0)*k;
-    const inside = p => full || (p.x >= x0 && p.x <= x0+width && p.y >= y0 && p.y <= y0+height);
+    const inside = p => full || Math.hypot(p.x-me.x,p.y-me.y) <= range;
     c.clearRect(0, 0, canvas.width, canvas.height);
+    c.save();
+    if (!full) {
+      c.beginPath(); c.arc(canvas.width/2,canvas.height/2,canvas.width/2,0,Math.PI*2); c.clip();
+    }
     c.fillStyle = '#101622'; c.fillRect(0, 0, canvas.width, canvas.height);
     c.drawImage(mm.base, x(0), y(0), world.w*k, world.h*k);
     for (const o of S.objects) {
@@ -1704,6 +1709,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.fill();
       c.stroke();
     }
+    if (!full) {
+      const radius = canvas.width/2;
+      const fade = c.createRadialGradient(radius,radius,0,radius,radius,radius);
+      fade.addColorStop(0,'rgba(0,0,0,1)');
+      fade.addColorStop(.55,'rgba(0,0,0,1)');
+      fade.addColorStop(.85,'rgba(0,0,0,.55)');
+      fade.addColorStop(1,'rgba(0,0,0,.08)');
+      c.globalCompositeOperation = 'destination-in';
+      c.fillStyle = fade; c.fillRect(0,0,canvas.width,canvas.height);
+    }
+    c.restore();
   }
   // On narrow screens the top bar wraps onto two rows and the damage board sits under it: keep the map below all of it.
   function mmPlace() {
@@ -1718,8 +1734,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (coarseUi && viewport.width > viewport.height && S.joined) {
       const joystickTop = $('joystick').getBoundingClientRect().top;
       const mapTop = parseFloat(mm.cv.style.top) || 56;
-      const aspect = S.world.w / S.world.h;
-      const mapWidth = Math.max(32, Math.min(112, Math.floor((joystickTop - mapTop - 60) * aspect)));
+      const mapWidth = Math.max(32, Math.min(84, Math.floor(joystickTop - mapTop - 60)));
       if (mm.cv.style.getPropertyValue('--mobile-map-width') !== mapWidth + 'px') {
         mm.cv.style.setProperty('--mobile-map-width', mapWidth + 'px');
         if (mm.source) mmBuild(mm.source.world, mm.source.props, mm.source.zones);

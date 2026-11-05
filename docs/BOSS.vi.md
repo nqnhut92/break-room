@@ -152,4 +152,4 @@ Bot giả người cũng là mục tiêu đi tuần và bỏ chạy thay vì đ�
 
 Lịch/version và vị trí đi tuần nằm trong hash boss hiện có, dùng lease boss hiện có. Chỉ broadcast chuyển trạng thái; lúc đi tuần/đi về lưu vị trí mỗi giây để chuyển runner. Join/reconnect nhận sự kiện hiện tại cùng deadline gốc. Lịch rảnh không ghi mỗi tick; phòng trống không chạy vòng lặp đi tuần hay mở thêm connection Redis. `lib/office-patrol.js` giữ thời gian; test có thể override `patrolOpts`, không thêm biến môi trường production.
 
-Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” ngay dưới tên. Nhãn trên cảm ứng/mobile không có đề từ.
+Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” trên một dòng ngay dưới tên. Nhãn trên cảm ứng/mobile không có đề từ.

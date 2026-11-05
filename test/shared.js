@@ -918,7 +918,7 @@ async function twoInstances(url) {
 
   await step('redis: one boss per room across two instances: a punch hurts players on both, both can hit it, one bounty', async () => {
     const r = room + '-boss';
-    world.WORLD.spawn = { x: 3300, y: 1640, rx: 0, ry: 0 };
+    world.WORLD.spawn = { ...world.layoutPoint(3300,1640), rx: 0, ry: 0 };
     const A = await h.client(p1, 'An', r);
     const B = await h.client(p2, 'Binh', r);
     const winds = [];

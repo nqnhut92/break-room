@@ -113,6 +113,7 @@ async function main() {
       }
       frame();
       check([...document.querySelectorAll('.boss-motto')].every(el=>el.previousElementSibling.classList.contains('nm') && el.getBoundingClientRect().top>=el.previousElementSibling.getBoundingClientRect().bottom), 'desktop mottos sit directly below names without covering them');
+      check([...document.querySelectorAll('.boss-motto')].every(el=>getComputedStyle(el).whiteSpace==='nowrap' && el.getBoundingClientRect().height<16), 'desktop boss mottos stay on a single line');
       return {checks,metrics};
     });
     assert.deepStrictEqual(errors, [], 'no browser page errors');

@@ -60,9 +60,9 @@ Max HP VKL tăng theo nhóm bốn người thật online: 6.000 cho 1–4 ngư�
 
 ## Văn phòng
 
-Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn IT sáu chỗ, hội trường và WC. Sảnh/breakout ở giữa; phòng server ở phía đông sảnh, lounge nằm cạnh server. Dãy phía nam gồm hai phòng họp, phòng giám đốc và pantry. Cửa được nới rộng; thêm lối nối khu làm việc–IT–hội trường, lounge và hai phòng họp để chạy vòng. Các bàn pantry giãn xa hơn. Tường chung không có khe luồn ngoài ý muốn; kích thước map và ID đồ vật đã lưu giữ nguyên.
+Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn IT sáu chỗ, hội trường và WC. Sảnh/breakout ở giữa; phòng server ở phía đông sảnh, lounge nằm cạnh server. Dãy phía nam gồm hai phòng họp, phòng giám đốc và pantry. Các phòng giữ tường, một cửa ra vào riêng và hành lang theo bố cục gốc. Không có lỗ mở thêm nối khu làm việc, IT, hội trường hay hai phòng họp. Kích thước map, vị trí nội thất và ID đồ vật đã lưu giữ nguyên.
 
-Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map bám theo bạn, hiện vùng lân cận khoảng 1,75 lần vùng mặt sàn trong khung nhìn, cập nhật khi zoom/đổi tỉ lệ màn hình. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
+Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map hình tròn giữ bạn ở tâm, phóng gần vùng sàn trong bán kính cố định 600 đơn vị. Giữa bản đồ rõ, vùng ngoài mờ dần về mép; zoom camera không đổi tỉ lệ radar. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
 
 [Xem map hiện tại](../artifacts/map-overview.png).
 

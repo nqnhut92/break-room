@@ -23,8 +23,8 @@ async function step(name, fn) {
   console.log('ok - ' + name);
 }
 
-const INSIDE = { x: 3300, y: 1640 }; // in the server room, near where the boss starts
-const LOBBY = { x: 1900, y: 1950 };
+const INSIDE = world.layoutPoint(3300,1640); // in the server room, near where the boss starts
+const LOBBY = world.layoutPoint(1900,1950);
 
 async function main() {
   const app = server.createApp({ bossMaxHp: 60, bossRespawnMs: 1500, playerRespawnMs: 1500, maxConnPerIp: 100 });
@@ -86,7 +86,7 @@ async function main() {
     const deaths = await take(a, (m) => m.t === 'deaths', 1500);
     assert.deepStrictEqual(deaths.list.filter((e) => e.id === a.id).map((e) => [e.n, e.rank]), [[1, 1]], 'the knock-out is counted in today\'s ranking');
     // knocked out: walking and swinging do nothing
-    send(a, { t: 'move', x: 2500, y: 1700, d: 1 });
+    send(a, { t: 'move', ...world.layoutPoint(2500,1700), d: 1 });
     send(a, { t: 'bhit' });
     await none(a, (m) => m.t === 'ps' && m.l.some((e) => e[0] === a.id), 400);
     // refreshing the page does not bring them back: the knock-out lives in the store
@@ -135,7 +135,7 @@ async function main() {
   });
 
   await step('a hammer swing does not pass through a glass wall', async () => {
-    const a = await join('Outside', 'bn-wall', undefined, { x: 2830, y: 1500 }); // outside the west wall, abreast of the boss
+    const a = await join('Outside', 'bn-wall', undefined, world.layoutPoint(2830,1500)); // outside the west wall, abreast of the boss
     await sleep(800);
     for (let i = 0; i < 6; i++) {
       send(a, { t: 'bhit' });
