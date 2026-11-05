@@ -978,8 +978,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.miniX = b.x; rig.miniY = b.y;
     const speed = dt > 0 && distance < 100 ? distance / dt : 0;
     const ease = 1 - Math.exp(-10 * dt);
-    rig.miniMove = (rig.miniMove || 0) + (Math.min(1, speed / 180) - (rig.miniMove || 0)) * ease;
-    rig.miniWalk = (rig.miniWalk || 0) + (distance < 100 ? distance : 0) / (compact ? 30 : 37);
+    // A stroll is a full walk cycle at a natural cadence (6.5 to 11 rad/s, the range players use), not a faint wobble that
+    // slows down with the speed: legs and arms must visibly move whenever the body does.
+    rig.miniMove = (rig.miniMove || 0) + (Math.min(1, speed / 60) - (rig.miniMove || 0)) * ease;
+    const cadence = Math.min(11, Math.max(6.5, speed / (compact ? 30 : 37)));
+    rig.miniWalk = (rig.miniWalk || 0) + (speed > 6 ? cadence * dt : 0);
     const mv = rig.miniMove, phase = rig.miniWalk;
     const step = Math.sin(phase), breath = Math.sin(rig.t * 2.1);
     const guard = b.mode === 'chase' || b.mode === 'windup' || b.mode === 'recover';
@@ -1006,10 +1009,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     rig.torsoM.rotation.y = roll * 0.1 + wind * 0.18 - impact * 0.22;
     rig.headM.rotation.set(-0.03 + breath * 0.015 - wind * 0.06, -roll * 0.08 - wind * 0.1, roll * 0.025);
     // Bent elbows, balanced free hand, and a full-body punch / heavy double slam.
-    rig.armR.rotation.set(-0.2 + breath * 0.025 - ready * 0.35 + roll * 0.24 - wind * 1.65 - impact * 1.0,
+    rig.armR.rotation.set(-0.2 + breath * 0.025 - ready * 0.35 + roll * 0.55 * (1 - ready * 0.5) - wind * 1.65 - impact * 1.0,
       -wind * 0.22, -0.16 - wind * 0.2);
     rig.foreR.rotation.x = -0.35 - ready * 0.65 - wind * 0.5 + impact * 0.9;
-    rig.armL.rotation.set(-0.18 - breath * 0.025 - ready * 0.4 - roll * 0.24 - wind * (compact ? 0.25 : 1.55) - impact * (compact ? 0.25 : 1.0),
+    rig.armL.rotation.set(-0.18 - breath * 0.025 - ready * 0.4 - roll * 0.55 * (1 - ready * 0.5) - wind * (compact ? 0.25 : 1.55) - impact * (compact ? 0.25 : 1.0),
       wind * 0.12, 0.16 + wind * 0.18);
     rig.foreL.rotation.x = -0.3 - ready * 0.7 - wind * 0.4 + impact * (compact ? 0.1 : 0.85);
   }
