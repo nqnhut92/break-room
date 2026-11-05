@@ -97,3 +97,6 @@ Nhân vật đã lưu hiển thị dạng thông tin chỉ đọc; chế độ s
 
 
 `test/office-patrol.js` nằm trong `npm test`/`npm run test:redis`: kiểm tra giới hạn hỗ trợ tủ/reset/hồi sinh/bounty, điện phân số, đường boss đi/về, chọn mục tiêu mini, bot ngụy trang, fence version/lease, trừ máu qua WebSocket thật và sự kiện/reconnect/chuyển runner giữa instance Redis. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` kiểm tra tia điện WebGL thật và banner không tương tác dưới header trên desktop/mobile.
+
+
+`CHROMIUM_PATH=/path/to/chromium npm run test:minimap` kiểm tra kích thước khi HUD ẩn, auto-rejoin, resize và map/chat/joystick không đè nhau. `npm run test:mobile-safe-area` mô phỏng inset camera/thanh điều hướng và lỗi chiều cao cũ; preview safe area với WebGL thật nằm trong `npm run test:office-ui`. Xem [Mobile](MOBILE.md#safe-areas-and-rotation-previews) để tra nguồn và kiểm tra trên máy thật.

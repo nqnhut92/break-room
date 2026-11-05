@@ -743,11 +743,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         if (scene) {
           scene.fx.sparks(o.x, objTop(o), o.y, 14);
           scene.fx.electric(o.x, o.y, p ? p.x : o.x + 25, p ? p.y : o.y + 20, 90);
-          scene.fx.floatText(o.x, objTop(o) + 35, o.y, '⚡ GIẬT ĐIỆN', '#b8efff', 20);
-        }
-        if (m.by === S.me && !S.serverShockHint) {
-          S.serverShockHint = true;
-          toast('⚡ Đánh server bị phản điện. Phá tủ để rút máu VKL!');
         }
         if (m.bossDamage > 0) floatText(o, 65, 'VKL −' + m.bossDamage + ' HP', '#ffd24a', 20);
         break;
@@ -1587,7 +1582,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // the static part: floor zones and walls/furniture, drawn once per welcome into an offscreen canvas
   function mmBuild(world, props, zones) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const cw = mm.cv.clientWidth || 200;
+    // The HUD is hidden during welcome: clientWidth is zero even on a phone.
+    const cw = parseFloat(getComputedStyle(mm.cv).width) || 200;
+    mm.source = { world, props, zones };
     const ch = Math.round((cw * world.h) / world.w);
     mm.cv.style.height = ch + 'px';
     mm.cv.width = Math.round(cw * dpr);
@@ -1676,6 +1673,21 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const board = $('board');
     const bottom = board ? viewport.rect(board).bottom : 0;
     mm.cv.style.top = Math.max(56, Math.round(bottom) + 8) + 'px';
+    if (coarseUi && viewport.width > viewport.height && S.joined) {
+      const joystickTop = $('joystick').getBoundingClientRect().top;
+      const mapTop = parseFloat(mm.cv.style.top) || 56;
+      const aspect = S.world.w / S.world.h;
+      const mapWidth = Math.max(32, Math.min(112, Math.floor((joystickTop - mapTop - 48) * aspect)));
+      if (mm.cv.style.getPropertyValue('--mobile-map-width') !== mapWidth + 'px') {
+        mm.cv.style.setProperty('--mobile-map-width', mapWidth + 'px');
+        if (mm.source) mmBuild(mm.source.world, mm.source.props, mm.source.zones);
+      }
+      const chatTop = mm.on ? mm.cv.getBoundingClientRect().bottom + 8 : Math.max(56, Math.round(bottom) + 8);
+      const available = joystickTop - chatTop - 8;
+      $('leftCol').style.setProperty('--mobile-chat-top', Math.round(chatTop) + 'px');
+      $('leftCol').style.setProperty('--mobile-chat-height', Math.max(24, Math.min(58, Math.floor(available))) + 'px');
+    }
+
   }
   // the side buttons sit in the top-right corner, right under the damage board
   function sidePlace() {
@@ -2609,6 +2621,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // --------------------------------------------------------------- render ----
   function resize() {
     if (scene) scene.resize(viewport.width, viewport.height);
+    if (mm.source) { mmBuild(mm.source.world, mm.source.props, mm.source.zones); mmPlace(); }
   }
   window.addEventListener('gameviewportchange', resize);
   resize();

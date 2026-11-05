@@ -9,6 +9,8 @@
     "test": "node test/viewport.js && node test/world.js && node test/object-respawn.js && node test/actor-collision.js && node test/boss.js && node test/snakes.js && node test/miniboss.js && node test/duel.js && node test/duel-realtime.js && node test/smoke.js && node test/boss-net.js && node test/moles.js && node test/office-patrol.js && node test/shared.js",
     "check:store": "node scripts/check-store.js",
     "test:redis": "bash scripts/test-with-redis.sh",
+    "test:minimap": "node test/minimap-ui.cjs",
+    "test:mobile-safe-area": "node test/mobile-safe-area.cjs",
     "test:office-ui": "node test/office-ui.cjs",
     "test:renderer": "node test/renderer.cjs",
     "test:orientation": "node test/orientation.cjs",

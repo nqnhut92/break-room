@@ -108,3 +108,6 @@ Khi cấu hình hồ sơ lâu dài có giữ tên, heartbeat phải gia hạn tr
 
 
 Hash boss còn giữ lịch đi tuần có version và vị trí lưu mỗi giây; cập nhật phải có lease boss hiện tại cùng version mong đợi. Dấu tủ đã hỗ trợ (`rack:<object id>`) nằm trong cùng hash tới lúc boss hồi sinh; script đánh đồ commit nguyên tử tủ vỡ, tiền thưởng và damage sếp có giới hạn. Xem [sếp đi tuần](BOSS.vi.md#sếp-đi-tuần).
+
+
+Canvas và HUD fixed dùng chung mặt phẳng layout động `#app`, được `viewport.js` theo dõi; `innerHeight` của layout đặt chiều cao tối thiểu khi xoay còn để lại giá trị root/đơn vị động cũ. Safe-area inset do trình duyệt cung cấp bảo vệ nội dung mà không thu nhỏ nền game. Số đo visual viewport vẫn chỉ dùng cho bàn phím. Xem [layout mobile và giới hạn kiểm tra](MOBILE.md#safe-areas-and-rotation-previews).

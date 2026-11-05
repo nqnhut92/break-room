@@ -13,7 +13,14 @@ async function main() {
   let browser;
   try {
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-    for (const touch of [false, true]) {
+    const variants = [
+      { tag: 'desktop', touch: false }, { tag: 'mobile', touch: true },
+      { tag: 'iphone-left', touch: true, safe: { left: 59, right: 59, bottom: 21 }, cutout: 'left' },
+      { tag: 'iphone-right', touch: true, safe: { left: 59, right: 59, bottom: 21 }, cutout: 'right' },
+      { tag: 'android', touch: true, safe: { left: 32, right: 0, bottom: 24 }, cutout: 'circle' },
+    ];
+    for (const variant of variants) {
+      const { touch } = variant;
       const page = await browser.newPage({ viewport: touch ? { width: 844, height: 390 } : { width: 1280, height: 800 }, isMobile: touch, hasTouch: touch });
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
@@ -28,9 +35,19 @@ async function main() {
         await route.fulfill({ contentType: 'application/javascript', body: source.replace('function fxElectric(x, z, tx, tz, y = 65) {', 'function fxElectric(x, z, tx, tz, y = 65) { window.officeTestArcs = (window.officeTestArcs || 0) + 1;') });
       });
       await page.goto(`http://127.0.0.1:${port}/?room=br-1`);
-      await page.fill('#nameInput', touch ? 'Mobile' : 'Desktop');
+      if (variant.safe) await page.evaluate(safe => { for (const [key,value] of Object.entries(safe)) document.documentElement.style.setProperty('--safe-'+key, value+'px'); }, variant.safe);
+      await page.fill('#nameInput', variant.tag);
       await page.click('#joinBtn');
       await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
+      if (variant.tag === 'iphone-left') {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => !document.getElementById('rotateOverlay').hidden);
+        await page.setViewportSize({ width: 844, height: 390 });
+        await page.waitForFunction(() => document.getElementById('rotateOverlay').hidden);
+        await page.evaluate(() => { document.documentElement.style.height='300px'; window.dispatchEvent(new Event('orientationchange')); });
+        await page.waitForFunction(() => GameViewport.height===390 && document.getElementById('c').height>=390);
+      }
+
       await page.evaluate(() => window.officeTestSocket.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ t: 'officePatrol', state: { version: 10, phase: 'warning', until: Date.now() + 5000 } }) })));
       await page.waitForFunction(() => !document.getElementById('officeNotice').hidden);
       const boxes = await page.evaluate(() => {
@@ -48,9 +65,15 @@ async function main() {
       assert.equal(await page.evaluate(() => window.officeTestShock.dmg), 2.5);
       await page.waitForFunction(() => window.officeTestHp);
       assert.equal(await page.evaluate(() => window.officeTestHp.hp), 97.5);
-      await page.screenshot({ path: `work/office-${touch ? 'mobile' : 'desktop'}.png` });
+      if (variant.cutout) await page.evaluate(kind => {
+        // Hardware-shaped overlays are test-only visual aids, not product UI or measured device dimensions.
+        const mask=document.createElement('div');
+        Object.assign(mask.style,{position:'fixed',top:'50%',transform:'translateY(-50%)',background:'#000',zIndex:1000,pointerEvents:'none',borderRadius:'99px',width:kind==='circle'?'20px':'24px',height:kind==='circle'?'20px':'112px'});
+        mask.style[kind==='right'?'right':'left']='8px'; document.body.append(mask);
+      },variant.cutout);
+      await page.screenshot({ path: `work/office-${variant.tag}.png` });
       assert.deepEqual(errors, []);
-      console.log(`ok - ${touch ? 'mobile' : 'desktop'}: visible banner below header, no added controls, real electric arcs and HP loss`);
+      console.log(`ok - ${variant.tag}: visible banner below header, no added controls, real electric arcs and HP loss`);
       await page.close();
     }
   } finally { Object.assign(WORLD.spawn, old); await browser?.close(); await app.stop(); }

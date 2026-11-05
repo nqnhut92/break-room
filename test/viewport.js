@@ -64,4 +64,20 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../public/viewport.js'),
 assert.equal(rotateOverlay.hidden, false);
 assert.equal(freshWindow.GameViewport.portrait, true);
 console.log('ok - first portrait load shows the prompt before game.js initializes');
-console.log('All 8 viewport checks passed');
+
+// A dynamic app box can settle after Safari reports an older root layout height.
+const appSurface = Object.assign(surface(), { getBoundingClientRect: () => ({ width: 844, height: 430 }) });
+const observed = [];
+const delayedWindow = Object.assign(surface(), { innerWidth: 844, innerHeight: 390, matchMedia: () => ({ matches: true }),
+  ResizeObserver: class { constructor(fn) { this.callback = fn; observed.push(this); } observe() {} } });
+const delayedDoc = Object.assign(surface(), { documentElement: root, activeElement: null,
+  getElementById: id => id === 'app' ? appSurface : id === 'rotateOverlay' ? rotateOverlay : null });
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/viewport.js'), 'utf8'), {
+  window: delayedWindow, document: delayedDoc, Event: class { constructor(type) { this.type = type; } }, setTimeout: fn => fn(),
+});
+assert.deepEqual([delayedWindow.GameViewport.width, delayedWindow.GameViewport.height], [844,430]);
+appSurface.getBoundingClientRect = () => ({ width: 844, height: 390 });
+observed[0].callback();
+assert.equal(delayedWindow.GameViewport.height, 390);
+console.log('ok - dynamic app layout, not a stale root height, controls canvas and HUD; delayed layout is observed');
+console.log('All 9 viewport checks passed');

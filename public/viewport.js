@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const root = document.documentElement;
+  const app = document.getElementById('app');
   let width = 0, height = 0;
   function mobilePortrait() {
     return !!window.matchMedia?.('(pointer: coarse)').matches && height > width;
@@ -18,8 +19,14 @@
     root.style.setProperty('--keyboard-bottom', inset + 'px');
   }
   function sync() {
-    const w = root.clientWidth || window.innerWidth;
-    const h = root.clientHeight || window.innerHeight;
+    // Measure the same CSS layout surface that contains WebGL and the HUD.
+    // Safari can update the dynamic app box after the root's resize notification.
+    // innerHeight is a layout-viewport measurement. It also covers stale dvh/root
+    // values on native rotation; visualViewport measurements never size the game.
+    root.style.setProperty('--layout-min-height', (window.innerHeight || root.clientHeight) + 'px');
+    const bounds = app?.getBoundingClientRect();
+    const w = Math.round(bounds?.width || root.clientWidth || window.innerWidth);
+    const h = Math.round(bounds?.height || root.clientHeight || window.innerHeight);
     if (w !== width || h !== height) {
       width = w; height = h;
       root.style.setProperty('--game-vw', width / 100 + 'px');
@@ -35,9 +42,20 @@
     get width() { return width; }, get height() { return height; },
     get portrait() { return mobilePortrait(); }, syncOrientation,
   };
-  window.addEventListener('resize', sync);
-  window.addEventListener('pageshow', sync);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+  function resync() {
+    sync();
+    // Native rotation/fullscreen can settle over more than one layout pass.
+    window.requestAnimationFrame?.(() => { sync(); window.requestAnimationFrame?.(sync); });
+    setTimeout(sync, 200);
+  }
+  window.addEventListener('resize', resync);
+  window.addEventListener('orientationchange', resync);
+  window.screen?.orientation?.addEventListener('change', resync);
+  window.addEventListener('pageshow', resync);
+  document.addEventListener('fullscreenchange', resync);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resync(); });
+  if (app && window.ResizeObserver) new window.ResizeObserver(sync).observe(app);
+
   // Keyboard/zoom changes can update the chat inset, but never the canvas or HUD scale.
   window.visualViewport?.addEventListener('resize', keyboardInset);
   window.visualViewport?.addEventListener('scroll', keyboardInset);

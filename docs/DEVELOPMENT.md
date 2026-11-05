@@ -97,3 +97,6 @@ Saved characters render as a read-only summary; edit mode reveals the form. Acco
 
 
 `test/office-patrol.js` is part of `npm test`/`npm run test:redis`: it checks rack support caps/reset/respawn/bounty, fractional electricity, global boss navigation/return, mini targeting, concealed-mole behavior, version/lease fences, real WebSocket HP loss and Redis multi-instance event/reconnect/runner handover. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` checks real WebGL electric arcs and the noninteractive banner below the header on desktop and mobile.
+
+
+`CHROMIUM_PATH=/path/to/chromium npm run test:minimap` covers hidden-HUD sizing, auto-rejoin, resizing and map/chat/joystick separation. `npm run test:mobile-safe-area` uses injected cutout/navigation insets and stale-height fault injection; real-WebGL safe-area previews are in `npm run test:office-ui`. See [Mobile](MOBILE.md#safe-areas-and-rotation-previews) for sources and physical-device checks.

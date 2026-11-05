@@ -106,3 +106,6 @@ With persistent profile reservations configured, presence renewal must arrive be
 
 
 The boss hash also holds the versioned office-patrol schedule and one-second roaming pose. Updates require the current boss lease and expected version. Rack support markers (`rack:<object id>`) live in the same hash until boss respawn; the object-hit script atomically commits the break, normal reward and bounded boss damage. See [office patrol](BOSS.md#office-patrol).
+
+
+Canvas and fixed HUD share the dynamic `#app` layout surface, observed by `viewport.js`; layout `innerHeight` supplies a floor when rotation leaves older root/dynamic-unit values. Browser safe-area insets protect content without shrinking the world background. Visual viewport measurements remain limited to keyboard placement. See [mobile layout and verification limits](MOBILE.md#safe-areas-and-rotation-previews).

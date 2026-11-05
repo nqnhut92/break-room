@@ -6,7 +6,7 @@ The header shows room, online count, sound and rage. Health stays above the loca
 
 ## Viewport and gestures
 
-`public/viewport.js` uses the layout viewport (`documentElement.clientWidth/clientHeight`) for canvas dimensions and HUD sizing. Do not derive game dimensions from `visualViewport.width/height`: page zoom shrinks those measurements, which can cause the HUD to reflow while the 3D view compensates for the new aspect ratio. Visual viewport events update only the keyboard inset for chat, without reallocating the renderer or resetting controls.
+`public/viewport.js` measures the shared CSS layout surface `#app` for canvas dimensions and HUD sizing. The app uses `100dvh` with a minimum from layout `window.innerHeight`, plus the existing percentage fallback, so a stale root/dynamic-height value after rotation cannot leave the app shorter than the layout viewport. Layout containment gives the canvas and fixed HUD the same containing block. ResizeObserver, native orientation/fullscreen events and brief deferred rechecks handle late layout changes. Do not derive game dimensions from `visualViewport.width/height`: page zoom shrinks those measurements. Visual viewport events update only the keyboard inset for chat, without reallocating the renderer or resetting controls.
 
 The game canvas, joystick and attack button use `touch-action: none`, cancel native `touchstart`, and cancel double-click default handling. The game handles two-finger camera zoom itself. Dialogs retain vertical scrolling. In help, only `#helpContent` owns scrolling: an unscrollable nested list with `overscroll-behavior: contain` would otherwise swallow swipes before they reach the outer scroller. Mobile text sizing is fixed at 100% so rotation does not trigger automatic text enlargement.
 
@@ -67,3 +67,15 @@ Verify the primary action after rotating; use `npm run test:orientation` and `np
 
 
 The office-patrol warning/countdown sits below the measured header, wraps within the landscape viewport and never captures taps. It adds no action button. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` checks 844×390 touch and desktop layouts with real WebGL, including visible rack electricity and player HP loss.
+
+
+Minimap sizing resolves its CSS width while the welcome HUD is still hidden, then rebuilds its backing canvas on layout-viewport changes. In touch landscape, chat starts below the visible map and fits above the joystick; hiding the map reclaims that space. `CHROMIUM_PATH=/path/to/chromium node test/minimap-ui.cjs` covers join/auto-rejoin, 740×320, 844×390, 956×440, resize and map toggling.
+
+
+## Safe areas and rotation previews
+
+The world background fills the app surface. Important content uses the browser-provided `safe-area-inset-*` values plus normal margins: header, map/chat, joystick, attack/skill/chat/emoji controls, notices, keyboard chat and dialog contents. The centered groups shift to the center of the usable width when left/right insets differ. No iPhone model detection or fixed notch width is used in production; Android cutouts and gesture/side-navigation bars use the same CSS variables. On short landscape surfaces, the map shrinks to leave chat above the joystick. Server shocks now use pooled electric arcs/sparks and normal HP-loss numbers, without a floating “GIẬT ĐIỆN” label or introductory toast.
+
+This follows [WebKit's edge-to-edge and safe-area guidance](https://webkit.org/blog/7929/designing-websites-for-iphone-x/) and [Chrome Android's edge-to-edge guidance](https://developer.chrome.com/docs/css-ui/edge-to-edge). Background coverage and safe content placement are separate concerns; do not pad the whole WebGL surface into a smaller rectangle or disable pinch accessibility globally.
+
+Run `npm run test:mobile-safe-area` with Chromium/`CHROMIUM_PATH` for injected insets representing left/right cutouts, bottom gestures, side navigation, no cutout and a short landscape display. It also fault-injects stale root/app heights and checks native rotation/viewport growth. `npm run test:office-ui` uses real WebGL for desktop, plain mobile and simulated iPhone-left/iPhone-right/Android previews; hardware-shaped masks are test-only visual aids. These checks establish layout behavior under supplied insets, not the exact Dynamic Island dimensions or a reproduction on physical Safari/Android hardware. Repeat rotation both ways, browser toolbar changes, keyboard open/close and Home Screen launch on devices before claiming the reported iPhone gap fully resolved.
