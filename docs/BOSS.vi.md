@@ -104,7 +104,7 @@ Test: `test/boss.js` (luật, cân bằng), `test/boss-net.js` (cả một trậ
 
 ## New Process (Quy trình mới)
 
-Sau mỗi 12 giây giao tranh, boss đánh dấu vị trí một người chơi bằng vòng tím bán kính 220. Sau 1,2 giây, giấy quy trình rơi xuống, gây 20 sát thương cho người còn trong vòng và trong khu boss. Vị trí đánh dấu không di chuyển; chạy khỏi vòng để né.
+Sau mỗi 12 giây giao tranh, boss đánh dấu vị trí một người chơi bằng vòng tím bán kính 350. Sau 1,2 giây, giấy quy trình rơi xuống, gây 20 sát thương cho người còn trong vòng và trong khu boss. Vị trí đánh dấu không di chuyển; chạy khỏi vòng để né.
 
 Người chơi đánh nhau chỉ tạo hiệu ứng, không mất máu hoặc mana.
 

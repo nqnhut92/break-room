@@ -7,7 +7,7 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. Th
 ## How it plays
 
 - The boss walks a loop inside the server room. When a player is **inside the room** (or standing in the doorway apron) it runs at the nearest one, raises its fist (0.7 s, a **red circle** on the floor shows where it will land) and punches. Anyone inside the circle when the fist lands takes 30 damage. Running out of the circle in time dodges it.
-- **New Process (Quy trình mới):** every 12 seconds of combat, the boss marks a player's position with a purple circle (radius 220). After 1.2 seconds, paperwork falls and deals 20 damage to players still inside the circle and the boss zone. The marked position stays fixed, so moving away dodges it.
+- **New Process (Quy trình mới):** every 12 seconds of combat, the boss marks a player's position with a purple circle (radius 350). After 1.2 seconds, paperwork falls and deals 20 damage to players still inside the circle and the boss zone. The marked position stays fixed, so moving away dodges it.
 - Player-to-player attacks only show hit feedback and never remove health or mana.
 - Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **15 seconds**, can still chat, and then come back at the **lobby**, never where they fell.
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.

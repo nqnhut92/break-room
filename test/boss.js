@@ -141,7 +141,7 @@ step('New Process warns before impact, keeps the marked position, and has a cool
   const wind = B.stepBoss(b, 0.05, [target]).find(e => e.skill === 'newProcess');
   assert.ok(wind);
   assert.strictEqual(wind.ms, 1200);
-  assert.strictEqual(wind.r, 220);
+  assert.strictEqual(wind.r, 350);
   assert.strictEqual(b.mode, 'windup');
   assert.ok(!B.stepBoss(b, 0.5, []).some(e => e.type === 'strike'));
   const strike = B.stepBoss(b, 0.71, [{ ...target, x: target.x + 400 }]).find(e => e.type === 'strike');
