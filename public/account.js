@@ -12,7 +12,7 @@ export function accountUI({ room, read, fill }) {
   const editor = document.getElementById('characterEditor');
   const summary = document.getElementById('characterSummary');
   let state = null, character = null, loadedRoom = null, busy = false, editing = false, profileError = false, loadVersion = 0;
-  const guestNote = 'Chơi khách không bảo đảm giữ nhân vật. Đăng nhập Google để lưu nhân vật và dùng trên thiết bị khác.';
+  const guestNote = 'Chơi khách không bảo đảm giữ nhân vật hay điểm. Đăng nhập Google để lưu nhân vật, dùng trên thiết bị khác và nhận điểm hôm nay của tab này.';
   async function api(path, options = {}) {
     const r = await fetch(path, { cache: 'no-store', ...options });
     const body = await r.json();

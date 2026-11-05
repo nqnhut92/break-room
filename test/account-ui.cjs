@@ -136,7 +136,7 @@ async function main() {
     assert.equal(await page.locator('#joinBtn').textContent(),'Tạo nhân vật & vào phòng');assert.equal(saves,2);
     await page.locator('#nameInput').fill('Room Two');await page.locator('#joinBtn').click();await page.waitForFunction(()=>window.entered===3);
     assert.equal(characters.get('br-1').name,'UI Renamed');assert.equal(characters.get('br-2').name,'Room Two');
-    assert.match(await page.locator('#scoreNote').textContent(),/Điểm chưa được lưu lâu dài/);
+    assert.match(await page.locator('#scoreNote').textContent(),/BXH tính theo ngày.*khách cũng có tên trên bảng.*đăng nhập Google/);
     console.log('ok - one primary action creates/enters; returning character restores; edit/cancel and room switching preserve independent profiles');
     await page.close();
     const mobile=await browser.newPage({viewport:{width:740,height:320},hasTouch:true,isMobile:true});await setup(mobile);

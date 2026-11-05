@@ -7,6 +7,7 @@
 
 const http = require('http');
 const { createIdentity } = require('../lib/identity');
+const { createPersistence } = require('../lib/persistence');
 const { createRealtime } = require('../lib/realtime');
 const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv, bossOptsFromEnv } = require('../lib/config');
 
@@ -20,9 +21,15 @@ const server = http.createServer((req, res) => {
   res.end('Endpoint này chỉ nhận kết nối WebSocket.');
 });
 
+const identity = createIdentity({ store });
+const persistence = store ? createPersistence({ profiles: identity.profiles, store }) : null;
+if (persistence) identity.hooks.rename = persistence.rename;
+
 createRealtime({
   store,
-  identity: createIdentity({ store }),
+  identity,
+  scoreboard: persistence?.scoreboard,
+  chat: persistence?.chat,
   respawnMs: respawnMsFromEnv(),
   trustProxy: true, // Vercel sets the client address headers itself
   renewAfterMs: renewAfterMsFromEnv(),

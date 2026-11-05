@@ -32,7 +32,7 @@ async function main() {
     try { await Promise.all([profiles.ready(), profiles.ready(), peer.ready()]); }
     finally { await peer.close(); }
     const ledger = await profiles.pool.query('SELECT version FROM schema_migrations');
-    assert.deepEqual(ledger.rows, [{ version: '001-identity.sql' }]);
+    assert.deepEqual(ledger.rows.map(r => r.version).sort(), ['001-identity.sql', '002-daily-scores-chat.sql', '003-daily-deaths.sql']);
   });
   await step('failed migration rolls back both DDL and ledger; a corrected migration retries safely', async () => {
     const dir=fs.mkdtempSync(path.join(os.tmpdir(),'br-migration-'));
@@ -145,7 +145,7 @@ async function main() {
       const restarted = createProfiles(db);
       try { await restarted.ready(); } finally { await restarted.close(); }
       assert.deepEqual((await profiles.pool.query('SELECT * FROM characters ORDER BY id')).rows, before);
-      assert.equal((await profiles.pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count, '1');
+      assert.equal((await profiles.pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count, '3');
     });
     await step('characters in BR1 and BR2 have independent stable IDs',async()=>{
       const own=[];

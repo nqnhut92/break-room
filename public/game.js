@@ -459,6 +459,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.milkTeaRangeMultiplier = m.milkTeaRangeMultiplier || 2;
         S.manaCfg = m.mana;
         S.maxPlayers = m.maxPlayers || 20;
+        S.chatHistory = !!m.chatHistory;
+        S.roomLabel = m.roomLabel || '';
         S.hpCfg = m.player || { max: 100, regenDelayMs: 4000, regenPerSec: 5 };
         S.mana = { v: m.mana.v, t: performance.now() - m.mana.ago };
         S.players = new Map();
@@ -485,9 +487,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         $('overlay').classList.add('gone');
         $('hud').hidden = false;
         if (chatLog.hidden) {
-          chatLog.textContent = ''; // a fresh join starts with an empty frame; a reconnect keeps what was said
+          chatLog.textContent = ''; // a fresh join starts with an empty frame (history fills it); a reconnect keeps what was said
+          chatSeen.clear();
+          S.chatLastSeen = null;
+          S.chatMore = undefined;
           chatLog.hidden = false;
-        }
+        } else S.chatLastSeen = chatNewest();
         chatWake();
         $('conn').hidden = true;
         $('roomName').textContent = m.roomLabel || S.room;
@@ -552,6 +557,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         break;
       case 'deaths':
         S.deaths = m.list;
+        S.deathsMine = m.mine;
         if (!rankEl.hidden) renderRanking();
         break;
       case 'rage':
@@ -800,6 +806,24 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'board':
         renderBoard(m);
         break;
+      case 'rank':
+        S.myRank = { rank: m.rank, score: m.score, breaks: m.breaks };
+        S.boardCount = m.count || S.boardCount;
+        if (!rankEl.hidden) renderRanking();
+        break;
+      case 'chatAck':
+        chatPending.delete(m.cid);
+        break;
+      case 'chatFail':
+        chatPending.delete(m.cid);
+        toast(m.m || 'Chưa gửi được tin nhắn.');
+        break;
+      case 'chatHist':
+        chatHistory(m);
+        break;
+      case 'info':
+        toast(m.m);
+        break;
       case 'err':
         if (m.code === 'name' || !S.joined) autoJoin.clear(); // a refused join (name taken, room full...) shows the form with the reason
         if (m.code === 'name') {
@@ -836,21 +860,28 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const load = m.online / (S.maxPlayers || 20);
     $('onlinePill').className = 'pill online ' + (load >= 0.8 ? 'hot' : load >= 0.5 ? 'warm' : 'cool');
     S.board = m.board;
+    S.boardCount = m.count || m.board.length;
+    if (m.selfs && m.selfs[0]) S.myRank = { rank: m.selfs[0].rank, score: m.selfs[0].tenths / 10, breaks: m.selfs[0].breaks };
+    if (m.room) $('boardTitle').textContent = 'BXH hôm nay · ' + (S.roomLabel || m.room.toUpperCase());
+    // our own row is outside the rows everyone receives: ask for our rank (the server throttles this)
+    if (S.joined && S.me && !m.board.some((e) => e.id === S.me)) {
+      if (!S.rankAskAt || Date.now() - S.rankAskAt > 2000) { S.rankAskAt = Date.now(); send({ t: 'rank' }); }
+    } else S.myRank = null;
     const list = $('boardList');
     list.textContent = '';
     for (const e of m.board.slice(0, BOARD_TOP)) {
       const li = document.createElement('li');
-      li.textContent = e.name + ' ';
+      li.textContent = (e.rank ? e.rank + '. ' : '') + e.name + ' ';
       const span = document.createElement('span');
       span.textContent = fmtShort(e.score);
       li.appendChild(span);
       list.appendChild(li);
     }
-    $('boardMore').hidden = !coarseUi && m.board.length <= BOARD_TOP;
+    $('boardMore').hidden = false; // the dialog also holds the knock-out tab, so it is always reachable
     if (!rankEl.hidden) renderRanking();
   }
 
-  // Full ranking dialog: everyone online, best score first, then joining order.
+  // Full ranking dialog: today's top rows (online or not), our own row if outside them. The deaths tab ranks today's knock-outs the same way.
   function renderRanking() {
     const list = $('rankList');
     list.textContent = '';
@@ -859,22 +890,25 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     $('rankTabDeaths').setAttribute('aria-selected', String(byDeaths));
     let rows = S.board || [];
     if (byDeaths) {
-      const n = new Map((S.deaths || []).map((d) => [d.id, d.n]));
-      rows = rows.map((e) => ({ ...e, deaths: n.get(e.id) || 0 })).filter((e) => e.deaths > 0).sort((a, b) => b.deaths - a.deaths || a.id - b.id);
-      if (!rows.length) {
+      // today's "bị sa thải" ranking from the server: top rows including players who are offline now
+      rows = (S.deaths || []).map((e) => ({ ...e, deaths: e.n }));
+      if (S.deathsMine && !rows.some((e) => e.id === S.me)) rows.push({ id: S.me, name: 'Bạn', rank: S.deathsMine.rank, deaths: S.deathsMine.n });
+      if (!(S.deaths || []).length) {
         const li = document.createElement('li');
         li.className = 'empty';
-        li.textContent = 'Chưa ai bị sa thải. Đi gặp sếp đi 😈';
+        li.textContent = 'Hôm nay chưa ai bị sa thải. Đi gặp sếp đi 😈';
         list.appendChild(li);
       }
     }
+    if (!byDeaths && S.myRank && !rows.some((e) => e.id === S.me)) rows = rows.concat([{ id: S.me, name: 'Bạn', rank: S.myRank.rank, score: S.myRank.score, breaks: S.myRank.breaks, out: true }]);
     for (const e of rows) {
       const li = document.createElement('li');
       if (e.id === S.me) li.className = 'me';
+      else if (e.id === undefined) li.className = 'off'; // played today, not online now
       const who = document.createElement('div');
       who.className = 'who';
       const nm = document.createElement('b');
-      nm.textContent = e.name;
+      nm.textContent = (e.rank ? e.rank + '. ' : '') + e.name;
       who.appendChild(nm);
       const p = S.players.get(e.id);
       const rl = p && ROLE_BY_ID[p.role];
@@ -886,7 +920,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       const sc = document.createElement('span');
       sc.className = 'sc';
-      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần bị sa thải' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
+      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần bị sa thải hôm nay' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
       li.append(who, sc);
       list.appendChild(li);
     }
@@ -1255,30 +1289,82 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // Room chat. Messages are broadcast to the room and never stored: the log keeps the last few lines for a
   // while in a frame under the system toasts, and each message also shows as a bubble over the speaker for 3 seconds.
-  const CHAT_LINES = 60; // kept in the frame, scrolled to the newest
+  const CHAT_LINES = 60; // kept in the frame, scrolled to the newest (history pages raise it while they are loaded)
+  const chatPending = new Map(); // client message id -> text, until the server confirms it was stored
+  const chatSeen = new Map(); // message id -> its <li>: de-duplicates live lines, history pages and server retries
+  const chatNewCid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('');
   const CHAT_BUBBLE_S = 3;
   const chatForm = $('chatForm');
   const chatInput = $('chatInput');
   const chatLog = $('chatLog');
   const coarseUi = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-  function chatReceive(m) {
-    if (typeof m.text !== 'string' || !m.text) return;
-    const p = S.players.get(m.id);
+  const chatKey = (m) => m.at + '|' + m.mid;
+  function chatLine(m, hist) {
     const li = document.createElement('li');
-    li.className = 'chatline' + (m.id === S.me ? ' me' : '');
+    li.className = 'chatline' + (m.id !== undefined && m.id === S.me ? ' me' : '') + (hist ? ' hist' : '');
+    li.dataset.k = chatKey(m);
     const nm = document.createElement('b');
-    nm.textContent = (p ? p.name : String(m.name || '?')) + ': ';
+    nm.textContent = String(m.name || '?') + ': ';
     li.append(nm, document.createTextNode(m.text)); // text nodes only: never HTML
+    return li;
+  }
+  // Keeps the log ordered by (server time, id) whether a line arrived live or from a history page.
+  function chatInsert(m, hist) {
+    if (typeof m.text !== 'string' || !m.text) return null;
+    if (m.mid && chatSeen.has(m.mid)) return null;
+    const li = chatLine(m, hist);
+    if (m.mid) chatSeen.set(m.mid, li);
+    const key = chatKey(m);
+    let before = null;
+    for (let n = chatLog.lastElementChild; n; n = n.previousElementSibling) {
+      if (!n.dataset.k || n.dataset.k <= key) break;
+      before = n;
+    }
+    if (before) chatLog.insertBefore(li, before); else chatLog.appendChild(li);
+    return li;
+  }
+  const chatOldest = () => { const f = chatLog.querySelector('li[data-k]'); return f ? { at: Number(f.dataset.k.split('|')[0]), mid: f.dataset.k.split('|')[1] } : null; };
+  const chatNewest = () => { const l = [...chatLog.querySelectorAll('li[data-k]')].pop(); return l ? { at: Number(l.dataset.k.split('|')[0]), mid: l.dataset.k.split('|')[1] } : null; };
+  function chatTrim() {
+    const cap = S.chatHistory ? 400 : CHAT_LINES;
+    while (chatLog.children.length > cap) { const f = chatLog.firstChild; if (f.dataset && f.dataset.k) chatSeen.delete(f.dataset.k.split('|')[1]); chatLog.removeChild(f); }
+  }
+  function chatReceive(m) {
     const atEnd = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40; // do not yank someone reading older lines
-    chatLog.appendChild(li);
-    while (chatLog.children.length > CHAT_LINES) chatLog.removeChild(chatLog.firstChild);
+    const li = m.mid ? chatInsert(m, false) : (() => { const x = chatLine({ ...m, at: Date.now(), mid: '' }, false); chatLog.appendChild(x); return x; })();
+    if (!li) return; // already shown
+    chatTrim();
     if (atEnd || m.id === S.me) chatLog.scrollTop = chatLog.scrollHeight;
     chatWake();
+    const p = S.players.get(m.id);
     if (p) {
       p.chat = m.text;
       p.chatT = CHAT_BUBBLE_S;
     }
   }
+  // History pages (join, reconnect gap, scrolling up): lines go into the frame without bubbles or sounds.
+  function chatHistory(m) {
+    S.chatBusy = false;
+    if (m.failed) return;
+    const keepBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40;
+    const prevHeight = chatLog.scrollHeight, prevTop = chatLog.scrollTop;
+    for (const x of m.messages) chatInsert(x, true);
+    chatTrim();
+    S.chatMore = m.dir === 'before' ? m.more : S.chatMore;
+    if (m.dir === 'before') chatLog.scrollTop = prevTop + (chatLog.scrollHeight - prevHeight); // stay on the same line
+    else if (keepBottom || m.dir === 'latest') chatLog.scrollTop = chatLog.scrollHeight;
+    // after a reconnect the latest page may not reach back to what we already show: fill the gap
+    if (m.dir === 'latest' && S.chatLastSeen && m.messages.length && chatKey(m.messages[0]) > chatKey(S.chatLastSeen) && m.more) chatAsk({ after: S.chatLastSeen });
+    if (m.dir === 'after' && m.more && m.messages.length) chatAsk({ after: m.messages[m.messages.length - 1] });
+    if (m.dir === 'latest' && S.chatMore === undefined) S.chatMore = m.more;
+    chatWake();
+  }
+  function chatAsk(extra) { if (S.joined && S.chatHistory) { S.chatBusy = true; send({ t: 'chatHist', ...extra }); } }
+  chatLog.addEventListener('scroll', () => {
+    if (chatLog.scrollTop > 20 || S.chatBusy || !S.chatMore || !S.chatHistory) return;
+    const o = chatOldest();
+    if (o) chatAsk({ before: o });
+  });
   // On a computer the chat frame stays on screen. On a phone, where room is scarce, it fades out after 3 seconds without
   // a new message, and comes back with the next one, when the box is focused (💬) or while a finger rests on it.
   const CHAT_IDLE_MS = 3000;
@@ -1313,7 +1399,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     e.preventDefault();
     const text = chatInput.value.replace(/\s+/g, ' ').trim().slice(0, 120);
     chatInput.value = '';
-    if (text && S.joined) send({ t: 'chat', text });
+    if (text && S.joined) { const cid = chatNewCid(); chatPending.set(cid, text); send({ t: 'chat', text, cid }); }
     chatInput.blur(); // back to the game: WASD walks again
   });
   $('chatSend').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus so the click still sends

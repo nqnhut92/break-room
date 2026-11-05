@@ -13,6 +13,10 @@
     },
     "api/profile.js": {
       "includeFiles": "migrations/*.sql"
+    },
+    "api/maintenance.js": {
+      "maxDuration": 60,
+      "includeFiles": "migrations/*.sql"
     }
   }
 }

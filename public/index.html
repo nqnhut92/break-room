@@ -64,7 +64,7 @@
 
       <div id="board">
         <div class="board-head">
-          <span class="board-title">Tổng thiệt hại</span>
+          <span class="board-title" id="boardTitle">BXH hôm nay</span>
           <span id="total" class="board-total">0 triệu</span>
         </div>
         <ol id="boardList"></ol>
@@ -125,7 +125,7 @@
 
     <div id="ranking" hidden>
       <div class="card" role="dialog" aria-modal="true" aria-labelledby="rankTitle">
-        <h2 id="rankTitle">Bảng xếp hạng</h2>
+        <h2 id="rankTitle">BXH hôm nay</h2>
         <div class="rank-tabs" role="tablist">
           <button id="rankTabScore" class="btn" type="button" role="tab" aria-selected="true">💰 Thiệt hại</button>
           <button id="rankTabDeaths" class="btn" type="button" role="tab" aria-selected="false">💀 Bị sa thải</button>
@@ -221,7 +221,7 @@
         <div id="roomList" class="roomlist" role="group" aria-label="Chọn server" aria-busy="true"><div class="roomskel" aria-hidden="true"></div><div class="roomskel" aria-hidden="true"></div></div>
       </div>
       <button id="joinBtn" class="btn smash" type="submit" disabled>Vào văn phòng</button>
-      <p id="scoreNote" class="join-disclaimer">Điểm chưa được lưu lâu dài. Chưa chuyển điểm khách.</p>
+      <p id="scoreNote" class="join-disclaimer">BXH tính theo ngày (giờ Việt Nam) của từng phòng, khách cũng có tên trên bảng. Điểm và tin nhắn khách chỉ được nhận lại khi còn đúng phiên trình duyệt này; đăng nhập Google để giữ nhân vật, và điểm hôm nay của tab này sẽ được chuyển sang nhân vật một lần.</p>
       <p id="joinErr" class="err" role="alert"></p>
       </div>
     </form>

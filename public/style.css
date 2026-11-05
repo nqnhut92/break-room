@@ -956,3 +956,7 @@ canvas {
   .character-details dt { margin-bottom: 4px; }
   .character-details dd { font-size: 14px; }
 }
+
+/* day board: rows of players who are not online right now, and chat lines loaded from history */
+#rankList li.off { opacity: .6; }
+#chatLog li.hist { opacity: .85; }

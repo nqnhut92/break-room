@@ -31,6 +31,7 @@ Put the function in the same region as the database (for example both in Singapo
 | `HEALTH_KEY` | If set, `/api/health?deep=<HEALTH_KEY>` performs the deep check (below) |
 | `ROOM_TTL_S` | A room with nobody in it loses its state after this many seconds, default 1800 |
 | `PORT` | Port for local runs, default 3000 |
+| `SCORE_PERSIST=0`, `CHAT_HISTORY=0`, `SCORE_QUEUE_MAX`, `MAINTENANCE_SECRET` / `CRON_SECRET`, `DB_POOL_MAX` | Daily score persistence, chat history, queue bound and the maintenance job secret. A scheduler must call `/api/maintenance` (or `npm run maintenance`); see [Scores](SCORES.md#operations). The deep health check also reports `queue.<room>.len/dropped/syncAt` |
 | `TRUST_PROXY=1` | Only needed when running `server.js` behind a reverse proxy outside Vercel (Render, Railway, Nginx...) so connections are counted per real IP. Always on in Vercel |
 
 ## What happens when a connection is cut after 5 minutes

@@ -40,6 +40,8 @@ Bạn sếp dùng thêm key `moles` (hash: id người chơi → `{hp, rev, conn
 
 State mở rộng gồm `mini`, `snakes`, `rage` và `moles`; đấu 1:1 nằm trong field `duel` của `boss`. Chúng không đổi bộ chín key cơ bản. Xem [TML/DMM](MINIBOSSES.md), [VKL](BOSS.vi.md) và `lib/store-redis.js` để tra thao tác cụ thể.
 
+Hash tên còn lưu `a<id>`, actor BXH nội bộ của từng người chơi. Bảng ngày (`ds:<day>`, `di:<day>`) và hàng đợi điểm (`evq`, `qs`, không TTL) cùng slot hash-tag nhưng nằm ngoài bộ chín key và ngoài TTL của phòng. Xem [BXH ngày](SCORES.vi.md).
+
 Lease kết nối theo IP (mỗi IP một zset) và key `br:keepalive` của health check nằm ngoài phòng.
 
 **2. Thao tác nguyên tử.** Vào, rời, đập, dọn dẹp, snapshot và reset đều là một script Lua. Hai người ở hai instance đập cùng một món thì món chỉ vỡ đúng một lần và điểm cộng một lần. Việc kiểm tra tên nằm trong script vào phòng, nên hai người không thể giành cùng một tên trong cùng một khoảnh khắc.
@@ -74,7 +76,9 @@ Kích thước ước lượng (ước tính, chưa đo): state của một phò
 | Việc | File |
 | --- | --- |
 | Luật chơi, xử lý WebSocket, luật tên | `lib/realtime.js` |
-| Script Redis và cách đặt key | `lib/store-redis.js` |
+| Script Redis và cách đặt key | `lib/store-redis.js`, `lib/daily-lua.js` |
+| BXH ngày, worker sync, chuyển điểm khách | `lib/scoreboard.js` (bản RAM: `lib/daily-memory.js`) |
+| Lịch sử chat, job maintenance | `lib/chat-store.js`, `lib/persistence.js`, `lib/maintenance-http.js` |
 | Store RAM (cùng hợp đồng) | `lib/store-memory.js` |
 | Chọn store, giới hạn, TTL từ biến môi trường | `lib/config.js` |
 | Danh sách server (`BR-1`, `BR-2`) | `lib/world.js` (`ROOMS`), `lib/room-list.js` |
@@ -94,7 +98,7 @@ Quy tắc thay đồ nằm ở `lib/object-respawn.js`; script Lua lấy hệ s�
 
 ## Tài khoản và hồ sơ lâu dài
 
-[Identity đợt 1](IDENTITY.vi.md) tách account Google đã xác thực và nhân vật Postgres theo phòng khỏi gameplay, hiệu lực phiên và quyền kết nối Redis. Tên đăng ký được giữ cả khi offline. Join/mutation hồ sơ phối hợp SQL với khách và bot online; Redis write có fence connection/session. Không query Postgres theo frame hay heartbeat. Điểm ngày và chat giữ 24 giờ vẫn là kế hoạch.
+[Identity đợt 1](IDENTITY.vi.md) tách account Google đã xác thực và nhân vật Postgres theo phòng khỏi gameplay, hiệu lực phiên và quyền kết nối Redis. Tên đăng ký được giữ cả khi offline. Join/mutation hồ sơ phối hợp SQL với khách và bot online; Redis write có fence connection/session. Không query Postgres theo frame hay heartbeat. BXH ngày (bảng ngày trên Redis + hàng đợi bền xả vào Postgres) và chat giữ 24 giờ được mô tả ở [BXH ngày](SCORES.vi.md); Redis vẫn là nguồn chân lý cho gameplay trực tiếp, Postgres chỉ bị chạm theo lô thưởng, không theo frame hay heartbeat.
 
 Khi cấu hình hồ sơ lâu dài có giữ tên, heartbeat phải gia hạn trước khi lease hết. Heartbeat đến muộn không tạo lại owner đã hết hạn hoặc bị prune; client phải join lại và kiểm tra tên đã giữ.
 

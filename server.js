@@ -6,6 +6,8 @@
 
 const http = require('http');
 const { createIdentity } = require('./lib/identity');
+const { createPersistence } = require('./lib/persistence');
+const { maintenanceHandler } = require('./lib/maintenance-http');
 const fs = require('fs');
 const path = require('path');
 const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS, MANA, manaAt } = require('./lib/realtime');
@@ -83,12 +85,19 @@ function staticHandler(req, res, roomList) {
 function createApp({ store = createStoreFromEnv(), env = process.env, identity: suppliedIdentity, ...overrides } = {}) {
   const roomList = createRoomList(store, ROOMS);
   const identity = suppliedIdentity || createIdentity({ env, store });
+  // Daily scores and chat history live in Postgres when DATABASE_URL is set; otherwise boards are live-only.
+  const persistence = store ? createPersistence({ profiles: identity.profiles, store, env }) : null;
+  if (identity.hooks && persistence) identity.hooks.rename = persistence.rename;
+  const maintenance = maintenanceHandler({ persistence, env });
   const server = http.createServer((req, res) => {
+    if ((req.url || '').split('?')[0] === '/api/maintenance') { maintenance(req, res).catch(() => res.writeHead(500).end()); return; }
     identity.http(req, res).then(handled => { if (!handled) staticHandler(req, res, roomList); }).catch(() => { res.writeHead(503).end('Service unavailable'); });
   });
   const rt = createRealtime({
     store,
     identity,
+    scoreboard: persistence?.scoreboard,
+    chat: persistence?.chat,
     respawnMs: respawnMsFromEnv(env),
     trustProxy: env.TRUST_PROXY === '1',
     renewAfterMs: renewAfterMsFromEnv(env),
@@ -100,6 +109,7 @@ function createApp({ store = createStoreFromEnv(), env = process.env, identity: 
   return {
     server,
     identity,
+    persistence,
     store,
     instanceId: rt.instanceId,
     start(port) {

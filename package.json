@@ -14,7 +14,9 @@
     "test:joystick": "node test/joystick.cjs",
     "test:settings": "node test/settings.cjs",
     "db:migrate": "node scripts/migrate.js",
+    "maintenance": "node scripts/maintenance.js",
     "test:identity": "bash scripts/test-identity.sh",
+    "test:scores": "bash scripts/test-scores.sh",
     "test:account-ui": "node test/account-ui.cjs"
   },
   "engines": {

@@ -8,6 +8,7 @@
 
 const Redis = require('ioredis');
 const { caFromEnv } = require('../lib/config');
+const { ROOMS } = require('../lib/world');
 
 module.exports = async (req, res) => {
   const url = process.env.REDIS_URL || process.env.KV_URL;
@@ -39,7 +40,14 @@ module.exports = async (req, res) => {
     await r.connect();
     await r.set('br:keepalive', String(Date.now()), 'EX', 3 * 24 * 3600);
     await r.ping();
-    send(200, { ok: true, store: 'redis', pingMs: Date.now() - t0 });
+    // Unsynced score events per room: a growing len with an old syncAt means nothing is draining the queue
+    // (run the maintenance job, see docs/DEPLOYMENT.md); dropped > 0 means points were NOT queued (queue full).
+    const queue = {};
+    for (const room of ROOMS) {
+      const [len, qs] = await Promise.all([r.llen('br:{' + room.id + '}:evq'), r.hgetall('br:{' + room.id + '}:qs')]);
+      queue[room.id] = { len, dropped: Number(qs.dropped || 0), syncAt: Number(qs.syncAt || 0), err: qs.err || undefined };
+    }
+    send(200, { ok: true, store: 'redis', pingMs: Date.now() - t0, queue });
   } catch (e) {
     send(503, { ok: false, store: 'redis unreachable', error: String(e && e.message).slice(0, 120) });
   } finally {

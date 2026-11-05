@@ -38,6 +38,8 @@ The boss uses three more keys of the same room, each with the same expiry: `boss
 
 Feature state also uses `mini`, `snakes`, `rage` and `moles`; captured duels live in the `boss` hash field `duel`. These do not change the base nine-key set. See [TML/DMM](MINIBOSSES.md), [VKL](BOSS.md) and `lib/store-redis.js` for individual operations.
 
+The name hash also stores `a<id>`, the server-internal leaderboard actor of each player. Day boards (`ds:<day>`, `di:<day>`) and the score queue (`evq`, `qs`, no TTL) live in the same hash-tag slot but outside the nine-key set and outside the room TTL. See [Scores](SCORES.md).
+
 Per-IP connection leases (one zset per IP) and the `br:keepalive` health key live outside the room.
 
 **2. Atomic operations.** Join, leave, hit, housekeeping, snapshot, reset and the boss's hit, respawn and lease are single Lua scripts. Two players hitting one object from two instances break it exactly once and the score is credited once. Name checks happen inside the join script, so two players cannot claim one name at the same instant.
@@ -72,7 +74,9 @@ Rough size (estimate, not measured): the state of one room is tens of KB. Redis 
 | Concern | File |
 | --- | --- |
 | Game rules, WebSocket handling, name rules | `lib/realtime.js` |
-| Redis scripts and key layout | `lib/store-redis.js` |
+| Redis scripts and key layout | `lib/store-redis.js`, `lib/daily-lua.js` |
+| Daily board, sync worker, guest transfer | `lib/scoreboard.js` (RAM twin: `lib/daily-memory.js`) |
+| Chat history, maintenance job | `lib/chat-store.js`, `lib/persistence.js`, `lib/maintenance-http.js` |
 | RAM store (same contract) | `lib/store-memory.js` |
 | Store selection, limits, TTLs from env | `lib/config.js` |
 | Server list (`BR-1`, `BR-2`) | `lib/world.js` (`ROOMS`), `lib/room-list.js` |
@@ -92,7 +96,7 @@ Object replacement policy lives in `lib/object-respawn.js`; Lua embeds the same 
 
 ## Accounts and durable profiles
 
-[Phase 1 identity](IDENTITY.md) separates verified Google accounts and Postgres room characters from Redis gameplay, session validity and connection ownership. Offline registered names remain reserved. Join/profile mutations coordinate SQL reservations with online guests and bots; Redis writes carry connection/session fences. No Postgres queries occur per frame or heartbeat. Daily scores and 24-hour chat persistence remain planned.
+[Phase 1 identity](IDENTITY.md) separates verified Google accounts and Postgres room characters from Redis gameplay, session validity and connection ownership. Offline registered names remain reserved. Join/profile mutations coordinate SQL reservations with online guests and bots; Redis writes carry connection/session fences. No Postgres queries occur per frame or heartbeat. Daily scores (Redis day board + durable queue drained into Postgres) and 24-hour chat are described in [Scores](SCORES.md); Redis stays authoritative for live play and Postgres is touched per payout batch, never per frame or heartbeat.
 
 With persistent profile reservations configured, presence renewal must arrive before its lease expires. A delayed heartbeat cannot recreate a pruned/expired owner; the client must rejoin and recheck name reservations.
 

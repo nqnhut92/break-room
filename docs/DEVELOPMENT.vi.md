@@ -79,6 +79,10 @@ Kiểm tra lưới cài đặt bằng `npm run test:settings` (Chromium/`CHROMIU
 
 Chỉnh chính sách IT trong `lib/object-respawn.js`: hệ số dùng chung cho RAM và Lua. `test/object-respawn.js` kiểm tra ví dụ/biên/tính đơn điệu; `test/shared.js` chạy cùng contract trên RAM/Redis, gồm bot, presence hết hạn, batch, thay đổi số người và tranh chấp hai client Redis. Chạy `npm run test:redis`; `RESPAWN_MS` dương vẫn giữ chế độ cố định để test nhanh.
 
+## Kiểm thử điểm và chat
+
+`npm run test:scores` (`scripts/test-scores.sh`, podman hoặc docker) dựng Postgres 16 và Redis 7 dùng-một-lần rồi chạy `test/scores.js` trên cả store RAM lẫn Redis: mọi nguồn thưởng theo phần mười, mất ack và hai worker đồng thời, nửa đêm với đồng hồ giả và sync trễ, chuyển điểm khách khi còn sự kiện chờ và sự kiện đến muộn, đồng hạng/đổi tên, hàng đợi đầy, Redis mất dữ liệu và phòng hết TTL, Postgres lỗi/phục hồi và thời gian giữ, chat idempotent/phân trang/lọc 24 giờ, cùng một lượt WebSocket thật (dòng BXH, chat ack/lỗi/lịch sử, không lộ id nội bộ). Test không bao giờ đọc `DATABASE_URL`/`REDIS_URL`. `npm test` và `npm run test:redis` phủ các script Lua qua contract của store và bộ test gameplay.
+
 ## Kiểm thử identity
 
 Dùng Node 20+ (đã kiểm tra Node 24). Chạy `npm run test:identity` với Postgres/Redis bỏ đi, migration và Google OIDC mock qua Auth.js. Runner không đọc URL database production. Xem [kiểm thử identity](IDENTITY.vi.md#kiểm-thử-và-phần-cần-xác-minh-live); mock không xác minh Google/Neon thật. Dùng `CHROMIUM_PATH` với browser đã cài như hướng dẫn trên.

@@ -69,7 +69,7 @@ Room names in the overview are layout annotations; the game no longer renders fl
 
 ## Guest and saved characters
 
-Guests still join immediately. [Google sign-in](IDENTITY.md#player-behavior) saves one independent character in each room. Create/restore/edit outside the room; edits apply on the next join and are blocked while that character is playing elsewhere. Registered names remain reserved offline, case-insensitively. Sign-in does not autojoin or transfer guest points. Scores are not saved long-term; daily boards and 24-hour chat are planned later.
+Guests still join immediately. [Google sign-in](IDENTITY.md#player-behavior) saves one independent character in each room. Create/restore/edit outside the room; edits apply on the next join and are blocked while that character is playing elsewhere. Registered names remain reserved offline, case-insensitively. Sign-in does not autojoin. The first signed-in join moves today's guest points of that browser tab to the character, once. The board is **BXH hôm nay** per room (resets 00:00 Vietnam time; everyone who played today, including offline players, guests and bots); there is no all-time board. Room chat is stored for 24 hours and loaded when you join. Details: [Scores](SCORES.md).
 
 ## Character collision
 

@@ -65,7 +65,7 @@ Tên phòng trong ảnh là chú thích bố cục; game không còn biển tên
 
 ## Khách và nhân vật đã lưu
 
-Khách vẫn vào chơi ngay. [Google login](IDENTITY.vi.md#hành-vi-người-chơi) lưu một nhân vật độc lập ở mỗi phòng. Tạo/khôi phục/sửa ở ngoài phòng; chỉnh sửa áp dụng lần vào tiếp theo và bị chặn khi nhân vật đang chơi ở nơi khác. Tên đăng ký được giữ cả offline, không phân biệt hoa/thường. Đăng nhập không tự vào phòng hay chuyển điểm khách. Điểm chưa lưu lâu dài; BXH ngày và chat giữ 24 giờ thuộc các đợt sau.
+Khách vẫn vào chơi ngay. [Google login](IDENTITY.vi.md#hành-vi-người-chơi) lưu một nhân vật độc lập ở mỗi phòng. Tạo/khôi phục/sửa ở ngoài phòng; chỉnh sửa áp dụng lần vào tiếp theo và bị chặn khi nhân vật đang chơi ở nơi khác. Tên đăng ký được giữ cả offline, không phân biệt hoa/thường. Đăng nhập không tự vào phòng. Lần vào đầu tiên bằng tài khoản chuyển điểm khách hôm nay của tab đó sang nhân vật, một lần. Bảng là **BXH hôm nay** theo phòng (về 0 lúc 00:00 giờ Việt Nam; gồm mọi người đã chơi hôm nay, cả offline, khách và bot); không có BXH all-time. Chat phòng được lưu 24 giờ và tải khi bạn vào. Chi tiết: [BXH ngày](SCORES.vi.md).
 
 ## Va chạm nhân vật
 

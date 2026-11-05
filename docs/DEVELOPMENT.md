@@ -79,6 +79,10 @@ Run `npm run test:settings` (Chromium/`CHROMIUM_PATH`) for paired button alignme
 
 Tune automatic IT policy in `lib/object-respawn.js`: constants are shared by RAM and Lua. `test/object-respawn.js` checks examples/bounds/monotonicity; `test/shared.js` runs the same contract on RAM/Redis, including bots, stale presence, batch consistency, changing population and competing Redis clients. Run `npm run test:redis`; positive `RESPAWN_MS` remains a fixed-delay override for fast tests.
 
+## Score and chat validation
+
+`npm run test:scores` (`scripts/test-scores.sh`, podman or docker) starts disposable Postgres 16 and Redis 7 and runs `test/scores.js` against both the RAM and Redis stores: every payout source in tenths, ack loss and two concurrent workers, midnight with an injected clock and late sync, guest transfer with queued events and late events, ties/rename, queue overflow, Redis data loss and room-TTL expiry, Postgres outage/recovery and retention, chat idempotency/pagination/24 h filter, and a real WebSocket run (board rows, chat ack/failure/history, no internal ids on the wire). It never reads `DATABASE_URL`/`REDIS_URL`. `npm test` and `npm run test:redis` cover the Lua scripts through the store contract and gameplay suites.
+
 ## Identity validation
 
 Use Node 20+ (Node 24 validated). Run `npm run test:identity` for disposable Postgres/Redis, migrations and mock Google OIDC through Auth.js. The runner never reads production database URLs. See [identity validation](IDENTITY.md#validation-and-remaining-live-checks); mock authentication does not verify live Google/Neon. Use `CHROMIUM_PATH` for installed browsers as above.

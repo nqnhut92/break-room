@@ -29,6 +29,7 @@ State dùng chung cần Redis khi chạy nhiều instance. Vercel không nhận 
 | `HEALTH_KEY` | Nếu đặt, `/api/health?deep=<HEALTH_KEY>` mới được kiểm tra sâu (xem dưới) |
 | `ROOM_TTL_S` | Phòng không có ai thì state bị xóa sau từng này giây, mặc định 1800 |
 | `PORT` | Cổng khi chạy local, mặc định 3000 |
+| `SCORE_PERSIST=0`, `CHAT_HISTORY=0`, `SCORE_QUEUE_MAX`, `MAINTENANCE_SECRET` / `CRON_SECRET`, `DB_POOL_MAX` | Lưu điểm ngày, lịch sử chat, giới hạn hàng đợi và secret của job maintenance. Cần một scheduler gọi `/api/maintenance` (hoặc `npm run maintenance`); xem [BXH ngày](SCORES.vi.md#vận-hành). Health check sâu còn báo `queue.<room>.len/dropped/syncAt` |
 | `TRUST_PROXY=1` | Chỉ cần khi chạy `server.js` sau reverse proxy ngoài Vercel (Render, Railway, Nginx...) để đếm kết nối theo IP thật. Trên Vercel luôn bật sẵn |
 
 ## Kết nối bị cắt sau 5 phút thì sao
