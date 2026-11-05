@@ -908,7 +908,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       const who = document.createElement('div');
       who.className = 'who';
       const nm = document.createElement('b');
-      nm.textContent = (e.rank ? e.rank + '. ' : '') + e.name;
+      nm.textContent = e.name;
+      li.dataset.rank = e.rank || String(list.children.length + 1); // the left column shows the server's rank (ties share it)
       who.appendChild(nm);
       const p = S.players.get(e.id);
       const rl = p && ROLE_BY_ID[p.role];
