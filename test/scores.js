@@ -244,7 +244,7 @@ async function main() {
       assert.equal((await rstore.queueStat(room)).len, 2);
       assert.equal(await raw.ttl(`br:{${room}}:evq`), -1, 'no TTL on the queue');
       await rstore.rageSet(room, A, 42.5, BASE);
-      assert.ok(await raw.ttl(`br:{${room}}:rage`) > 86400, 'the ultimate bar is kept for days, keyed by actor');
+      assert.ok(await raw.ttl(`br:{${room}}:rage:${A}`) > 86400, 'the ultimate bar is kept for days, keyed by actor');
       assert.equal(await rstore.rageGet(room, A), 42.5);
       assert.equal((await sb.sync(room)).error, null);
       assert.equal(Number((await pool.query('SELECT score_tenths FROM daily_scores WHERE room_id=$1', [room])).rows[0].score_tenths), 60);
@@ -262,6 +262,8 @@ async function main() {
       assert.ok((await down.sync(room)).error, 'sync reports the failure');
       const st = await rstore.queueStat(room); assert.ok(st.len >= 1 && st.err);
       const sb = createScoreboard({ store: rstore, pool, clock: () => clock.now, log: () => {} });
+      // Simulate the shared cooldown expiring before recovery.
+      await raw.del('br:maint:hydrate:{' + room + '}:' + dayOf(clock.now));
       assert.equal((await sb.sync(room)).error, null);
       assert.equal((await sb.board(room)).rows[0].tenths, 30, 'degraded board rebuilt from SQL + queue, not doubled');
       // retention: events for a day older than the kept window are counted and dropped
@@ -272,6 +274,55 @@ async function main() {
       const removed = await sb.cleanup();
       assert.ok(removed.daily_scores >= 1 && removed.score_events >= 1);
       assert.equal((await pool.query('SELECT count(*)::int AS n FROM daily_scores WHERE room_id=$1', [room])).rows[0].n, 0);
+    });
+
+    await step('redis: all board entry points and instances share the hydration cooldown, then recover', async () => {
+      const room = uniq('retry'), day = dayOf(BASE), A = 'g:retry';
+      let attempts = 0, failing = true;
+      const database = { connect: async () => { attempts++; if (failing) throw Error('offline'); return pool.connect(); } };
+      const options = { store: rstore, pool: database, clock: () => BASE, log: () => {} };
+      const first = createScoreboard(options), second = createScoreboard(options);
+      await Promise.all([first.touch(room, A, 'Retry'), second.ensure(room)]);
+      assert.equal(attempts, 1, 'concurrent instances share the first failure cooldown');
+      for (let i = 0; i < 3; i++) {
+        await second.board(room);
+        await first.deaths(room, { aid: A });
+        await second.touch(room, A, 'Retry');
+        await first.transfer(room, A, 'c:retry', 'Retry');
+        await second.ensure(room);
+      }
+      assert.equal(attempts, 1, 'reads, joins, transfers and upkeep must not retry SQL during cooldown');
+      assert.equal(await rstore.dayState(room, day), 2);
+      const gate = 'br:maint:hydrate:{' + room + '}:' + day;
+      assert.ok(await raw.ttl(gate) > 0);
+      failing = false;
+      await raw.pexpire(gate, 20);
+      await sleep(50);
+      assert.equal(await second.ensure(room), 1);
+      assert.equal(attempts, 2);
+      assert.equal((await first.board(room)).rows[0].name, 'Retry');
+      assert.equal(attempts, 2, 'healthy boards do not hydrate again');
+    });
+
+    await step('redis: ultimate bars expire per actor, migrate legacy values, and preserve player fences', async () => {
+      const room = uniq('rage'), legacy = `br:{${room}}:rage`, key = (id) => legacy + ':' + id;
+      await raw.hset(legacy, 'g:old', 42.5, 'g:write', 99);
+      await raw.expire(legacy, 7 * 86400);
+      assert.equal(await rstore.rageGet(room, 'g:old'), 42.5);
+      assert.equal(await raw.hexists(legacy, 'g:old'), 0);
+      assert.ok(await raw.ttl(key('g:old')) > 86400);
+      await rstore.rageSet(room, 'g:write', 0);
+      assert.equal(await raw.hexists(legacy, 'g:write'), 0);
+      assert.equal(await rstore.rageGet(room, 'g:write'), 0);
+      await raw.pexpire(key('g:old'), 80);
+      await rstore.rageSet(room, 'g:active', 7);
+      await rstore.rageGet(room, 'g:old');
+      assert.ok(await raw.pttl(key('g:old')) <= 80, 'reads do not extend retention');
+      await sleep(120);
+      assert.equal(await rstore.rageGet(room, 'g:old'), 0, 'another actor cannot keep the old bar alive');
+      assert.equal(await rstore.rageGet(room, 'g:active'), 7);
+      await assert.rejects(context.run({ room, id: 1, conn: 'stale', sid: 'stale' }, () => rstore.rageSet(room, 'g:active', 100)), /STALE_SESSION/);
+      assert.equal(await rstore.rageGet(room, 'g:active'), 7);
     });
 
     // ---- chat

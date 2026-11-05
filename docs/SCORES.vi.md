@@ -31,7 +31,7 @@ ID người tham gia là nội bộ: `c:<uuid nhân vật>`, `g:<HMAC của phò
 
 ### Khôi phục và nhất quán
 
-BXH đang chạy là dữ liệu *suy ra*: `dòng SQL + sự kiện trong hàng đợi mà SQL chưa có`. Nó được dựng lại (`ensure`) khi bảng của một ngày thiếu: lần đầu dùng ngày mới, Redis restart/bị evict, hoặc sau chế độ degraded. Việc dựng giữ khóa hàng đợi, đọc hàng đợi, hỏi SQL id nào đã commit, rồi chạy đúng một script Lua, nên không cộng SQL và hàng đợi hai lần. Nếu Postgres không với tới, bảng degraded được dựng chỉ từ hàng đợi và dựng lại từ SQL ở lần thử sau (~30 giây/phòng). Gameplay chạy tiếp trong mọi trường hợp này.
+BXH đang chạy là dữ liệu *suy ra*: `dòng SQL + sự kiện trong hàng đợi mà SQL chưa có`. Nó được dựng lại (`ensure`) khi bảng của một ngày thiếu: lần đầu dùng ngày mới, Redis restart/bị evict, hoặc sau chế độ degraded. Việc dựng giữ khóa hàng đợi, đọc hàng đợi, hỏi SQL id nào đã commit, rồi chạy đúng một script Lua, nên không cộng SQL và hàng đợi hai lần. Nếu Postgres không với tới, bảng degraded được dựng chỉ từ hàng đợi và dựng lại từ SQL ở lần thử sau. Sau khi dựng thất bại, cổng Redis dùng chung chỉ cho thử lại tối đa một lần mỗi 30 giây theo phòng và ngày, cho mọi instance và đường gọi (`board`, deaths, touch, transfer và housekeeping); trong lúc chờ vẫn đọc bảng degraded. Việc dựng kiểm tra lại trạng thái ngày sau khi lấy khóa hàng đợi; lượt đọc degraded không chờ khóa đang bận. Sync hàng đợi có lịch riêng và không bị cổng dựng bảng này trì hoãn. Gameplay chạy tiếp trong mọi trường hợp này.
 
 ID sự kiện là `<run id>:<số thứ tự>`; run id mới mỗi khi Redis bắt đầu hàng đợi mới, nên không bao giờ trùng id Postgres đã giữ từ lần trước.
 
