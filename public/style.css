@@ -933,6 +933,16 @@ canvas {
   #roomList { max-height: 160px; }
   #joinBtn { min-height: 48px; }
 }
+/* Two-column join form: the long score note lives under the character fields (the empty column) so the server list keeps the right column's height. */
+@media (min-width: 760px), (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
+  #joinForm { grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
+  .joinRooms { display: contents; }
+  .joinRooms > .roompick { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; min-height: 0; gap: 8px; }
+  #roomList { flex: 1 1 auto; min-height: 0; max-height: none; }
+  #joinBtn { grid-column: 2; grid-row: 4; }
+  #scoreNote { grid-column: 1; grid-row: 4 / 6; align-self: start; padding-right: 24px; }
+  #joinErr { grid-column: 2; grid-row: 5; }
+}
 @media (max-height: 559px) and (min-width: 600px) {
   #accountBox { padding: 8px 0; max-height: 88px; overflow-y: auto; }
   #googleLogin { width: 250px; min-height: 44px; padding: 10px 14px; font-size: 14px; }
