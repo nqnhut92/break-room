@@ -256,6 +256,18 @@ async function main() {
       await pool.query('DELETE FROM chat_messages WHERE room_id=$1', [room]);
     });
 
+    await step('maintenance endpoint falls back to HEALTH_KEY and stays closed without any key', async () => {
+      const { maintenanceHandler } = require('../lib/maintenance-http');
+      const call = async (env, url) => {
+        const out = {};
+        await maintenanceHandler({ persistence: { status: async () => ({ queue: {} }) }, env })({ method: 'GET', url, headers: {} }, { setHeader() {}, end(b) { out.body = b; }, set statusCode(v) { out.code = v; } });
+        return out.code;
+      };
+      assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?status=1&key=health-key-1'), 200);
+      assert.equal(await call({ HEALTH_KEY: 'health-key-1' }, '/api/maintenance?status=1&key=nope'), 401);
+      assert.equal(await call({}, '/api/maintenance?status=1&key=anything'), 503);
+    });
+
     // ---- real WebSockets against the app
     await step('websocket: day board rows, chat acknowledged only after the insert, history on join, failures not shown as sent', async () => {
       const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1', MAINTENANCE_SECRET: 'maintenance-test-secret' } });

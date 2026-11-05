@@ -69,7 +69,7 @@ curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/mainten
 curl -H "Authorization: Bearer $MAINTENANCE_SECRET" "https://<domain>/api/maintenance?status=1"
 ```
 
-Monitors that cannot set headers (for example UptimeRobot) can use `https://<domain>/api/maintenance?key=<secret>` with GET every 5 minutes; the secret then appears in URLs and logs, and only lets someone run this idempotent job. The endpoint is disabled unless `MAINTENANCE_SECRET` (or `CRON_SECRET`, which Vercel Cron sends) has 16+ characters. It is idempotent and safe to run concurrently. On Vercel add a cron entry yourself, for example `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; this repository does not add one. Sizes: a row in `daily_scores` is small; expect rows ≈ players per room per day, an event row per queued event for ≤ 2 days, chat ≤ 24 h of lines.
+Monitors that cannot set headers (for example UptimeRobot) can use `https://<domain>/api/maintenance?key=<secret>` with GET every 5 minutes; the secret then appears in URLs and logs, and only lets someone run this idempotent job. The endpoint is disabled unless a secret of 8+ characters exists: `MAINTENANCE_SECRET`, else `CRON_SECRET` (which Vercel Cron sends), else the existing `HEALTH_KEY`. It is idempotent and safe to run concurrently. On Vercel add a cron entry yourself, for example `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; this repository does not add one. Sizes: a row in `daily_scores` is small; expect rows ≈ players per room per day, an event row per queued event for ≤ 2 days, chat ≤ 24 h of lines.
 
 ## Configuration
 
@@ -79,7 +79,7 @@ Monitors that cannot set headers (for example UptimeRobot) can use `https://<dom
 | `SCORE_PERSIST=0` | Keep daily boards in Redis only (no queue, no SQL) |
 | `CHAT_HISTORY=0` | Broadcast-only chat even with a database |
 | `SCORE_QUEUE_MAX` | Unsynced event limit, default 20000 |
-| `MAINTENANCE_SECRET` / `CRON_SECRET` | Bearer secret for `/api/maintenance` |
+| `MAINTENANCE_SECRET` / `CRON_SECRET` / `HEALTH_KEY` | Secret for `/api/maintenance`, first one set wins |
 | `DB_POOL_MAX` | Postgres pool size per instance, default 4 |
 
 ## Rollout

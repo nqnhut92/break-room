@@ -69,7 +69,7 @@ curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/mainten
 curl -H "Authorization: Bearer $MAINTENANCE_SECRET" "https://<domain>/api/maintenance?status=1"
 ```
 
-Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET mỗi 5 phút; secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Endpoint tắt trừ khi có `MAINTENANCE_SECRET` (hoặc `CRON_SECRET`, Vercel Cron gửi sẵn) dài từ 16 ký tự. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
+Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET mỗi 5 phút; secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Endpoint tắt trừ khi có secret dài từ 8 ký tự: `MAINTENANCE_SECRET`, nếu không thì `CRON_SECRET` (Vercel Cron gửi sẵn), nếu không nữa thì dùng luôn `HEALTH_KEY` đang có. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
 
 ## Cấu hình
 
@@ -79,7 +79,7 @@ Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<doma
 | `SCORE_PERSIST=0` | BXH ngày chỉ ở Redis (không hàng đợi, không SQL) |
 | `CHAT_HISTORY=0` | Chat chỉ broadcast dù có database |
 | `SCORE_QUEUE_MAX` | Giới hạn sự kiện chưa sync, mặc định 20000 |
-| `MAINTENANCE_SECRET` / `CRON_SECRET` | Bearer secret cho `/api/maintenance` |
+| `MAINTENANCE_SECRET` / `CRON_SECRET` / `HEALTH_KEY` | Secret cho `/api/maintenance`, cái nào có trước dùng cái đó |
 | `DB_POOL_MAX` | Cỡ pool Postgres mỗi instance, mặc định 4 |
 
 ## Triển khai
