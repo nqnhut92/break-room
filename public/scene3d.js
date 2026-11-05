@@ -1656,6 +1656,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // Elbow: a relaxed bend at rest, straight for the swing. The hammer's own rotation cancels the arm's, so it stays
     // "held up" in the body's frame whatever the arm does, and blends to "along the arm" for the swing.
     rig.foreR.rotation.x = armed ? lerp(-0.8, -0.2, hk) : -0.2;
+    if (p.mini && p.swing <= 0) {
+      // no hammer in this fist: hang it exactly like the left arm (mirrored), instead of held out to clear a hammer
+      rig.armR.rotation.x = sw * 0.95 + breathe * 0.05;
+      rig.armR.rotation.z = -(0.14 + Math.sin(rig.t * 1.7) * 0.03 * idle + Math.abs(sw) * 0.12);
+      rig.foreR.rotation.x = -0.3 - Math.abs(sw) * 0.4;
+    } else if (p.mini) rig.armR.rotation.z = -0.14; // and in a punch it comes from the side, not from out in the air
     if (skill === 'milkTea' || skill === 'electric') {
       // Other skills hold something else in the same fist. The cup is carried up in front of the chest; a throw winds
       // up over the shoulder, snaps forward and lets go (the cup that flies is drawn by the effect, so the one in the
