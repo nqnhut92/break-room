@@ -82,10 +82,16 @@ Rough size (estimate, not measured): the state of one room is tens of KB. Redis 
 
 ## Validation and token boundaries
 
-The server decides everything important: the client only sends its position and smash requests, and the server checks distance, prevents teleporting, and limits smash rate and messages per second. Player names are sanitised on the server and displayed only through `textContent` or canvas on the client. A player's token only lets them reclaim their place after a reconnect; it is not an authentication credential: there are no accounts, and a player's public id is an integer unrelated to the token.
+The server decides everything important: the client only sends its position and smash requests, and the server checks distance, prevents teleporting, and limits smash rate and messages per second. Player names are sanitised on the server and displayed only through `textContent` or canvas on the client. A player's token only lets them reclaim their place after a reconnect; it is not an account authentication credential. Account ownership comes from the verified session; a player's public realtime id remains an integer unrelated to that session.
 
 ## Architecture decisions
 
 See [ADRs](adr/README.md) for the rationale behind shared storage, leased runners, direct rendering and static collision geometry. [Development](DEVELOPMENT.md) covers editing and verification.
 
 Object replacement policy lives in `lib/object-respawn.js`; Lua embeds the same constants and computes pressure from shared Redis state inside housekeeping, not an instance-local count. Break timestamps stay unchanged. [Formula and examples](GAMEPLAY.md#automatic-it-replacement).
+
+## Accounts and durable profiles
+
+[Phase 1 identity](IDENTITY.md) separates verified Google accounts and Postgres room characters from Redis gameplay, session validity and connection ownership. Offline registered names remain reserved. Join/profile mutations coordinate SQL reservations with online guests and bots; Redis writes carry connection/session fences. No Postgres queries occur per frame or heartbeat. Daily scores and 24-hour chat persistence remain planned.
+
+With persistent profile reservations configured, presence renewal must arrive before its lease expires. A delayed heartbeat cannot recreate a pruned/expired owner; the client must rejoin and recheck name reservations.

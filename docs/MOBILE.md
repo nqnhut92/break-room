@@ -56,3 +56,7 @@ On the actual iPhone, test repeated drags/lifts including off-pad release, joyst
 Touch settings contains five actions in one grid: Help/Map on the first row, High graphics/Copy server link on the second, and Call IT across the final row. Existing button elements are moved rather than recreated, preserving their listeners and state. Zoom stays at the right edge; skill/chat/emoji stay at the bottom; sound stays in the header. Desktop controls return to their original toolbar positions. [Current panel screenshot](../artifacts/settings-mobile.png).
 
 Run `npm run test:settings` with Chromium installed (or `CHROMIUM_PATH`) for alignment, action behavior and desktop placement at the 740×320, 844×390 and 956×440 touch layouts. `SETTINGS_REAL_RENDERER=1` runs the 844×390 smoke check with actual WebGL instead of the UI-only renderer stub; `SETTINGS_SCREENSHOT=/path/image.png` saves the open panel.
+
+## Account form
+
+Google sign-in, logout and explicit profile create/save/restore controls appear outside gameplay. On touch landscape screens, account/profile fields scroll within the left column while the room selection and primary join action remain in the right column. Guest explanation remains visible without a confirmation popup. Verify the primary action after rotating; use `npm run test:orientation` and `npm run test:account-ui`. Physical phone keyboard and Google redirect behavior still need device checks.

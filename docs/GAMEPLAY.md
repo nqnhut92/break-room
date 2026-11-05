@@ -66,3 +66,7 @@ There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; 
 [View the current layout](../artifacts/map-overview.png).
 
 Room names in the overview are layout annotations; the game no longer renders floating room-name signs.
+
+## Guest and saved characters
+
+Guests still join immediately. [Google sign-in](IDENTITY.md#player-behavior) saves one independent character in each room. Create/restore/edit outside the room; edits apply on the next join and are blocked while that character is playing elsewhere. Registered names remain reserved offline, case-insensitively. Sign-in does not autojoin or transfer guest points. Scores are not saved long-term; daily boards and 24-hour chat are planned later.

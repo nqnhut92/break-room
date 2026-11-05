@@ -1,3 +1,4 @@
+import { accountUI } from './account.js';
 import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js';
 import { createScene3D } from './scene3d.js';
 import { ROLES, ROLE_BY_ID } from './roles.js';
@@ -383,6 +384,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       $('drinkBtn').hidden = true;
       clearTimeout(drinkTimer);
       if (S.pendingWs) return; // a replacement is already joining; it takes over
+      if (ev && ev.code === 4004) {
+        exitLeave();
+        $('joinErr').textContent = 'Phiên đăng nhập hoặc phiên chơi đã kết thúc. Tải lại trang để đăng nhập lại nhé.';
+        return;
+      }
       if (ev && ev.code === 4002) {
         // kicked for inactivity: do not reconnect on our own, that would defeat the purpose
         autoJoin.clear();
@@ -435,6 +441,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function onMsg(m) {
     switch (m.t) {
       case 'welcome': {
+        if (m.guestTemporary) toast('Chưa kiểm tra được tên đã giữ. Bạn đang dùng tên khách tạm trong phòng này.');
         if (m.newer || (m.build && m.build !== 'dev' && MY_BUILD && m.build !== MY_BUILD)) showUpdate(false);
         $('drinkBtn').hidden = true;
         clearTimeout(drinkTimer);
@@ -2156,6 +2163,18 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 20 }));
     let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
     let chosenByUser = picked !== null;
+    const account = accountUI({
+      room: () => picked || rooms[0].id,
+      read: () => ({ name: $('nameInput').value, gender: S.gender, role: $('roleSelect').value, company: $('companyInput').value }),
+      fill: p => {
+        $('nameInput').value = S.name = p.name;
+        $('companyInput').value = S.company = p.company;
+        $('roleSelect').value = S.role = p.role;
+        S.gender = p.gender;
+        for (const radio of document.querySelectorAll('input[name="gender"]')) radio.checked = radio.value === p.gender;
+        syncJoin();
+      },
+    });
 
     let loaded = false;
     let lastSig = '';
@@ -2199,6 +2218,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         b.append(n, c);
         b.addEventListener('click', () => {
           picked = r.id;
+          account.roomChanged();
           chosenByUser = true;
           render();
         });
@@ -2230,7 +2250,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         if (data && Array.isArray(data.rooms) && data.rooms.length) rooms = data.rooms;
       } catch (e) { /* keep what we have */ }
       loaded = true;
+      const previousRoom = picked;
       preselect();
+      if (picked !== previousRoom) account.roomChanged();
       render();
     }
     preselect();
@@ -2247,13 +2269,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       $('joinForm').dispatchEvent(new Event('submit', { cancelable: true }));
     };
     if (picked !== null) resume(); // the room is in the URL: no need to wait for the server list
-    refresh(true).then(resume);
+    refresh(true).then(async () => { await account.ready; if (!account.authenticated()) resume(); });
     setInterval(() => {
       if (!$('overlay').classList.contains('gone')) refresh();
     }, 15000);
 
-    $('joinForm').addEventListener('submit', (e) => {
+    $('joinForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      try { await account.beforeJoin(); } catch (err) { $('joinErr').textContent = err.message; return; }
       const name = $('nameInput').value.trim();
       if (!name) return;
       if (!scene) {

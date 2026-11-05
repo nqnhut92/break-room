@@ -78,3 +78,7 @@ REDIS_URL='rediss://user:password@host:port' npm run check:store
 Script kiểm tra: kết nối, độ trễ, `SET`/`GET`, Lua (`EVAL`), pub/sub, 20 kết nối cùng lúc, và chạy thử chính store của game (vào phòng, đập, snapshot, dọn dẹp, gọi IT). Nó chỉ tạo khoá trong một phòng tạm rồi xoá, và không in chuỗi kết nối.
 
 Nhà cung cấp phải hỗ trợ Redis TCP/TLS, Lua (`EVAL`) và pub/sub; REST-only không đủ. Kiểm tra hạn mức kết nối, ops/giây, số lệnh/tháng, băng thông, TLS và chính sách xoá database khi không hoạt động trên gói đang dùng. Giá và hạn mức thay đổi; xem [Redis Cloud](https://redis.io/cloud/) hoặc [Upstash](https://upstash.com/pricing) rồi chạy `check:store` trước khi deploy. Vị trí được gửi nội bộ khi mọi người ở cùng instance, nhưng housekeeping và các cú đập vẫn dùng lệnh Redis.
+
+## Google login và Neon
+
+Xem [cấu hình và rollout identity](IDENTITY.vi.md#cấu-hình) để tạo Google app/callback, cấu hình `AUTH_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL` pooled và `MIGRATION_DATABASE_URL` tùy chọn (cùng DB). App tự áp dụng migration còn thiếu trước lần dùng DB hồ sơ đầu tiên; các instance chờ transaction advisory lock và bỏ qua version đã chạy. Không cần migration tay nếu role DB có quyền quản lý schema. Build không kết nối database. Local chỉ chơi khách không cần các biến này. Phiên account production dùng Redis chung. Không bật tạo account khi instance cũ còn bỏ qua protocol giữ tên.

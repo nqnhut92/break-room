@@ -6,7 +6,16 @@
   "functions": {
     "api/ws.js": {
       "maxDuration": 300,
-      "includeFiles": "lib/build-info.json"
+      "includeFiles": [
+        "lib/build-info.json",
+        "migrations/*.sql"
+      ]
+    },
+    "api/auth/**/*.js": {
+      "includeFiles": "migrations/*.sql"
+    },
+    "api/profile.js": {
+      "includeFiles": "migrations/*.sql"
     }
   }
 }

@@ -6,6 +6,7 @@
 // on that instance; all game state lives in Redis (see lib/store-redis.js).
 
 const http = require('http');
+const { createIdentity } = require('../lib/identity');
 const { createRealtime } = require('../lib/realtime');
 const { createStoreFromEnv, renewAfterMsFromEnv, respawnMsFromEnv, limitsFromEnv, bossOptsFromEnv } = require('../lib/config');
 
@@ -21,6 +22,7 @@ const server = http.createServer((req, res) => {
 
 createRealtime({
   store,
+  identity: createIdentity({ store }),
   respawnMs: respawnMsFromEnv(),
   trustProxy: true, // Vercel sets the client address headers itself
   renewAfterMs: renewAfterMsFromEnv(),

@@ -3,6 +3,9 @@
 const WebSocket = require('ws');
 const { resolveCollisions } = require('../lib/world');
 
+// Allow constrained CI/cloud cold starts more time without changing game
+// cooldowns, negative assertions, or default local-test timing.
+const waitMs = ms => ms * Math.max(1, Math.min(10, Number(process.env.TEST_WAIT_FACTOR) || 1));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const send = (c, o) => c.ws.send(JSON.stringify(o));
 
@@ -31,11 +34,12 @@ function client(port, name, room, token = newToken()) {
     });
     ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, room, token })));
     ws.on('error', reject);
-    setTimeout(() => reject(new Error('join timeout for ' + name)), 4000);
+    setTimeout(() => reject(new Error('join timeout for ' + name)), waitMs(4000));
   });
 }
 
 function take(c, pred, ms = 1500) {
+  ms = waitMs(ms);
   return new Promise((resolve, reject) => {
     const t0 = Date.now();
     const iv = setInterval(() => {
@@ -97,4 +101,4 @@ async function smashPlant(c, types) {
   return plant;
 }
 
-module.exports = { sleep, send, client, take, none, walkTo, dist, smashPlant, newToken, WebSocket };
+module.exports = { waitMs, sleep, send, client, take, none, walkTo, dist, smashPlant, newToken, WebSocket };

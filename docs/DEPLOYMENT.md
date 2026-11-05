@@ -80,3 +80,7 @@ REDIS_URL='rediss://user:password@host:port' npm run check:store
 The script checks connection, latency, `SET`/`GET`, Lua (`EVAL`), pub/sub, 20 simultaneous connections, and runs the game's own store (join, smash, snapshot, housekeeping, Call IT). It only creates keys in a temporary room, deletes them, and never prints the connection string.
 
 The provider must support Redis TCP/TLS, Lua (`EVAL`) and pub/sub; a REST-only endpoint is insufficient. Check connection limits, ops/s, monthly command and bandwidth quotas, TLS and idle-deletion rules for the actual plan. Prices and limits change; consult [Redis Cloud](https://redis.io/cloud/) or [Upstash](https://upstash.com/pricing), then run `check:store` before deployment. Positions stay local on a single instance, but housekeeping and hits still use Redis commands.
+
+## Google login and Neon
+
+Follow [identity setup and rollout](IDENTITY.md#configuration) for Google app/callback URLs, `AUTH_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, pooled `DATABASE_URL` and optional `MIGRATION_DATABASE_URL` (same database). The app automatically applies pending migrations before first profile database use; concurrent instances serialize through a transaction advisory lock and applied versions are skipped. No manual migration step is needed when the database role has schema permissions. Build does not connect to the database. Guest-only local mode requires none of these. Production account sessions share Redis. Do not enable account creation while old instances bypass the reservation protocol.

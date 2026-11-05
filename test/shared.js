@@ -643,6 +643,9 @@ async function twoInstances(url) {
   const mk = () =>
     server.createApp({
       store: createRedisStore(url, { log: quiet }), presenceTtlMs: 2500, log: quiet,
+      // This suite checks shared wreck snapshots; replacement timing is
+      // covered by the contract and smoke suites, not cold-start latency.
+      respawnMs: 60000,
       bossMaxHp: 60, bossRespawnMs: 1500, playerRespawnMs: 1500, // a tiny boss for the boss step below
     });
   const app1 = mk();

@@ -884,3 +884,12 @@ canvas {
   #sideBtns { align-items: flex-end; }
   #sideBtns #zoomBtns { flex-direction: row; }
 }
+
+.account-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.account-actions .btn { min-height:44px; white-space:normal; }
+#accountNote { line-height:1.5; }
+
+@media (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
+  #joinForm .joinFields { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+  #accountBox { grid-column: 1 / -1; }
+}

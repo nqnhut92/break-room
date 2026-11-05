@@ -12,13 +12,18 @@
     "test:renderer": "node test/renderer.cjs",
     "test:orientation": "node test/orientation.cjs",
     "test:joystick": "node test/joystick.cjs",
-    "test:settings": "node test/settings.cjs"
+    "test:settings": "node test/settings.cjs",
+    "db:migrate": "node scripts/migrate.js",
+    "test:identity": "bash scripts/test-identity.sh",
+    "test:account-ui": "node test/account-ui.cjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
+    "@auth/core": "0.41.3",
     "ioredis": "^5.11.1",
+    "pg": "^8.23.1",
     "ws": "^8.18.0"
   },
   "license": "MIT",

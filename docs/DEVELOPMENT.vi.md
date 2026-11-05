@@ -78,3 +78,11 @@ Kiểm tra vòng đời joystick bằng `npm run test:joystick` (Chromium/`CHROM
 Kiểm tra lưới cài đặt bằng `npm run test:settings` (Chromium/`CHROMIUM_PATH`): bố cục các cặp nút, Gọi IT toàn hàng, listener/trạng thái được giữ và toolbar desktop. `SETTINGS_REAL_RENDERER=1` chạy smoke test có WebGL thật; xem [Mobile](MOBILE.md#settings-layout). Renderer test cũng đi camera qua ranh giới sàn cũ ở cả safe/high; kiểm tra máy thật khi di chuyển vẫn cần thiết.
 
 Chỉnh chính sách IT trong `lib/object-respawn.js`: hệ số dùng chung cho RAM và Lua. `test/object-respawn.js` kiểm tra ví dụ/biên/tính đơn điệu; `test/shared.js` chạy cùng contract trên RAM/Redis, gồm bot, presence hết hạn, batch, thay đổi số người và tranh chấp hai client Redis. Chạy `npm run test:redis`; `RESPAWN_MS` dương vẫn giữ chế độ cố định để test nhanh.
+
+## Kiểm thử identity
+
+Dùng Node 20+ (đã kiểm tra Node 24). Chạy `npm run test:identity` với Postgres/Redis bỏ đi, migration và Google OIDC mock qua Auth.js. Runner không đọc URL database production. Xem [kiểm thử identity](IDENTITY.vi.md#kiểm-thử-và-phần-cần-xác-minh-live); mock không xác minh Google/Neon thật. Dùng `CHROMIUM_PATH` với browser đã cài như hướng dẫn trên.
+
+Trên máy cloud hạn chế tài nguyên, `TEST_WAIT_FACTOR=3 npm test` (hoặc `TEST_WAIT_FACTOR=3 npm run test:redis`) chỉ tăng thời gian chờ kết quả mạng/join trong helper. Không đổi cooldown game, assertion phủ định hay timing mặc định của test.
+
+Schema tự khởi tạo khi dùng DB hồ sơ lần đầu. `test:identity` kiểm tra các instance chạy đồng thời, khởi động lại giữ nguyên dữ liệu và rollback/retry transaction. Lệnh tùy chọn `npm run db:migrate` dùng `MIGRATION_DATABASE_URL` hoặc `DATABASE_URL`; test chỉ dùng DB bỏ đi.

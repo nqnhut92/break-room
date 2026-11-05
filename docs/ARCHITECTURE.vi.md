@@ -84,10 +84,16 @@ Kích thước ước lượng (ước tính, chưa đo): state của một phò
 
 ## Ranh giới kiểm tra và token
 
-Server là nơi quyết định mọi thứ quan trọng: client chỉ gửi vị trí và yêu cầu đập, server kiểm tra khoảng cách, chống dịch chuyển tức thời, giới hạn tốc độ đập và số tin nhắn mỗi giây. Tên người chơi được làm sạch ở server và chỉ hiển thị bằng `textContent` hoặc canvas ở client. Token của người chơi chỉ để nhận lại chỗ cũ sau khi reconnect, nó không phải thông tin xác thực: không có tài khoản, và id công khai của người chơi là số nguyên không liên quan tới token.
+Server là nơi quyết định mọi thứ quan trọng: client chỉ gửi vị trí và yêu cầu đập, server kiểm tra khoảng cách, chống dịch chuyển tức thời, giới hạn tốc độ đập và số tin nhắn mỗi giây. Tên người chơi được làm sạch ở server và chỉ hiển thị bằng `textContent` hoặc canvas ở client. Token của người chơi chỉ để nhận lại chỗ cũ sau khi reconnect, nó không phải thông tin xác thực account. Quyền account lấy từ phiên đã xác minh; id realtime công khai của người chơi vẫn là số nguyên không liên quan tới phiên đó.
 
 ## Quyết định kiến trúc
 
 Xem [ADR](adr/README.md) để biết vì sao chọn store dùng chung, runner có lease, render trực tiếp và map va chạm tĩnh. [Phát triển](DEVELOPMENT.vi.md) hướng dẫn sửa và kiểm tra code.
 
 Quy tắc thay đồ nằm ở `lib/object-respawn.js`; script Lua lấy hệ số từ cùng constants và tính trên state Redis ngay trong lượt housekeeping, không dùng số đếm riêng của từng instance. Tuổi đồ vỡ giữ nguyên. [Công thức và ví dụ](GAMEPLAY.vi.md#it-tự-thay-đồ).
+
+## Tài khoản và hồ sơ lâu dài
+
+[Identity đợt 1](IDENTITY.vi.md) tách account Google đã xác thực và nhân vật Postgres theo phòng khỏi gameplay, hiệu lực phiên và quyền kết nối Redis. Tên đăng ký được giữ cả khi offline. Join/mutation hồ sơ phối hợp SQL với khách và bot online; Redis write có fence connection/session. Không query Postgres theo frame hay heartbeat. Điểm ngày và chat giữ 24 giờ vẫn là kế hoạch.
+
+Khi cấu hình hồ sơ lâu dài có giữ tên, heartbeat phải gia hạn trước khi lease hết. Heartbeat đến muộn không tạo lại owner đã hết hạn hoặc bị prune; client phải join lại và kiểm tra tên đã giữ.

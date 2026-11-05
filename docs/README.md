@@ -13,6 +13,7 @@
 | TML / DMM | [Mini-bosses](MINIBOSSES.md) | Chưa có bản dịch |
 | Touch UI and device checks / Cảm ứng và kiểm tra thiết bị | [Mobile](MOBILE.md) | Chưa có bản dịch |
 | Mobile performance investigation / Điều tra giật trên mobile | [Performance](PERFORMANCE.md) | [Hiệu năng](PERFORMANCE.vi.md) |
+| Accounts and room characters / Tài khoản và nhân vật theo phòng | [Identity](IDENTITY.md) | [Identity](IDENTITY.vi.md) |
 | Decisions and tradeoffs / Quyết định và hệ quả | [ADR index](adr/README.md) | ADR dùng một bản tiếng Anh |
 
 Use guides for current behavior and instructions. Use ADRs for the context, decision, alternatives and consequences of an architectural choice. ADRs are not a changelog or a place for tuning every gameplay number.

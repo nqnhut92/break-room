@@ -8,7 +8,7 @@ A multiplayer 3D office-smashing game built with three.js. Smash furniture with 
 
 ## Run locally
 
-Requires Node.js 18+ and a browser with WebGL.
+Requires Node.js 20+ and a browser with WebGL.
 
 ```bash
 npm install
@@ -51,3 +51,5 @@ npm run test:redis
 ## License and credits
 
 Code: [MIT](LICENSE). Floor textures: [ambientCG](https://ambientcg.com/), CC0 ([notice](public/assets/textures/License.txt)). Three.js: MIT ([license](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([license](public/vendor/lucide-LICENSE.txt)). Furniture and characters are built in code.
+
+Optional Google login saves a separate character per room; guests remain available. Scores are not saved long-term. [Identity setup](docs/IDENTITY.md).

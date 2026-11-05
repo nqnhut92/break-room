@@ -14,6 +14,8 @@ Records 0001–0004 document decisions already present in the code and project n
 | [0004](0004-static-world.md) | Accepted | Share a static world and collision model with stable object IDs |
 | [0005](0005-safe-mode-shadows.md) | Accepted | Disable real-time shadow passes in safe mode |
 
+| [0006](0006-account-identity.md) | Accepted | Separate Google accounts, durable Postgres characters and Redis session/control ownership |
+
 ## Adding or changing a decision
 
 Copy [template.md](template.md) to the next unused `NNNN-short-title.md`. Start new proposals as **Proposed**; mark them **Accepted** when agreed or implemented. Explain context, the choice, alternatives and consequences, and link code, relevant guides and verification evidence. Do not invent historical dates, benchmarks or rejected experiments.

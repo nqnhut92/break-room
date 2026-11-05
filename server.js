@@ -5,6 +5,7 @@
 // Without REDIS_URL the game state lives in this process's memory.
 
 const http = require('http');
+const { createIdentity } = require('./lib/identity');
 const fs = require('fs');
 const path = require('path');
 const { createRealtime, HIT_RANGE, HIT_COOLDOWN_MS, RESET_COOLDOWN_MS, MANA, manaAt } = require('./lib/realtime');
@@ -79,11 +80,15 @@ function staticHandler(req, res, roomList) {
 
 // Builds one self-contained server. Tests build several on one shared store to
 // act like several Vercel instances.
-function createApp({ store = createStoreFromEnv(), env = process.env, ...overrides } = {}) {
+function createApp({ store = createStoreFromEnv(), env = process.env, identity: suppliedIdentity, ...overrides } = {}) {
   const roomList = createRoomList(store, ROOMS);
-  const server = http.createServer((req, res) => staticHandler(req, res, roomList));
+  const identity = suppliedIdentity || createIdentity({ env, store });
+  const server = http.createServer((req, res) => {
+    identity.http(req, res).then(handled => { if (!handled) staticHandler(req, res, roomList); }).catch(() => { res.writeHead(503).end('Service unavailable'); });
+  });
   const rt = createRealtime({
     store,
+    identity,
     respawnMs: respawnMsFromEnv(env),
     trustProxy: env.TRUST_PROXY === '1',
     renewAfterMs: renewAfterMsFromEnv(env),
@@ -94,6 +99,7 @@ function createApp({ store = createStoreFromEnv(), env = process.env, ...overrid
   rt.attach(server, { path: WS_PATH });
   return {
     server,
+    identity,
     store,
     instanceId: rt.instanceId,
     start(port) {
@@ -103,6 +109,7 @@ function createApp({ store = createStoreFromEnv(), env = process.env, ...overrid
       await rt.stop();
       await new Promise((resolve) => server.close(() => resolve()));
       if (store) await store.close();
+      await identity.close();
     },
   };
 }

@@ -62,3 +62,7 @@ Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đ
 [Xem map hiện tại](../artifacts/map-overview.png).
 
 Tên phòng trong ảnh là chú thích bố cục; game không còn biển tên phòng lơ lửng.
+
+## Khách và nhân vật đã lưu
+
+Khách vẫn vào chơi ngay. [Google login](IDENTITY.vi.md#hành-vi-người-chơi) lưu một nhân vật độc lập ở mỗi phòng. Tạo/khôi phục/sửa ở ngoài phòng; chỉnh sửa áp dụng lần vào tiếp theo và bị chặn khi nhân vật đang chơi ở nơi khác. Tên đăng ký được giữ cả offline, không phân biệt hoa/thường. Đăng nhập không tự vào phòng hay chuyển điểm khách. Điểm chưa lưu lâu dài; BXH ngày và chat giữ 24 giờ thuộc các đợt sau.

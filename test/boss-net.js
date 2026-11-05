@@ -45,7 +45,7 @@ async function main() {
       });
       ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, room, token })));
       ws.on('error', reject);
-      setTimeout(() => reject(new Error('join timeout')), 4000);
+      setTimeout(() => reject(new Error('join timeout')), h.waitMs(4000));
     });
 
   await step('welcome carries the boss and health settings, and everyone starts at full health', async () => {

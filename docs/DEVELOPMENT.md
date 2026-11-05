@@ -78,3 +78,11 @@ Run `npm run test:joystick` (Chromium/`CHROMIUM_PATH`) for joystick lifecycle ch
 Run `npm run test:settings` (Chromium/`CHROMIUM_PATH`) for paired button alignment, the full-width Call IT row, preserved listeners/state and desktop toolbar placement. `SETTINGS_REAL_RENDERER=1` enables a real-WebGL smoke test; see [Mobile](MOBILE.md#settings-layout). Renderer checks also move the camera across the former overlapping floor boundary in safe/high; moving-scene checks on actual hardware are still needed.
 
 Tune automatic IT policy in `lib/object-respawn.js`: constants are shared by RAM and Lua. `test/object-respawn.js` checks examples/bounds/monotonicity; `test/shared.js` runs the same contract on RAM/Redis, including bots, stale presence, batch consistency, changing population and competing Redis clients. Run `npm run test:redis`; positive `RESPAWN_MS` remains a fixed-delay override for fast tests.
+
+## Identity validation
+
+Use Node 20+ (Node 24 validated). Run `npm run test:identity` for disposable Postgres/Redis, migrations and mock Google OIDC through Auth.js. The runner never reads production database URLs. See [identity validation](IDENTITY.md#validation-and-remaining-live-checks); mock authentication does not verify live Google/Neon. Use `CHROMIUM_PATH` for installed browsers as above.
+
+On constrained cloud machines, `TEST_WAIT_FACTOR=3 npm test` (or `TEST_WAIT_FACTOR=3 npm run test:redis`) extends only positive network-result/join waits in shared helpers. It does not alter game cooldowns, negative assertions or the default test timing.
+
+Schema initialization is automatic on first profile database use. `test:identity` covers simultaneous instances, repeated startup preserving existing rows, and transactional rollback/retry. Optional `npm run db:migrate` uses `MIGRATION_DATABASE_URL` or `DATABASE_URL`; tests use only disposable targets.
