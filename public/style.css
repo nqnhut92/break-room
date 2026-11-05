@@ -1032,3 +1032,13 @@ canvas {
   #emoteTray { bottom: calc(var(--safe-bottom) + 76px); }
   #toasts { top: calc(var(--safe-top) + 58px); left: var(--hud-center); width: min(360px, calc(var(--safe-width) - 300px)); }
 }
+
+/* The overview never captures walking/attack controls; only its close button takes input. */
+#fullMap[hidden] { display: none; }
+#fullMap { position: fixed; inset: 0; z-index: 6; display: grid; place-items: center; pointer-events: none; }
+.full-map-panel { width: min(76vw, 960px); padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: rgba(10,13,20,.94); box-shadow: 0 8px 36px #0008; }
+.full-map-heading { display: flex; justify-content: space-between; align-items: center; color: #e5edf7; padding-bottom: 6px; font-size: 13px; }
+#fullMapClose { pointer-events: auto; min-width: 44px; min-height: 44px; font-size: 22px; }
+#fullMapCanvas { position: static; inset: auto; display: block; width: 100%; height: min(62vh, 560px); }
+.plabel .boss-motto { display: block; max-width: 180px; white-space: normal; text-align: center; font-size: 11px; line-height: 1.2; color: #e1cfa4; text-shadow: 0 1px 3px #000; }
+@media (pointer: coarse) { .plabel .boss-motto { display: none; } .full-map-panel { width: 68vw; } #fullMapCanvas { height: 58vh; } }

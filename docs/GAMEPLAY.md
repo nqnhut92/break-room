@@ -21,7 +21,8 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | Emoji | Shift + keys 1 to 8 or the emoji buttons |
 | Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a phone it fades after 3 seconds |
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
-| Mini map | M to hide or show it (click it too) |
+| Mini map | M or the map utility hides/shows the local map; click/tap the mini map to toggle the full-room overview |
+| Full-room map | Desktop: hold Tab to view, release to close; Esc or × closes a clicked-open overview. Mobile: tap the mini map again or × to close. Movement continues; chat fields retain normal keyboard behavior |
 
 **Mana.** Every smash costs 5 mana out of 100 (the blue bar under your name). Mana comes back at 3/s at first and 12/s once you have gone 2 seconds without smashing (so the walk between two far-apart objects only gives a little back), so you can burst about 20 hits, then you need roughly 10 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
 
@@ -53,17 +54,19 @@ Call IT still replaces everything immediately when its existing cooldown permits
 
 ## Bosses and moles
 
-VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. New Process marks a fixed circle of radius 350, with a 1.2-second warning before dealing 20 damage. Patrol/wander speeds are 220/180/200 for VKL/TML/DMM; chase speeds are 480/440/460, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. Detailed rules and balance:
+VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. New Process marks a fixed circle of radius 350, with a 1.2-second warning before dealing 20 damage. Patrol/wander speeds are 220/200/180 for VKL/TML/DMM; chase speeds are 480/460/440, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. Detailed rules and balance:
 
 - [VKL, snakes, captured duels and New Process](BOSS.md)
 - [TML and DMM](MINIBOSSES.md)
 - [Moles](MOLES.md)
 
+VKL maximum HP grows by groups of four real online players: 6,000 for 1–4, then +3,000 per group after a sustained 15-second threshold. Growth preserves damage dealt and never lowers the current life’s tier; respawn recalculates it. Moles/snakes do not count, and ordinary hits no longer lose damage in a crowd. Ultimate deals 20% of maximum HP on all three bosses; mini-boss HP stays fixed.
+
 ## The office
 
-The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall and toilets in the north. Reception/breakout is in the middle, with the server room to its east and the lounge beside it. Two meeting rooms, the director's office and the pantry occupy the south wing. Rooms connect through corridors and designated doors; shared walls leave no walkable slivers.
+The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall and toilets in the north. Reception/breakout is in the middle, with the server room to its east and the lounge beside it. Two meeting rooms, the director's office and the pantry occupy the south wing. Rooms connect through wider designated doors and corridors; new workspace–IT–town-hall, lounge and meeting-room links create circulation loops. Pantry tables are spaced farther apart. Shared walls leave no unintended walkable slivers; the world dimensions and saved object IDs stay unchanged.
 
-There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The mini map shows you in yellow, other players in white, broken objects in red, VKL as a large red dot and the living mini-bosses TML (orange) and DMM (purple) as smaller dots.
+There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The mini map follows you and covers a nearby region about 1.75 times the ground-view extent, including zoom/aspect changes. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that region. The full-room overview shows the whole layout. Neither view pauses the game.
 
 [View the current layout](../artifacts/map-overview.png).
 

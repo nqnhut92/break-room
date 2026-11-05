@@ -38,9 +38,6 @@ step('boss and player hp: the boss does not heal by default, the formula still w
   // a full bar takes about 20 seconds after the delay: neither instant nor endless
   const full = (PLAYER.maxHp - 1) / PLAYER.regenPerSec;
   assert.ok(full >= 15 && full <= 30);
-  assert.strictEqual(B.hitScale(1), 1);
-  assert.strictEqual(B.hitScale(BOSS.teamRef), 1);
-  assert.strictEqual(B.hitScale(BOSS.teamRef * 4), 4);
 });
 
 step('the boss punches hard enough to matter: a handful of punches kill, and the windup can be dodged', () => {
@@ -176,7 +173,8 @@ step('dead boss does nothing until the caller revives it', () => {
 // a group cannot win here it cannot win for real.
 function secondsToKill(n, style, limitS = 900) {
   const dt = 0.05;
-  let hp = B.BOSS.maxHp;
+  const maxHp = require('../lib/boss-population').populationMax(B.BOSS.maxHp, n);
+  let hp = maxHp;
   let at = 0;
   const ps = Array.from({ length: n }, (_, i) => ({ mana: MANA.max, manaAt: 0, lastHit: -1e9, off: i * 37, burst: true }));
   for (let t = 0; t < limitS; t += dt) {
@@ -195,7 +193,7 @@ function secondsToKill(n, style, limitS = 900) {
       p.mana = m - MANA.cost;
       p.manaAt = now;
       p.lastHit = now;
-      hp = B.bossHpAt(hp, at, now) - B.BOSS.hitDmg / B.hitScale(n);
+      hp = B.bossHpAt(hp, at, now, { ...B.BOSS, maxHp }) - B.BOSS.hitDmg;
       at = now;
       if (hp <= 0) return t;
     }
@@ -204,12 +202,12 @@ function secondsToKill(n, style, limitS = 900) {
 }
 const best = (n) => Math.min(secondsToKill(n, 'greedy'), secondsToKill(n, 'burst'));
 
-step('balance: no regeneration, so it is a damage budget: a lone player takes a long time, five take about a minute, a crowd is not trivial', () => {
+step('balance: population HP and unscaled normal hits keep solo long and groups viable', () => {
   const times = {};
   for (const n of [1, 2, 3, 4, 5, 8, 12, 20]) times[n] = best(n);
   console.log('   seconds to kill by players (best of two swing styles): ' + Object.entries(times).map(([n, t]) => n + ':' + (t === Infinity ? 'never' : Math.round(t))).join('  '));
   assert.ok(times[1] > 240, 'solo is a long job even if the boss never punched: ' + times[1]);
-  assert.ok(times[2] > times[3] && times[3] > times[4] && times[4] > times[5], 'more players, faster: ' + JSON.stringify(times));
+  assert.ok(times[2] > times[3] && times[3] > times[4] && times[5] > times[8], 'more attackers within a tier finish faster: ' + JSON.stringify(times));
   assert.ok(times[5] >= 50 && times[5] <= 150, 'five players: ' + times[5]);
   for (const n of [8, 12, 20]) assert.ok(times[n] >= 50 && times[n] <= 180, n + ' players: ' + times[n]);
 });

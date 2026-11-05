@@ -26,7 +26,7 @@ async function main() {
       assert.ok(source.includes(marker), 'private diagnostic export marker still exists');
       return route.fulfill({ contentType: 'application/javascript', body: source.replace(marker, 'debug: { scene, players, miniRigs, sun, bodyMat, pickMat }, ' + marker) });
     });
-    await page.route('**/renderer-check', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}canvas{display:block}#labels{display:none}</style><canvas></canvas><div id="labels"></div><script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script><script type="module">
+    await page.route('**/renderer-check', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><style>body{margin:0}canvas{display:block}</style><canvas></canvas><div id="labels"></div><script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script><script type="module">
       import {createScene3D} from '/scene3d.js';
       const data=${JSON.stringify({ world: W.WORLD, props: W.PROPS, zones: W.ZONES, objects: W.OBJECTS, types: W.TYPES })};
       const app=createScene3D(document.querySelector('canvas'),document.querySelector('#labels'));
@@ -82,6 +82,10 @@ async function main() {
       const mini={...player(-10),mini:'TML',x:2000,y:1850};
       S.minis.set('TML',{x:2000,y:1850,hp:900,mode:'idle',pl:mini});frame();
       check(app.debug.miniRigs.has('TML'), 'mini-boss uses the same owned-resource lifecycle');
+      S.minis.set('DMM',{x:2050,y:1850,hp:600,mode:'idle',pl:{...player(-11),mini:'DMM'}});frame();
+      const mottos=[...document.querySelectorAll('.boss-motto')].map(el=>el.textContent);
+      check(matchMedia('(pointer: coarse)').matches ? mottos.length===0 : mottos.includes('Tranh công, chối tội, đổ lỗi, thanh minh') && mottos.includes('Thiên hạ đệ nhất thái giám'), 'mini-boss mottos appear on desktop only');
+
       S.minis.clear();frame();
       check(app.renderer.info.memory.geometries===baseline, 'removed mini-boss releases its rig and telegraph geometry');
       S.players.set(2,player(2));frame();
@@ -100,6 +104,15 @@ async function main() {
       }
       Object.assign(me,home,{moving:false});app.cameraTo(me.x,me.y);app.setQuality('low');frame();
       check(motionErrors===0,'camera movement across the former floor-overlap strip works in safe and high modes without WebGL errors');
+      S.boss={x:1920,y:1950,dead:false,mode:'patrol',pl:{...player(-1),gender:'boss',role:'boss',name:'VKL'}};frame();
+      const mainMotto=[...document.querySelectorAll('.boss-motto')].find(el=>el.textContent==='Mọi người nghĩ dì dẫy?');
+      check(matchMedia('(pointer: coarse)').matches ? !mainMotto : !!mainMotto, 'VKL motto appears below its name on desktop only');
+      S.boss.pl.alwaysHp=true;S.boss.pl.hpLabel='6.000 / 6.000';
+      for(const [id,x,hp] of [['TML',1600,900],['DMM',2240,600]]) {
+        S.minis.set(id,{x,y:1950,hp,mode:'idle',pl:{...player(id==='TML'?-10:-11),name:id,role:'',mini:id,x,y:1950,alwaysHp:true,hpLabel:hp+' / '+hp}});
+      }
+      frame();
+      check([...document.querySelectorAll('.boss-motto')].every(el=>el.previousElementSibling.classList.contains('nm') && el.getBoundingClientRect().top>=el.previousElementSibling.getBoundingClientRect().bottom), 'desktop mottos sit directly below names without covering them');
       return {checks,metrics};
     });
     assert.deepStrictEqual(errors, [], 'no browser page errors');

@@ -109,3 +109,9 @@ The boss hash also holds the versioned office-patrol schedule and one-second roa
 
 
 Canvas and fixed HUD share the dynamic `#app` layout surface, observed by `viewport.js`; layout `innerHeight` supplies a floor when rotation leaves older root/dynamic-unit values. Browser safe-area insets protect content without shrinking the world background. Visual viewport measurements remain limited to keyboard placement. See [mobile layout and verification limits](MOBILE.md#safe-areas-and-rotation-previews).
+
+## Population-scaled boss health
+
+The boss hash stores current/max HP, monotonic `rev`, private per-tier `population` confirmation start times and `popAt`. The existing lease holder calls `bossScale` once per second; one store mutation verifies the lease, counts fresh room-wide presence excluding mole IDs, and applies additive tier growth. Downed humans count; stale presence does not. A gap over three seconds restarts pending confirmation. Respawn resets max/current HP using current real population. Ordinary hits no longer divide damage by nearby target count.
+
+`bossHit` accepts a percentage `share` for ultimate and calculates damage against stored max HP atomically; rack support and snake thresholds also read that maximum. Growth retains contribution, rack and wave markers. Health-changing operations advance `rev`; `bhp`, `bup` and welcome carry current max/revision so reordered pub/sub health cannot overwrite a newer state. Population fields and human/bot classifications are never included in those messages. Public HP still permits some inference. See [ADR 0010](adr/0010-population-boss-health.md) and [rules](BOSS.md#population-health).

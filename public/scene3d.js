@@ -1556,7 +1556,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       hpt.className = 'hpt';
       hpb.appendChild(hpt);
     }
-    label.append(bub, emo, nm, rl, hpb, bar);
+    label.append(bub, emo, nm);
+    if (!coarse && (p.gender === 'boss' || p.mini)) {
+      const motto = document.createElement('span');
+      motto.className = 'boss-motto';
+      motto.textContent = p.mini === 'TML' ? 'Tranh công, chối tội, đổ lỗi, thanh minh'
+        : p.mini === 'DMM' ? 'Thiên hạ đệ nhất thái giám' : 'Mọi người nghĩ dì dẫy?';
+      label.appendChild(motto);
+    }
+    label.append(rl, hpb, bar);
     labelsEl.appendChild(label);
 
     scene.add(g);
@@ -2521,6 +2529,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   // for the zoom buttons: are we at the closest or the furthest view?
+  function groundView() {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    camera.updateMatrixWorld();
+    for (const [x,y] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+      ndc.set(x,y); ray.setFromCamera(ndc,camera);
+      if (ray.ray.intersectPlane(ground,hitPt)) {
+        x0 = Math.min(x0,hitPt.x); x1 = Math.max(x1,hitPt.x);
+        y0 = Math.min(y0,hitPt.z); y1 = Math.max(y1,hitPt.z);
+      }
+    }
+    return Number.isFinite(x0) ? { w: x1-x0, h: y1-y0 } : { w: 1200, h: 750 };
+  }
   function zoomLimits() {
     return { atMin: cam.dist <= ZOOM_MIN + 1, atMax: cam.dist >= ZOOM_MAX - 1 };
   }
@@ -2539,7 +2559,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
+    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, groundView, cameraTo, ready,
     fx: { summon: fxSummon, duelCast: fxDuelCast, blow: fxBlow, rope: fxRope, process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),

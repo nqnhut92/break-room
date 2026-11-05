@@ -21,7 +21,8 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | Thả emoji | Shift + phím 1 đến 8 hoặc bấm các nút emoji |
 | Chat | Enter hoặc `/`, hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game, Esc để huỷ. Khung chat luôn hiện trên máy tính; trên điện thoại nó mờ đi sau 3 giây |
 | Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |
-| Bản đồ nhỏ | Phím M để ẩn hoặc hiện (bấm vào nó cũng được) |
+| Bản đồ nhỏ | Phím M hoặc tiện ích bản đồ để ẩn/hiện bản đồ quanh bạn; chạm/click mini map để mở/đóng bản đồ toàn room |
+| Bản đồ toàn room | Desktop: giữ Tab để xem, thả để đóng; Esc hoặc × đóng bản mở bằng click. Mobile: chạm lại mini map hoặc × để đóng. Vẫn di chuyển được; lúc nhập chat giữ thao tác bàn phím bình thường |
 
 **Mana.** Mỗi cú đập tốn 5 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 3/giây lúc đầu và 12/giây khi đã quá 2 giây không đập (nên đi bộ giữa hai món xa nhau chỉ hồi được chút ít), nên bạn đập dồn được khoảng 20 cú rồi cần khoảng 10 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
 
@@ -49,17 +50,19 @@ Nút Gọi IT vẫn thay ngay khi hết cooldown như cũ. Đặt `RESPAWN_MS` d
 
 ## Boss và nội gián
 
-VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. New Process đánh dấu vòng tròn cố định bán kính 350, báo trước 1,2 giây rồi gây 20 sát thương. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/180/200; tốc độ đuổi là 480/440/460, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
+VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. New Process đánh dấu vòng tròn cố định bán kính 350, báo trước 1,2 giây rồi gây 20 sát thương. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/200/180; tốc độ đuổi là 480/460/440, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
 
 - [VKL, rắn, đấu 1:1 và chiêu New Process](BOSS.vi.md)
 - [TML và DMM](MINIBOSSES.md) (tiếng Anh)
 - [Nội gián](MOLES.vi.md)
 
+Max HP VKL tăng theo nhóm bốn người thật online: 6.000 cho 1–4 người, sau đó +3.000 mỗi nhóm khi giữ ngưỡng 15 giây. Tăng máu giữ sát thương đã gây, không hạ mức trong cùng mạng boss; hồi sinh thì tính lại. Nội gián/rắn không tính, đòn thường không còn giảm damage theo đám đông. Ulti gây 20% max HP lên cả ba boss; máu mini boss vẫn cố định.
+
 ## Văn phòng
 
-Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn IT sáu chỗ, hội trường và WC. Sảnh/breakout ở giữa; phòng server ở phía đông sảnh, lounge nằm cạnh server. Dãy phía nam gồm hai phòng họp, phòng giám đốc và pantry. Các phòng nối bằng hành lang và cửa riêng; tường chung không chừa khe luồn.
+Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn IT sáu chỗ, hội trường và WC. Sảnh/breakout ở giữa; phòng server ở phía đông sảnh, lounge nằm cạnh server. Dãy phía nam gồm hai phòng họp, phòng giám đốc và pantry. Cửa được nới rộng; thêm lối nối khu làm việc–IT–hội trường, lounge và hai phòng họp để chạy vòng. Các bàn pantry giãn xa hơn. Tường chung không có khe luồn ngoài ý muốn; kích thước map và ID đồ vật đã lưu giữ nguyên.
 
-Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Bản đồ nhỏ hiển thị bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL là chấm đỏ lớn, còn TML (cam) và DMM (tím) còn sống là các chấm nhỏ hơn.
+Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map bám theo bạn, hiện vùng lân cận khoảng 1,75 lần vùng mặt sàn trong khung nhìn, cập nhật khi zoom/đổi tỉ lệ màn hình. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
 
 [Xem map hiện tại](../artifacts/map-overview.png).
 

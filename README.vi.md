@@ -4,7 +4,7 @@
 
 Văn phòng đập phá nhiều người chơi, dựng 3D bằng three.js. Đập đồ cùng đồng nghiệp, đua tổng thiệt hại hoặc hợp sức đánh VKL, TML và DMM. IT tự thay đồ trong 25–60 giây tùy số người và số đồ vỡ; nút Gọi IT thay hết ngay.
 
-![Break Room](artifacts/map-ingame.png)
+![Toàn cảnh văn phòng hiện tại, chụp từ game](artifacts/map-ingame.png)
 
 ## Chạy local
 
@@ -29,6 +29,7 @@ Chọn cùng **BR-1** hoặc **BR-2**, tối đa 20 người mỗi server, rồi
 | Gọi IT | I |
 | Chat / emoji | Enter hoặc `/` / Shift + 1…8 |
 | Camera / bản đồ | Lăn chuột, chụm hai ngón, +/− / M |
+| Bản đồ toàn room | Desktop giữ Tab; chạm/click mini map để mở/đóng; × để đóng |
 
 ## Kiểm tra
 

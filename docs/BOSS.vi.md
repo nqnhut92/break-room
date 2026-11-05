@@ -9,20 +9,21 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong p
 - Sếp đi một vòng trong phòng server. Khi có người **ở trong phòng** (hoặc đứng ở khoảng sân ngay trước cửa) sếp chạy lại người gần nhất, giơ nắm đấm lên (0,7 giây, **vòng đỏ** dưới sàn báo chỗ nắm đấm sẽ rơi) rồi đấm. Ai đang trong vòng lúc nắm đấm rơi thì mất 30 máu. Chạy ra khỏi vòng kịp lúc là né được.
 - Người chơi có 100 máu (thanh máu trên đầu khi bị thương, và một ô ở thanh trên cùng). Bốn cú đấm là gục. Nằm **15 giây**, vẫn chat được, rồi hồi sinh ở **sảnh**, không bao giờ hồi sinh ngay chỗ ngã.
 - Máu hồi chậm: 4 giây đầu sau cú đấm không hồi gì, sau đó 5 máu mỗi giây (đầy lại khoảng 24 giây sau cú cuối). Ra khỏi phòng chờ một chút là lựa chọn thật sự.
-- Sếp có 6.000 máu, một cú búa gây 10 (tức 600 cú) và sếp **không hồi máu**: sát thương được giữ lại, nên đánh rồi chạy cũng được. **Một người đánh một mình rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó; khoảng năm người hạ trong chừng một phút, đông người cũng không dễ.**
+- Sếp khởi đầu có 6.000 máu với 1–4 người thật online trong room. Mỗi nhóm bốn người tiếp theo cộng 3.000 vào cả máu hiện tại và tối đa sau 15 giây giữ ngưỡng. Sát thương đã gây được giữ lại; không tự hồi máu. Búa/điện luôn gây 10, trà sữa gây 5; ulti gây 20% máu tối đa hiện tại.
 - Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 1 phút sau sếp quay lại chỗ cũ với đầy máu.
 - Ngoài sự kiện đi tuần toàn văn phòng, sếp ở phòng server; ra khỏi khu vực sẽ thoát truy đuổi, nhưng sếp không hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
 
 ## Các con số
 
-Tất cả nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js), không chỗ nào khác ghi cứng (client nhận qua tin `welcome`).
+Chỉ số giao tranh nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js); ngưỡng dân số nằm trong [`lib/boss-population.js`](../lib/boss-population.js). Client nhận máu hiện tại/tối đa, không nhận bộ đếm người thật.
 
 | Thiết lập | Giá trị | Lý do |
 | --- | --- | --- |
 | Máu người chơi | 100 | Bốn cú đấm. Đủ ít để thấy nguy hiểm, đủ nhiều để sống sót qua một lỗi. |
 | Cú đấm của sếp | 30 sát thương, báo trước 0,7 giây, hồi 0,6 giây | "Phải đau" nhưng né được. Người chạy hết tốc độ thoát khỏi vòng trong khoảng 0,29 giây. |
 | Tốc độ sếp | 220 khi tuần tra, 480 khi đuổi (người chơi đi 420) | Trên đường thoáng, sếp bắt kịp người đang chạy; né lúc báo đòn và đánh trả lúc sếp hồi đòn. Ngoài sự kiện đi tuần toàn văn phòng, ra khỏi khu boss vẫn thoát được cuộc đuổi. |
-| Máu sếp | 6.000, mỗi cú búa 10 | Chỉnh theo mô phỏng bên dưới. |
+| Máu sếp | 6.000 cho 1–4 người thật; +3.000 mỗi nhóm bốn tiếp theo | Giữ sát thương đã gây khi room đông thêm. |
+| Ulti | 20% máu tối đa hiện tại | Áp dụng VKL, TML và DMM; tốc độ tích giữ nguyên. |
 | Hồi máu sếp | không | Người chơi thấy sếp hồi máu quá khó. Xem "Vì sao sếp không hồi máu". |
 | Hồi máu người chơi | 5/giây sau 4 giây | Vừa phải: không "không bao giờ", không "ngay lập tức". |
 | Người chơi hồi sinh | 15 giây, ở sảnh | Trước là 60 giây; người chơi thấy một phút là quá lâu. |
@@ -34,19 +35,27 @@ Tất cả nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js), 
 
 `node test/boss.js` chạy một mô hình cố ý rộng rãi (không ai chết hay đánh trượt, mọi người đập nhanh nhất mana cho phép, lấy kiểu đập tốt hơn trong hai kiểu) rồi in thời gian sếp sống được:
 
-| Số người trong phòng | 1 | 2 | 3 | 4 | 5 | 8 | 20 |
+| Người thật online, tất cả cùng đánh | 1 | 2 | 3 | 4 | 5 | 8 | 20 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Giây để hạ sếp | không bao giờ | không bao giờ (> 15 phút) | ~310 | ~170 | ~115 | ~115 | ~115 |
+| Giây để hạ sếp | ~373 | ~186 | ~121 | ~93 | ~108 | ~68 | ~54 |
 
-Trận thật khó hơn mô hình vì người chơi bị đấm, nên 3 đến 4 người đánh rất vất vả, từ 5 người trở lên thắng được dù có người ngã, 1 đến 2 người không thể. Test sẽ fail nếu các lời hứa này bị phá, nên chỉnh lại số là an toàn: sửa `BOSS`, chạy `npm test`.
+Mô hình bắt đầu ở mức máu tương ứng số người, không tính ulti, tủ server, đòn địch hay thời gian di chuyển. Trận thật phụ thuộc né đòn và số người tham chiến; người online ở khu khác vẫn làm tăng mức máu. Qua ranh giới nhóm có thể khiến năm người đánh lâu hơn bốn. Đây là kết quả mô phỏng, không phải thời gian đo trận thật. Chạy `npm run test:redis` sau khi sửa luật server.
 
 ## Vì sao làm thế này
 
-**Thang sát thương riêng, không phải "gấp 100 đến 1000 lần máu".** Ý đầu tiên là sếp có máu gấp 100 đến 1000 lần người chơi. Hiểu đúng nghĩa thì là 10.000 đến 100.000 máu, mà mỗi cú đập chỉ 1 sát thương và cả nhóm chỉ đập được khoảng bốn cú mỗi giây, nên sếp như vậy không bao giờ chết. Điều quan trọng là *thời gian hạ sếp*, không phải tỉ lệ. Nên cú búa vào sếp tính 10 và sếp có 3.600 (gấp 36 lần máu người, 360 cú), số được chọn theo thời gian hạ ở bảng trên.
+**Thang sát thương riêng, không phải "gấp 100 đến 1000 lần máu".** Ý đầu tiên là sếp có máu gấp 100 đến 1000 lần người chơi. Hiểu đúng nghĩa thì là 10.000 đến 100.000 máu, mà mỗi cú đập chỉ 1 sát thương và cả nhóm chỉ đập được khoảng bốn cú mỗi giây, nên sếp như vậy không bao giờ chết. Điều quan trọng là *thời gian hạ sếp*, không phải tỉ lệ. Cú đánh vào sếp có thang sát thương riêng (búa gây 10); máu tối đa hiện theo nhóm người như bảng trên.
 
 **Vì sao sếp không hồi máu (nữa).** Trước đây sếp hồi 5 mỗi giây, thêm 20 mỗi giây sau một lúc yên, nên một hay hai người không bao giờ thắng và cả nhóm phải bám sát. Chơi thật thì quá khó và mất vui: không ai đánh bớt rồi rút lui được. Giờ sát thương được giữ lại, đánh rồi chạy là chiến thuật thật. Trận vẫn khó vì sếp đấm, và máu sếp tăng lên 6.000 để vẫn là việc của cả nhóm. Code hồi máu (`bossHpAt`) vẫn còn và hai con số nằm trong `BOSS` (`baseRegenPerSec`, `regenPerSec`): đặt lớn hơn 0 là hồi máu trở lại, client dùng cùng công thức.
 
-**Vì sao sát thương theo số đông.** Nếu hai mươi người bạn vào, sếp chỉnh cho năm người sẽ chết trong 30 giây. Mỗi cú búa được chia cho `max(1, số người trong phòng sếp / 5)`, nên thời gian hạ sếp vẫn quanh hai phút dù đông hay vắng. Số này đếm người *còn sống và đang trong khu vực của sếp*, không phải số người online, nếu không thì mười lăm người đứng trong nhà vệ sinh làm sếp khoẻ hơn với năm người đang đánh, còn một đám đông đứng ngoài thì chẳng ảnh hưởng gì.
+### Máu theo số người
+
+Máu tối đa là 6.000 / 9.000 / 12.000 / 15.000 / 18.000 tương ứng 1–4 / 5–8 / 9–12 / 13–16 / 17–20 người thật online trong room. Đếm presence còn hạn trong store chung của mọi instance, kể cả người đang chờ hồi sinh hoặc ngoài khu boss. Mỗi ID tính một lần; nội gián ẩn/đã lộ và rắn triệu hồi không tính. Các danh tính khách/tài khoản riêng vẫn là người chơi riêng; cơ chế này không xác minh số người ngoài đời.
+
+Mỗi ngưỡng mới phải giữ 15 giây, runner quan sát mỗi giây. Mỗi ngưỡng có bộ đếm riêng: từ chín xuống năm người không xóa tiến độ ngưỡng năm người. Nếu quá ba giây không quan sát, các bộ đếm chờ bắt đầu lại. Khi tăng mức, cộng chênh lệch max HP vào HP hiện tại: 300/6.000 thành 3.300/9.000. Không xóa ledger sát thương, dấu tủ đã dùng hoặc đợt rắn đã gọi. Trong một mạng boss, max HP không giảm; ra vào lại cùng mức không cộng thêm. Hồi sinh thì đầy máu theo số người thật đang có. Room mới bắt đầu ở máu gốc và xác nhận tăng mức như bình thường.
+
+Bỏ giảm sát thương theo số mục tiêu cũ. Ulti tính 20% max HP trong store nguyên tử cùng cú đánh, tránh instance khác dùng max HP cũ. Tủ hỗ trợ 2% max HP tại lúc vỡ; tủ đã dùng không được tính lại khi tăng mức. Mỗi đợt rắn 70/40/10% vẫn chỉ xảy ra một lần mỗi mạng boss.
+
+Client chỉ nhận HP hiện tại/tối đa và phiên bản máu. Không gửi số người thật, bộ đếm ngưỡng hay phân loại bot. Chia nhóm và trì hoãn giảm dấu hiệu đổi HP ngay khi có người vào, nhưng số máu và số online công khai vẫn có thể giúp suy luận; không bảo đảm giấu tuyệt đối. Xem [ADR 0010](adr/0010-population-boss-health.md).
 
 **Vì sao sếp chỉ ở trong phòng server.** Bạn yêu cầu thế, và nó cũng giữ phần còn lại của game an toàn: người mới vào spawn ở sảnh, văn phòng mở không bao giờ nguy hiểm. Giống "phòng boss" trong RPG cũ: bạn chọn bước vào. Vì sếp chỉ để ý người trong phòng (hoặc trên khoảng sân trước cửa) nên đứng ở cửa chọc sếp cũng không thành đánh miễn phí: khoảng sân được tính, sếp sẽ bước ra gặp bạn.
 
@@ -71,7 +80,7 @@ Game chạy trên nhiều instance Vercel cùng lúc, nên phải có **đúng m
 - **Một người điều khiển.** Instance giữ một hợp đồng ngắn trong store (`blk`, 3 giây, gia hạn mỗi giây, instance nào có người trong phòng cũng thử giành) sẽ điều khiển sếp: đi tuần, để ý người, tung đấm, và phát bản chụp vị trí. Nó chết thì instance khác giành hợp đồng trong khoảng 3 giây và đi tiếp từ bản chụp cuối. Phòng trống thì không instance nào giữ hợp đồng, nên tốn 0.
 - **Ai cũng làm đau người của mình.** Người điều khiển phát `bstrike` (tâm và bán kính). Mỗi instance tự kiểm tra *người của nó* với vòng tròn bằng vị trí thật phía server rồi trừ máu. Không ai phải đoán vị trí người ở instance khác, và mỗi người chỉ bị đau một lần.
 - **Nguyên tử ở chỗ cần.** Một cú đánh vào sếp là một script Lua (`bossHit`): cộng phần hồi máu, trừ cú đánh, ghi sát thương, và với cú kết liễu thì trả tiền thưởng và đánh dấu sếp gục, tất cả một lúc, nên hai instance cùng tung cú cuối không thể cùng trả thưởng. Máu sếp lưu kèm mốc thời gian (hash `boss`); máu người chơi nằm trong hash tên.
-- **Chi phí.** Bản chụp vị trí gửi 5 lần mỗi giây khi sếp đi và 10 lần khi đánh, và chỉ khi nó di chuyển; nếu mọi người trong phòng ở cùng instance với người điều khiển thì không đụng Redis. Redis thấy khoảng một lệnh hợp đồng mỗi giây mỗi instance mỗi phòng, một `HMGET` mỗi giây cho người điều khiển, và một lệnh cho mỗi cú đánh vào sếp hoặc mỗi cú đấm trúng. Phòng trống thì sếp không có đồng hồ nào chạy.
+- **Chi phí.** Bản chụp vị trí gửi 5 lần mỗi giây khi sếp đi và 10 lần khi đánh, và chỉ khi nó di chuyển; nếu mọi người trong phòng ở cùng instance với người điều khiển thì không đụng Redis. Redis thấy khoảng một lệnh hợp đồng mỗi giây mỗi instance mỗi phòng, một lệnh nguyên tử kiểm tra presence/tăng máu mỗi giây cho người điều khiển, và một lệnh cho mỗi cú đánh vào sếp hoặc mỗi cú đấm trúng. Phòng trống thì sếp không có đồng hồ nào chạy.
 
 ### Các tin nhắn (server gửi client)
 
@@ -80,9 +89,9 @@ Game chạy trên nhiều instance Vercel cùng lúc, nên phải có **đúng m
 | `boss` | vị trí, hướng, trạng thái và số người trong tầm (thanh HUD dùng) |
 | `bwind` | một cú đấm bắt đầu: tâm, bán kính, thời lượng (vòng đỏ) |
 | `bstrike` | nắm đấm rơi |
-| `bhp` | một cú đánh vào sếp, kèm máu mới (client tự cộng phần hồi) |
+| `bhp` | đổi máu do đánh, tủ hoặc tăng dân số: HP hiện tại/tối đa và phiên bản máu tăng dần; bỏ qua bản cũ |
 | `bdead` | sếp gục: ai gây bao nhiêu, mỗi người nhận bao nhiêu thưởng, bao lâu nữa quay lại |
-| `bup` | sếp quay lại |
+| `bup` | sếp quay lại, kèm max HP của mạng mới và phiên bản máu |
 | `hp` | người chơi bị thương: máu mới và sát thương |
 | `down` | người chơi bị hạ gục: bao nhiêu mili giây nữa hồi sinh |
 | `up` | người chơi hồi sinh: ở đâu, máu mới |
@@ -142,3 +151,5 @@ Hết đợt, VKL tự đi về theo sàn đi được và không đánh trên �
 Bot giả người cũng là mục tiêu đi tuần và bỏ chạy thay vì đâm lén trong sự kiện. Đòn boss trừ theo cùng tỷ lệ máu người thật (30/100 tương đương 2,4 trên 8 HP nội bộ), không làm lộ bot và không phát bounty hạ bot. Bot chưa lộ hồi sau 4 giây với tốc độ tương đương 5 HP người/giây. Bot bị hạ hiện animation gục thông thường, ghi số lần ngỏm rồi rời phòng sau thời gian nằm 15 giây. Người chơi đánh vẫn làm lộ; bot đã lộ giữ nguyên danh tính.
 
 Lịch/version và vị trí đi tuần nằm trong hash boss hiện có, dùng lease boss hiện có. Chỉ broadcast chuyển trạng thái; lúc đi tuần/đi về lưu vị trí mỗi giây để chuyển runner. Join/reconnect nhận sự kiện hiện tại cùng deadline gốc. Lịch rảnh không ghi mỗi tick; phòng trống không chạy vòng lặp đi tuần hay mở thêm connection Redis. `lib/office-patrol.js` giữ thời gian; test có thể override `patrolOpts`, không thêm biến môi trường production.
+
+Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” ngay dưới tên. Nhãn trên cảm ứng/mobile không có đề từ.

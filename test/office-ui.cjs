@@ -72,6 +72,15 @@ async function main() {
         mask.style[kind==='right'?'right':'left']='8px'; document.body.append(mask);
       },variant.cutout);
       await page.screenshot({ path: `work/office-${variant.tag}.png` });
+      if (touch) await page.tap('#minimap'); else await page.keyboard.down('Tab');
+      assert.equal(await page.locator('#fullMap').isVisible(), true);
+      const mapBox=await page.locator('#fullMapCanvas').boundingBox();
+      const panelBox=await page.locator('.full-map-panel').boundingBox(), headingBox=await page.locator('.full-map-heading').boundingBox();
+      assert.ok(mapBox.y>=headingBox.y+headingBox.height-1 && mapBox.x>=panelBox.x && mapBox.x+mapBox.width<=panelBox.x+panelBox.width,'map stays inside its panel below heading');
+      assert.ok(mapBox.x>=0 && mapBox.y>=0 && mapBox.x+mapBox.width<=(touch?844:1280) && mapBox.y+mapBox.height<=(touch?390:800));
+      await page.screenshot({path:`work/map-${variant.tag}.png`});
+      if(touch) await page.tap('#fullMapClose'); else await page.keyboard.up('Tab');
+      assert.equal(await page.locator('#fullMap').isVisible(),false);
       assert.deepEqual(errors, []);
       console.log(`ok - ${variant.tag}: visible banner below header, no added controls, real electric arcs and HP loss`);
       await page.close();

@@ -147,7 +147,7 @@ async function main() {
 
   await app.stop();
 
-  await step('ultimate: only hits on the boss fill the bar; a full bar buys one blow of 15% of its health, then it is empty again', async () => {
+  await step('ultimate: only hits on the boss fill the bar; a full bar buys one blow of 20% of its health, then it is empty again', async () => {
     const ult = server.createApp({ bossMaxHp: 600, bossRespawnMs: 1500, maxConnPerIp: 100, rageOpts: { perBossHit: 50, cooldownMs: 100 } });
     const port2 = await ult.start(0);
     const old = port;
@@ -162,7 +162,7 @@ async function main() {
     await take(c, (m) => m.t === 'rage' && m.v >= 100, 2000).catch((e) => { throw new Error(e.message + ' ' + JSON.stringify(c.msgs.filter((m) => ['rage', 'bhp', 'mana', 'err'].includes(m.t)))); });
     send(c, { t: 'ult' });
     const u = await take(c, (m) => m.t === 'ult', 2000).catch((e) => { throw new Error('no ult: ' + JSON.stringify(c.msgs.filter((m) => ['rage', 'bhp', 'ult', 'err'].includes(m.t)))); });
-    assert.deepStrictEqual([u.target, u.dmg], ['boss', 90]);
+    assert.deepStrictEqual([u.target, u.dmg], ['boss', 120]);
     assert.ok((await take(c, (m) => m.t === 'rage' && m.v === 0, 1000)));
     c.ws.close();
     await ult.stop();

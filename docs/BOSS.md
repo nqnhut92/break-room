@@ -11,20 +11,21 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. Th
 - Player-to-player attacks only show hit feedback and never remove health or mana.
 - Players have 100 health (a bar over their head once hurt, and a pill in the top bar). Four punches knock a player out. They lie there for **15 seconds**, can still chat, and then come back at the **lobby**, never where they fell.
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.
-- The boss has 6,000 health, a hammer hit does 10 (that is 600 hits) and it **does not heal**: damage sticks, so hit and run works. **A lone player can wear it down in the end but the punches make that very hard; about five players take it down in around a minute, and a crowd is not a walkover.**
+- The boss starts at 6,000 health for 1–4 real players online in the room. Each further group of four adds 3,000 maximum and current HP after 15 seconds of sustained presence. Damage already dealt sticks; there is no passive regeneration. A hammer/electric hit always does 10, milk tea 5, and ultimate deals 20% of the current maximum HP.
 - When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back one minute later, at its starting spot, with full health.
 - Outside the office patrol event it stays in the server room: leave and it goes back to patrolling without healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
 
 ## The numbers
 
-All of them live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); nothing else hard-codes them (the client is sent them in the `welcome` message).
+Combat settings live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); population tiers live in [`lib/boss-population.js`](../lib/boss-population.js). Clients receive current/max HP, not private population counters.
 
 | Setting | Value | Why |
 | --- | --- | --- |
 | Player health | 100 | Four punches. Few enough to feel dangerous, enough to survive a mistake. |
 | Boss punch | 30 damage, 0.7 s windup, 0.6 s recovery | "It has to hurt", but dodgeable. A player at full speed leaves the circle in about 0.29 s. |
 | Boss speed | 220 patrolling, 480 chasing (players walk at 420) | On clear floor the boss catches a fleeing player; dodge during windup and counter during recovery. Outside the office patrol event, leaving the boss zone still ends pursuit. |
-| Boss health | 6,000, hit = 10 | Tuned with the simulation below. |
+| Boss health | 6,000 for 1–4 humans; +3,000 per next group of four | Preserves damage already dealt as the room grows. |
+| Ultimate | 20% of current max HP | Applies to VKL, TML and DMM; charge rate is unchanged. |
 | Regeneration | none | Players found a boss that heals too hard. See "Why it does not heal". |
 | Player regeneration | 5 per second after 4 s | Moderate: not "never", not "instantly". |
 | Player respawn | 15 s, at the lobby | Was 60 s; players found a minute too long. |
@@ -36,19 +37,27 @@ All of them live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); noth
 
 `node test/boss.js` runs a deliberately generous model (nobody ever dies or misses, everybody swings as fast as mana allows, whichever of two swing styles is better) and prints how long the boss survives:
 
-| Players inside | 1 | 2 | 3 | 4 | 5 | 8 | 20 |
+| Humans online, all attacking | 1 | 2 | 3 | 4 | 5 | 8 | 20 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Seconds to beat the boss | never | never (> 15 min) | ~310 | ~170 | ~115 | ~115 | ~115 |
+| Seconds to beat the boss | ~373 | ~186 | ~121 | ~93 | ~108 | ~68 | ~54 |
 
-The real fight is harder than this model because players get punched, so 3 and 4 players have a real fight on their hands, 5 or more win with some losses, and 1 or 2 cannot. The test fails if these promises break, so retuning is safe: change `BOSS`, run `npm test`.
+This model starts at the population tier for that group and excludes ultimates, racks, enemy attacks and travel. Real fights depend on dodging and participation: online players elsewhere still count for HP. A tier boundary can make five players slower than four. These are simulation results, not measured live fight times. Run `npm run test:redis` after changing server rules.
 
 ## Why it is built this way
 
-**A separate damage scale, not "100 to 1000 times the health".** The first idea was a boss with 100 to 1000 times a player's health. Taken literally that is 10,000 to 100,000 health, but everything a player does is 1 damage per hit and the whole group manages about four hits a second, so such a boss could never die. What matters is the *time to kill*, not the ratio. So hits on the boss are worth 10 and the boss has 3,600 (36 times a player's health, 360 hits), and the numbers were chosen by the time to kill above.
+**A separate damage scale, not "100 to 1000 times the health".** The first idea was a boss with 100 to 1000 times a player's health. Taken literally that is 10,000 to 100,000 health, but everything a player does is 1 damage per hit and the whole group manages about four hits a second, so such a boss could never die. What matters is the *time to kill*, not the ratio. Hits on the boss use their own damage scale (10 for a hammer); maximum HP now follows the population tiers above.
 
 **Why it does not heal (any more).** It used to recover 5 per second plus 20 per second after a pause, so one or two players could never win and a group had to stay on it. In play that was too hard and no fun: nobody could chip at it and leave. Now damage sticks, which makes hit and run a real tactic. The fight is still hard because of the punches, and the health is higher (6,000) so it stays a group effort. The regeneration code (`bossHpAt`) is still there and the two numbers are in `BOSS` (`baseRegenPerSec`, `regenPerSec`): a value above 0 brings it back, and the client uses the same formula.
 
-**Why the hit value scales with the crowd.** If twenty friends join, a boss tuned for five would die in 30 seconds. Each hit is divided by `max(1, players in the boss's room / 5)`, so time to kill stays near two minutes however many come. The count is the players *inside the boss's zone and alive*, not everyone online, otherwise fifteen people standing in the toilets would make it stronger for the five who fight, and a big crowd outside would not matter.
+### Population health
+
+Maximum HP is 6,000 / 9,000 / 12,000 / 15,000 / 18,000 for 1–4 / 5–8 / 9–12 / 13–16 / 17–20 real players online in the room. Count authoritative fresh presence across all instances, including downed players and people outside the boss zone. Count a player ID once; concealed/revealed moles and summoned snakes do not count. Separate guest identities/accounts remain separate players; this does not identify distinct people behind them.
+
+Each newly reached tier must remain reached for 15 seconds, observed by the runner each second. Each threshold has its own timer, so dropping from nine to five does not erase progress toward the five-player tier. A gap over three seconds without an observation restarts pending timers. On growth, add the maximum-HP difference to current HP: 300/6,000 becomes 3,300/9,000. Do not reset the damage ledger, rack markers or snake-wave markers. Maximum HP never decreases during a life, and rejoining the same tier adds nothing. Respawn resets to the tier of currently present humans, at full HP. A newly created room starts at base HP and confirms growth normally.
+
+The previous crowd-based damage reduction is removed. Ultimate computes 20% of stored maximum HP atomically with the hit, so another instance cannot use a stale maximum. Rack support uses 2% of the maximum when that rack breaks; already consumed racks are not recalculated on growth. Each 70/40/10% snake wave can still happen only once per life.
+
+Only current/max HP and a health revision reach clients. No human count, tier timer or bot classification is exposed. Bucketed delayed growth reduces immediate join-to-HP clues, but public HP plus public online counts can still support inference; it is not a secrecy guarantee. See [ADR 0010](adr/0010-population-boss-health.md).
 
 **Why the boss normally stays in the server room.** Outside the announced office patrol, the room remains an opt-in boss fight. The later patrol event deliberately makes the open office dangerous for a short, announced period. Because it only notices people inside the room (or on the apron in front of the door), standing at the door and poking it does not turn into free hits either: the apron counts, so the boss comes out to meet you.
 
@@ -73,7 +82,7 @@ The game runs on several Vercel instances at once, so there must be **exactly on
 - **One runner.** The instance that holds a short lease in the store (`blk`, 3 s, renewed every second, any instance with players in the room tries to take it) runs the boss: it walks, notices people and throws punches, and publishes snapshots. If it dies, another instance takes the lease within about 3 seconds and continues from the last snapshot. No instance has the lease while the room is empty, so an empty room costs nothing.
 - **Everyone hurts their own players.** The runner publishes `bstrike` (centre and radius). Each instance checks *its own* players against the circle using their true server-side positions and takes the health off. Nobody has to guess where a remote player stands, and a player is hurt once.
 - **Atomic where it must be.** A hit on the boss is one Lua script (`bossHit`): it adds the regeneration, subtracts the hit, records the damage, and on the killing blow pays the bounty and marks the boss down, all at once, so two instances landing the last hit cannot both pay. The boss's health is stored with a timestamp (`boss` hash); the player's is in the name hash.
-- **Cost.** Snapshots go out 5 times a second while it walks and 10 while it fights, and only when it moved; with every player of a room on the runner's own instance they never touch Redis. Redis sees about one lease command per second per instance and room, one `HMGET` per second for the runner, and one command per hit on the boss or per punch that lands. The whole boss has no timers when the room is empty.
+- **Cost.** Snapshots go out 5 times a second while it walks and 10 while it fights, and only when it moved; with every player of a room on the runner's own instance they never touch Redis. Redis sees about one lease command per second per instance and room, one atomic presence/HP scale check per second for the runner, and one command per hit on the boss or per punch that lands. The whole boss has no timers when the room is empty.
 
 ### Messages (server to client)
 
@@ -82,9 +91,9 @@ The game runs on several Vercel instances at once, so there must be **exactly on
 | `boss` | position, heading, mode and number of players in range (the HUD uses it) |
 | `bwind` | a punch starts: centre, radius, duration (the red circle) |
 | `bstrike` | the fist lands |
-| `bhp` | a hit on the boss, with its new health (clients add the regeneration themselves) |
+| `bhp` | health change from a hit, rack or population growth: current/max HP and monotonic health revision; older revisions are ignored |
 | `bdead` | it fell: who did how much, the bounty each gets, time until it returns |
-| `bup` | it is back |
+| `bup` | it is back, with the new life’s maximum HP and health revision |
 | `hp` | a player was hurt: new health and the damage |
 | `down` | a player was knocked out: milliseconds until they return |
 | `up` | a player came back: where, and the new health |
@@ -93,7 +102,7 @@ From the client: `bhit` (a hammer swing at the boss; the server checks reach, li
 
 ## Trying and tuning
 
-Environment variables (all optional): `BOSS_DISABLED=1`, `BOSS_MAX_HP=300` (a boss that falls in 30 hits), `BOSS_RESPAWN_MS=5000`, `PLAYER_RESPAWN_MS=5000`.
+Environment variables (all optional): `BOSS_DISABLED=1`, `BOSS_MAX_HP=300` (base HP for 1–4 humans; each next group adds 50% of that base), `BOSS_RESPAWN_MS=5000`, `PLAYER_RESPAWN_MS=5000`.
 
 Tests: `test/boss.js` (rules, balance), `test/boss-net.js` (a whole fight over WebSockets), `test/shared.js` (the same store contract on memory and a real Redis, plus a fight across two instances).
 
@@ -138,3 +147,5 @@ At the end, VKL walks home along navigable floor without attacking; minis cancel
 Concealed moles are valid patrol targets and flee instead of stabbing during the event. Boss damage uses the same health fraction as a human (30/100 costs 2.4 of the mole's internal 8 HP), without revealing the mole or paying a kill bounty. Unrevealed moles recover health after the same 4-second delay at the equivalent of 5 human HP/s. A knocked-out mole shows the ordinary down animation, records its knock-out and leaves after the 15-second down timer. A human attack still reveals it; already exposed moles keep their identity.
 
 The office schedule/version and roaming pose live in the existing boss hash and use the existing boss lease. Transitions are broadcast; active/returning poses save once a second for runner handover. Joining/reconnecting receives the current event and its original deadline. Idle schedules do not write every tick, and empty rooms run no patrol loop or extra Redis connection. `lib/office-patrol.js` owns timing; tests can override `patrolOpts` without production environment switches.
+
+On desktop, VKL displays “Mọi người nghĩ dì dẫy?” directly under its name. Touch/mobile labels omit the motto.

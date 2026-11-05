@@ -21,4 +21,6 @@ Use guides for current behavior and instructions. Use ADRs for the context, deci
 
 Hướng dẫn mô tả cách hệ thống đang hoạt động và cách dùng. ADR lưu bối cảnh, quyết định, phương án và hệ quả. ADR không thay changelog hay ghi mọi lần chỉnh chỉ số gameplay.
 
+Population HP rules are in [Boss](BOSS.md#population-health) / [tiếng Việt](BOSS.vi.md#máu-theo-số-người); the shared-state decision is [ADR 0010](adr/0010-population-boss-health.md) (English).
+
 Office patrol and electrified rack rules are documented in [Boss](BOSS.md#electrified-server-racks) / [tiếng Việt](BOSS.vi.md#tủ-server-phản-điện); architectural rationale is [ADR 0009](adr/0009-office-patrol-and-rack-support.md) (English).

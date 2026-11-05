@@ -111,3 +111,9 @@ Hash boss còn giữ lịch đi tuần có version và vị trí lưu mỗi giâ
 
 
 Canvas và HUD fixed dùng chung mặt phẳng layout động `#app`, được `viewport.js` theo dõi; `innerHeight` của layout đặt chiều cao tối thiểu khi xoay còn để lại giá trị root/đơn vị động cũ. Safe-area inset do trình duyệt cung cấp bảo vệ nội dung mà không thu nhỏ nền game. Số đo visual viewport vẫn chỉ dùng cho bàn phím. Xem [layout mobile và giới hạn kiểm tra](MOBILE.md#safe-areas-and-rotation-previews).
+
+## Máu boss theo dân số
+
+Hash boss lưu HP hiện tại/tối đa, `rev` tăng dần, bộ đếm ngưỡng riêng `population` và `popAt`. Chủ lease hiện tại gọi `bossScale` mỗi giây; một thao tác store kiểm tra lease, đếm presence còn hạn toàn room trừ ID nội gián và cộng chênh lệch mức máu. Người đang chờ hồi sinh vẫn tính; presence hết hạn không tính. Quá ba giây không quan sát thì xác nhận ngưỡng bắt đầu lại. Hồi sinh tính lại HP hiện tại/tối đa theo số người thật đang có. Đòn thường không còn chia damage theo số mục tiêu gần boss.
+
+`bossHit` nhận `share` cho ulti và tính damage theo max HP trong store nguyên tử cùng cú đánh; tủ hỗ trợ và ngưỡng rắn cũng đọc max HP này. Tăng mức giữ ledger đóng góp, dấu tủ và đợt rắn. Mọi thay đổi máu tăng `rev`; `bhp`, `bup` và welcome mang max HP/phiên bản để bản pub/sub đến muộn không ghi đè trạng thái mới. Các trường dân số và phân loại người/bot không nằm trong tin này; HP công khai vẫn có thể cho phép suy luận một phần. Xem [ADR 0010](adr/0010-population-boss-health.md) và [luật](BOSS.vi.md#máu-theo-số-người).

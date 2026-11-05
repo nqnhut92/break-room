@@ -9,9 +9,9 @@ const at = { x: 1920, y: 1950 };
 const player = (id, extra = {}) => ({ id, ...at, dead: false, ...extra });
 const state = () => ({ version: 1, list: [{ ...M.createMini('TML'), ...at }] });
 async function main() {
-  await check('mini-boss stats retain the approved inverted table', () => {
-    assert.deepStrictEqual([M.MINI.TML.maxHp, M.MINI.TML.damage, M.MINI.TML.speed, M.MINI.TML.wanderSpeed, M.MINI.TML.bounty], [900, 20, 440, 180, 40]);
-    assert.deepStrictEqual([M.MINI.DMM.maxHp, M.MINI.DMM.damage, M.MINI.DMM.speed, M.MINI.DMM.wanderSpeed, M.MINI.DMM.bounty], [600, 15, 460, 200, 30]);
+  await check('mini-boss HP, damage and movement match the approved settings', () => {
+    assert.deepStrictEqual([M.MINI.TML.maxHp, M.MINI.TML.damage, M.MINI.TML.speed, M.MINI.TML.wanderSpeed, M.MINI.TML.bounty], [900, 20, 460, 200, 40]);
+    assert.deepStrictEqual([M.MINI.DMM.maxHp, M.MINI.DMM.damage, M.MINI.DMM.speed, M.MINI.DMM.wanderSpeed, M.MINI.DMM.bounty], [600, 15, 440, 180, 30]);
   });
   await check('spawns cover connected floor across the map and avoid players', () => {
     const points = [...M.nav().values()];
@@ -80,6 +80,25 @@ async function main() {
     M.stepMini(s, [player(1, { x: 2830, y: 1500 })], 1000, 0.1);
     assert.strictEqual(b.wind, null);
   });
+  await check('both minis travel diagonally at their configured speed on clear floor and cannot cut wall corners', () => {
+    for (const id of ['TML','DMM']) {
+      const s={version:1,list:[{...M.createMini(id),x:1920,y:1950}]}, b=s.list[0];
+      const goal={x:2120,y:2070};
+      const before={...b}; M.move(b,goal,.1,M.MINI[id].speed,1000);
+      assert.ok(b.x>before.x && b.y>before.y,'both axes advance in the same tick');
+      assert.ok(Math.abs(Math.hypot(b.x-before.x,b.y-before.y)-M.MINI[id].speed*.1)<.01,'normalized diagonal speed');
+      Object.assign(b,{x:2830,y:1500});
+      for(let tick=0;tick<100;tick++) {
+        M.move(b,{x:3100,y:1580},.1,M.MINI[id].speed,2000+tick*100);
+        const q=resolveCollisions(b.x,b.y,M.RADIUS);
+        assert.ok(Math.hypot(q.x-b.x,q.y-b.y)<.1,'body stays off walls/furniture');
+      }
+      const wander={...M.createMini(id),x:1920,y:1950,goal:{x:2120,y:2070}};
+      M.stepMini({list:[wander]},[],1000,.1);
+      assert.ok(wander.x>1920 && wander.y>1950);
+      assert.ok(Math.abs(Math.hypot(wander.x-1920,wander.y-1950)-M.MINI[id].wanderSpeed*.1)<.01);
+    }
+  });
   await check('roaming remains on free floor', () => {
     const s = M.initialState();
     for (let i = 0; i < 600; i++) {
@@ -122,16 +141,16 @@ async function network() {
       const hp = await h.take(a, m => m.t === 'hp' && m.id === a.id, 2500); assert.strictEqual(hp.dmg, 20);
       assert.ok(!b.msgs.some(m => ['hp', 'down'].includes(m.t) && m.id === b.id));
     });
-    await check('wire: mini hits fill rage and ultimate takes 15%, then empties it', async () => {
+    await check('wire: mini hits fill rage and ultimate takes 20%, then empties it', async () => {
       await h.take(a, m => m.t === 'rage' && m.v === 2, 1000);
       h.send(a, { t: 'ult' });
-      const hit = await h.take(a, m => m.t === 'miniHit' && m.ult, 2000); assert.strictEqual(hit.dmg, 135);
+      const hit = await h.take(a, m => m.t === 'miniHit' && m.ult, 2000); assert.strictEqual(hit.dmg, 180);
       await h.take(a, m => m.t === 'rage' && m.v === 0, 1000);
     });
     await check('wire: reconnect reads persisted HP, threat, and respawn timer', async () => {
       a.ws.close(); await h.sleep(100);
       c = await h.client(port, 'Returning', room);
-      assert.strictEqual(c.welcome.minis.list.find(b => b.id === 'TML').hp, 750);
+      assert.strictEqual(c.welcome.minis.list.find(b => b.id === 'TML').hp, 705);
     });
   } finally {
     WORLD.spawn = originalSpawn;

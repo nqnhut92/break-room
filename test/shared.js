@@ -217,7 +217,7 @@ async function contract(label, makeStore) {
     const b = await store.join(r6, { ...big, token: T(82), connId: 'b2', name: 'Ben' });
     const cfg = { maxHp: 100, baseRegenPerSec: 1, regenPerSec: 10, regenDelayMs: 5000 };
     const hitArgs = (id, dmg, now, respawnAt = now + 60000) => ({ playerId: id, dmg, now, cfg, respawnAt, bounty: 500 });
-    assert.deepStrictEqual(await store.bossGet(r6, { now: NOW, maxHp: 100 }), { hp: 100, at: NOW, dead: false, respawnAt: 0 });
+    assert.deepStrictEqual(await store.bossGet(r6, { now: NOW, maxHp: 100 }), { rev: 0, hp: 100, maxHp: 100, at: NOW, dead: false, respawnAt: 0 });
     let r = await store.bossHit(r6, hitArgs(a.id, 30, NOW));
     assert.strictEqual(r.state, 'hit');
     assert.strictEqual(Math.round(r.hp), 70);
@@ -254,6 +254,67 @@ async function contract(label, makeStore) {
     assert.strictEqual(r.state, 'killed');
     assert.deepStrictEqual(r.shares.map((s) => s.id), [b.id]);
     assert.ok(Math.abs(r.shares[0].bounty - 500) < 0.01);
+  });
+
+  await step(label + ': boss population: real presence only, delayed additive HP, atomic ult/racks, no repeated waves or reconnect inflation', async () => {
+    const r = room + '-population', cfg = { maxHp: 6000, baseRegenPerSec: 0, regenPerSec: 0, regenDelayMs: 5000 };
+    const humans = [], bots = [], ttlMs = 120000;
+    const join = async (i, now = NOW) => store.join(r, { ...base, now, max: 30, ttlMs, token: T(300+i), connId: 'pop'+i, name: 'Pop'+i });
+    for (let i=0;i<4;i++) humans.push(await join(i));
+    for (let i=10;i<16;i++) { const b=await join(i); bots.push(b); await store.moleAdd(r,b.id,{now:NOW,hp:8,conn:'pop'+i}); }
+    const hit = (dmg, now, extra={}) => store.bossHit(r,{playerId:humans[0].id,dmg,now,cfg,respawnAt:now+1000,bounty:500,...extra});
+    await hit(5700,NOW);
+    await store.summonSnakes(r,{now:NOW,maxHp:6000,count:1,x:3300,y:1700});
+    const observe = async (at, owner='a') => {
+      assert.ok(await store.bossLock(r,owner,{now:at,ttlMs:120000}));
+      return store.bossScale(r,{owner,now:at,ttlMs,maxHp:6000});
+    };
+    for(let i=0;i<=20;i++) assert.equal((await observe(NOW+i*1000)).maxHp,6000,'six bots do not increase HP');
+    humans.push(await join(4,NOW+20000));
+    for(let i=20;i<=34;i++) assert.equal((await observe(NOW+i*1000)).maxHp,6000,'must wait the entire 15s');
+    await store.bossLock(r,'a',{now:NOW+34000,ttlMs:25}); await sleep(40);
+    assert.ok(await store.bossLock(r,'b',{now:NOW+34040,ttlMs:120000}));
+    assert.equal(await store.bossScale(r,{owner:'a',now:NOW+35000,ttlMs,maxHp:6000}),null,'stale leader fenced');
+    const [grown] = await Promise.all([observe(NOW+35000,'b'),hit(10,NOW+35000)]);
+    assert.equal(grown.maxHp,9000);
+    let st=await store.bossGet(r,{now:NOW+35000,maxHp:6000});
+    assert.equal(st.hp,3290,'damage survives concurrent growth'); assert.equal(st.maxHp,9000);
+    assert.deepEqual((await store.summonSnakes(r,{now:NOW+35000,maxHp:6000,count:1,x:3300,y:1700})).waves,[]);
+    const ult=await hit(1,NOW+35001,{share:.2}); assert.equal(ult.dmg,1800); assert.equal(ult.hp,1490);
+    const rack=await store.hit(r,{objId:800,defaultHp:8,cost:120,playerId:humans[0].id,now:NOW+35002,dmg:8,serverBossHp:6000});
+    assert.equal(rack.bossDamage,180); assert.equal(rack.bossHp,1310);
+    await store.leave(r,humans[4].id,'pop4',null,NOW+36000);
+    assert.equal((await observe(NOW+36000,'b')).maxHp,9000,'leaving does not reduce the current life');
+    await join(4,NOW+37000);
+    for(let i=37;i<=55;i++) assert.equal((await observe(NOW+i*1000,'b')).maxHp,9000,'rejoining the same tier never adds HP');
+    assert.equal((await hit(20000,NOW+55001)).state,'killed');
+    assert.equal(await store.bossScale(r,{owner:'b',now:NOW+55002,ttlMs,maxHp:6000}),null,'never revive a dead boss by scaling');
+    await store.leave(r,humans[4].id,'pop4',null,NOW+56000);
+    assert.ok(await store.bossRespawn(r,{now:NOW+57000,maxHp:6000,ttlMs}));
+    st=await store.bossGet(r,{now:NOW+57000,maxHp:6000}); assert.equal(st.hp,6000); assert.equal(st.maxHp,6000);
+    assert.deepEqual(Object.keys(st).sort(),['at','dead','hp','maxHp','respawnAt','rev'],'no population counts or bot classification in snapshots');
+  });
+
+  await step(label + ': boss population: thresholds must stay reached, lower tiers keep their own timers, stale presence is excluded', async () => {
+    const r=room+'-population-timers', ttlMs=60000, people=[];
+    const add = async i => people.push(await store.join(r,{...base,max:30,ttlMs,token:T(400+i),connId:'timer'+i,name:'Timer'+i}));
+    for(let i=0;i<9;i++) await add(i);
+    const observe=async at=>{await store.bossLock(r,'leader',{now:at,ttlMs:120000}); return store.bossScale(r,{owner:'leader',now:at,ttlMs,maxHp:6000});};
+    for(let i=0;i<=5;i++) await observe(NOW+i*1000);
+    for(let i=5;i<9;i++) await store.leave(r,people[i].id,'timer'+i,null,NOW+5500);
+    for(let i=6;i<=15;i++) await observe(NOW+i*1000);
+    assert.equal((await store.bossGet(r,{now:NOW+15000,maxHp:6000})).maxHp,9000,'lower threshold keeps its timer when a higher one drops');
+    for(let i=5;i<9;i++) await store.join(r,{...base,now:NOW+16000,max:30,ttlMs,token:T(400+i),connId:'timer'+i,name:'Timer'+i});
+    for(let i=16;i<=30;i++) assert.equal((await observe(NOW+i*1000)).maxHp,9000);
+    assert.equal((await observe(NOW+31000)).maxHp,12000);
+    // A long inactive gap cannot be evidence of continuous population.
+    for(let i=9;i<13;i++) await add(i);
+    await observe(NOW+32000);
+    assert.equal((await observe(NOW+38000)).maxHp,12000);
+    for(let i=39;i<=52;i++) assert.equal((await observe(NOW+i*1000)).maxHp,12000);
+    assert.equal((await observe(NOW+53000)).maxHp,15000);
+    // All original presence has expired by this point; it cannot raise another tier.
+    assert.equal((await observe(NOW+130000)).maxHp,15000);
   });
 
   await step(label + ': boss: concurrent killing blows pay out exactly once', async () => {
@@ -661,6 +722,21 @@ async function twoInstances(url) {
     return Number((t.match(/cmdstat_publish:calls=(\d+)/) || [])[1] || 0);
   };
   const closeAll = (...cs) => cs.forEach((c) => c.ws.readyState < 2 && c.ws.close());
+
+  await step('redis: population HP grows across two live servers and reconnect welcomes preserve the shared maximum', async () => {
+    const group=[], r=room+'-population-live';
+    try {
+      for(let i=0;i<5;i++) group.push(await h.client(i%2?p2:p1,'Population '+i,r));
+      const grown=await take(group[0],m=>m.t==='bhp' && m.maxHp===90,22000);
+      assert.equal(grown.hp,90); assert.ok(grown.rev>0);
+      const peer=await take(group[1],m=>m.t==='bhp' && m.rev===grown.rev,3000);
+      assert.deepEqual([peer.hp,peer.maxHp],[90,90]);
+      group[4].ws.close();await sleep(100);
+      const again=await h.client(p2,'Returning population',r);group.push(again);
+      assert.deepEqual([again.welcome.boss.hp,again.welcome.boss.maxHp],[90,90]);
+      assert.ok(!('humans' in again.welcome.boss) && !('population' in again.welcome.boss));
+    } finally {closeAll(...group);await sleep(100);}
+  });
 
   await step('redis: two servers show the same office to players on different instances', async () => {
     const A = await h.client(p1, 'An', room);

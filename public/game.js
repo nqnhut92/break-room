@@ -1054,6 +1054,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       x: bc.x, y: bc.y, tx: bc.x, ty: bc.y,
       mode: bc.m,
       eng: bc.e || 0,
+      hpRev: bc.rev || 0,
       hp: bc.hp,
       hpT: now - bc.ago,
       dead: !!bc.dead,
@@ -1165,10 +1166,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function bossHit(m) {
     const b = S.boss;
     if (!b) return;
+    if (m.rev && m.rev <= (b.hpRev || 0)) return;
+    b.hpRev = m.rev || b.hpRev;
     const hitter = S.players.get(m.by);
     if (hitter) showSkill(hitter, m.skill, b);
+    if (m.maxHp) b.cfg.maxHp = m.maxHp;
     b.hp = m.hp;
     b.hpT = performance.now();
+    if (!m.by) return;
     const v = volumeAt(b.x, b.y);
     sfxHit(v);
     if (scene) {
@@ -1185,6 +1190,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
   }
   function bossDown(m) {
+    if (!S.boss || (m.rev && m.rev < (S.boss.hpRev || 0))) return;
+    S.boss.hpRev = m.rev || S.boss.hpRev;
     S.duel = null;
     $('duelBanner').hidden = true;
     const b = S.boss;
@@ -1209,11 +1216,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   function bossBack(m) {
     const b = S.boss;
-    if (!b) return;
+    if (!b || (m.rev && m.rev < (b.hpRev || 0))) return;
+    b.hpRev = m.rev || b.hpRev;
     b.dead = false;
     S.snakes.clear();
     b.x = b.tx = b.pl.x = m.x;
     b.y = b.ty = b.pl.y = m.y;
+    if (m.maxHp) b.cfg.maxHp = m.maxHp;
     b.hp = b.cfg.maxHp;
     b.hpT = performance.now();
     b.wind = null;
@@ -1398,6 +1407,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }, CHAT_IDLE_MS);
   }
   function chatOpen() {
+    mm.held = false; mmFull(false);
     if (coarseUi) chatForm.classList.add('open');
     chatInput.focus();
   }
@@ -1551,7 +1561,23 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       localStorage.setItem('br-minimap', mm.on ? '1' : '0');
     } catch (e) { /* ignore */ }
   }
-  mm.cv.addEventListener('click', mmToggle);
+  const fullMap = $('fullMap'), fullMapCanvas = $('fullMapCanvas');
+  function mmFull(open) {
+    mm.open = !!open;
+    fullMap.hidden = !mm.open;
+    mm.cv.setAttribute('aria-expanded', String(mm.open));
+    if (mm.open) {
+      const rect = fullMapCanvas.getBoundingClientRect();
+      fullMapCanvas.width = Math.round(rect.width * mm.dpr);
+      fullMapCanvas.height = Math.round(rect.height * mm.dpr);
+      mmDraw();
+    }
+  }
+  mm.cv.addEventListener('click', () => mmFull(!mm.open));
+  mm.cv.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); mmFull(!mm.open); }
+  });
+  $('fullMapClose').addEventListener('click', () => { mm.held = false; mmFull(false); });
   const syncMapBtn = () => $('mapBtn').setAttribute('aria-pressed', String(mm.on));
   $('mapBtn').addEventListener('click', () => {
     mmToggle();
@@ -1592,8 +1618,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     mm.k = mm.cv.width / world.w;
     mm.dpr = dpr;
     const base = document.createElement('canvas');
-    base.width = mm.cv.width;
-    base.height = mm.cv.height;
+    base.width = 1600;
+    base.height = Math.round(base.width * world.h / world.w);
+    mm.k = base.width / world.w;
     const c = base.getContext('2d');
     c.fillStyle = '#252d3f';
     c.fillRect(0, 0, base.width, base.height);
@@ -1615,50 +1642,65 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     mm.base = base;
   }
   function mmDraw() {
-    if (!mm.on || !mm.base || !S.joined) return;
-    const c = mm.cv.getContext('2d');
-    c.drawImage(mm.base, 0, 0);
+    if ((!mm.on && !mm.open) || !mm.base || !S.joined) return;
+    if (mm.on) mmRender(mm.cv, false);
+    if (mm.open) mmRender(fullMapCanvas, true);
+  }
+  function mmRender(canvas, full) {
+    const me = S.players.get(S.me), world = mm.source.world;
+    if (!me) return;
+    const c = canvas.getContext('2d'), aspect = canvas.width / canvas.height;
+    const view = scene?.groundView?.() || { w: 1200, h: 750 };
+    const width = full ? world.w : Math.max(500, view.w * 1.75, view.h * 1.75 * aspect);
+    const height = full ? world.h : width / aspect;
+    const x0 = full ? 0 : me.x - width / 2, y0 = full ? 0 : me.y - height / 2;
+    const k = Math.min(canvas.width / width, canvas.height / height);
+    const ox = (canvas.width - width*k)/2, oy = (canvas.height - height*k)/2;
+    const x = value => ox + (value-x0)*k, y = value => oy + (value-y0)*k;
+    const inside = p => full || (p.x >= x0 && p.x <= x0+width && p.y >= y0 && p.y <= y0+height);
+    c.clearRect(0, 0, canvas.width, canvas.height);
+    c.fillStyle = '#101622'; c.fillRect(0, 0, canvas.width, canvas.height);
+    c.drawImage(mm.base, x(0), y(0), world.w*k, world.h*k);
     for (const o of S.objects) {
       const t = S.types[o.type];
       const solid = t && t.w >= 44 && t.h >= 36 && o.type !== 'chair' && o.type !== 'plant';
       c.fillStyle = o.broken ? '#ff5d4a' : solid ? '#8b6f4e' : '#7a869a';
-      const sz = Math.max(1.6, (solid ? t.w * 0.7 : 24) * mm.k);
-      c.fillRect(o.x * mm.k - sz / 2, o.y * mm.k - sz / 2, sz, sz);
+      const sz = Math.max(1.6, (solid ? t.w * 0.7 : 24) * k);
+      c.fillRect(x(o.x) - sz / 2, y(o.y) - sz / 2, sz, sz);
     }
     for (const p of S.players.values()) {
-      if (p.id === S.me) continue;
+      if (p.id === S.me || !inside(p)) continue;
       c.fillStyle = '#ffffff';
       c.beginPath();
-      c.arc(p.x * mm.k, p.y * mm.k, 2.6 * mm.dpr, 0, Math.PI * 2);
+      c.arc(x(p.x), y(p.y), 2.6 * mm.dpr, 0, Math.PI * 2);
       c.fill();
     }
-    if (S.boss && !S.boss.dead) {
+    if (S.boss && !S.boss.dead && inside(S.boss)) {
       c.fillStyle = '#ff3b2a';
       c.strokeStyle = '#ffffff';
       c.lineWidth = 1.2 * mm.dpr;
       c.beginPath();
-      c.arc(S.boss.x * mm.k, S.boss.y * mm.k, 4.6 * mm.dpr, 0, Math.PI * 2);
+      c.arc(x(S.boss.x), y(S.boss.y), 4.6 * mm.dpr, 0, Math.PI * 2);
       c.fill();
       c.stroke();
     }
     // mini-bosses (TML orange, DMM purple) while they are alive, like the boss's red dot but a little smaller
     for (const b of S.minis.values()) {
-      if (!(b.hp > 0)) continue;
+      if (!(b.hp > 0) || !inside(b)) continue;
       c.fillStyle = 'hsl(' + b.pl.hue + ', 85%, 58%)';
       c.strokeStyle = '#ffffff';
       c.lineWidth = 1.2 * mm.dpr;
       c.beginPath();
-      c.arc(b.x * mm.k, b.y * mm.k, 3.8 * mm.dpr, 0, Math.PI * 2);
+      c.arc(x(b.x), y(b.y), 3.8 * mm.dpr, 0, Math.PI * 2);
       c.fill();
       c.stroke();
     }
-    const me = S.players.get(S.me);
     if (me) {
       c.fillStyle = '#ffd34d';
       c.strokeStyle = '#000000';
       c.lineWidth = 1.2 * mm.dpr;
       c.beginPath();
-      c.arc(me.x * mm.k, me.y * mm.k, 3.8 * mm.dpr, 0, Math.PI * 2);
+      c.arc(x(me.x), y(me.y), 3.8 * mm.dpr, 0, Math.PI * 2);
       c.fill();
       c.stroke();
     }
@@ -1724,13 +1766,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           '<b>Kéo núm bên trái</b> để di chuyển. Đến gần mục tiêu rồi dùng nút ra đòn bên phải.',
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
           '<b>Bấm 💬</b> để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
-          '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ.',
+          '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ; chạm bản đồ nhỏ để xem toàn văn phòng.',
           'Tắt khóa xoay và cầm máy ngang để chơi. Trong Safari, chọn <b>Chia sẻ → Thêm vào Màn hình chính</b> (bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
           '<b>Enter</b> hoặc bấm vào ô chat để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
-          '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, <b>Shift + 1 đến 8</b> để thả emoji.',
+          '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, giữ <b>Tab</b> xem toàn văn phòng, <b>Shift + 1 đến 8</b> để thả emoji.',
         ];
     const itPolicy = S.respawnPolicy || { minMs: 25000, maxMs: 60000 };
     const autoIT = S.respawnMs > 0
@@ -1740,13 +1782,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       autoIT,
       '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
       'Đồ đã bị đập hiện <b>thanh máu</b>: xanh khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối.',
-      '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 1 phút rồi hồi sinh ở sảnh.',
-      'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, nhưng sếp đấm rất đau: <b>từ 5 người</b> đánh cùng nhau thì hạ trong chừng một phút. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
-      'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ra khỏi phòng server là sếp không đuổi theo.',
+      '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 15 giây rồi hồi sinh ở sảnh.',
+      'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, máu tối đa tăng theo từng nhóm 4 người online trong phòng. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
+      'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ngoài sự kiện đi tuần, ra khỏi khu phòng server là sếp không đuổi theo.',
       touch ? 'Bấm <b>Skill</b> để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Giữ nút ra đòn bên phải để dùng skill.' : 'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> hoặc nút <b>Skill</b>. Giữ <b>Space</b> để dùng.',
       'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b> để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Đợt 70% và 40% có số rắn nguyên ngẫu nhiên từ 1,3 đến 2 lần số người online (làm tròn lên ở mức tối thiểu); đợt cuối ở 10% thả rắn đỏ, tăng lên 2–3 lần. Rắn xanh cắn 5 máu, rắn đỏ cắn 7 máu mỗi 1,2 giây; cả hai chịu 4 cú búa và đuổi khắp bản đồ. Rắn còn lại biến mất khi boss hồi sinh.',
-      '<b>TML và DMM</b> đi khắp bản đồ, chỉ trả đũa người đánh mình. TML có 900 máu, đánh 20; DMM có 600 máu, đánh 15. Né vòng báo đòn, hạ được thưởng 40/30 triệu chia theo damage. Chết sau 30 giây sẽ xuất hiện ở nơi khác. Đánh mỗi cú tăng 1 nộ; ulti gây 15% máu tối đa.',
+      '<b>TML và DMM</b> đi khắp bản đồ, chỉ trả đũa người đánh mình. TML có 900 máu, đánh 20; DMM có 600 máu, đánh 15. Né vòng báo đòn, hạ được thưởng 40/30 triệu chia theo damage. Chết sau 30 giây sẽ xuất hiện ở nơi khác. Đánh mỗi cú tăng 1 nộ; ulti gây 20% máu tối đa.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
@@ -2004,9 +2046,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   window.addEventListener('keydown', (e) => {
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) return;
     const k = e.key.toLowerCase();
-    if (MOVE_KEYS[k]) {
+    if (k === 'tab' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault(); if (!e.repeat) { mm.held = true; mmFull(true); }
+    } else if (k === 'escape' && mm.open) {
+      mm.held = false; mmFull(false);
+    } else if (MOVE_KEYS[k]) {
       e.preventDefault();
       S.keys.add(MOVE_KEYS[k]);
     } else if (k === ' ') {
@@ -2033,11 +2079,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   window.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
+    if (k === 'tab' && mm.held) { mm.held = false; mmFull(false); }
     if (MOVE_KEYS[k]) S.keys.delete(MOVE_KEYS[k]);
     else if (k === ' ') S.keys.delete('space');
   });
 
   window.addEventListener('blur', () => {
+    mm.held = false; mmFull(false);
     S.keys.clear();
     resetJoystick();
     S.smashHeld = false;
@@ -2113,7 +2161,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   joystick.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) return;
     const j = S.joystick;
     // A new primary touch starts a fresh gesture. A stale id must not lock out
     // that gesture; a second thumb must not steal a still-captured joystick.
@@ -2199,7 +2247,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const smashBtn = $('smashBtn');
   smashBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden) return;
+    if (!S.joined || mobilePortrait() || typing() || !exitEl.hidden || !updateEl.hidden || !helpEl.hidden || !rankEl.hidden || !settingsEl.hidden) return;
     smashBtn.setPointerCapture(e.pointerId);
     S.smashHeld = true;
     tryHit(nearest());
@@ -2626,7 +2674,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // --------------------------------------------------------------- render ----
   function resize() {
     if (scene) scene.resize(viewport.width, viewport.height);
-    if (mm.source) { mmBuild(mm.source.world, mm.source.props, mm.source.zones); mmPlace(); }
+    if (mm.source) { mmBuild(mm.source.world, mm.source.props, mm.source.zones); mmPlace(); if (mm.open) mmFull(true); }
   }
   window.addEventListener('gameviewportchange', resize);
   resize();

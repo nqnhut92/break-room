@@ -103,3 +103,11 @@ Saved characters render as a read-only summary; edit mode reveals the form. Acco
 
 
 `npm run test:mobile-chat` (Chromium/`CHROMIUM_PATH`) verifies populated fixed-size mobile chat, long-message wrapping and unchanged tap behavior; `CHAT_REAL_RENDERER=1` captures the Pro Max-size layout with actual WebGL. See [mobile chat layout](MOBILE.md#mobile-chat-layout) for interaction and hardware limits.
+
+## Population, navigation and map verification
+
+`test/shared.js` covers private human-only population tiers against memory/Redis, threshold timing and interruption, concurrent growth/hits, leader handover, percentage ultimate/rack damage, wave retention, reconnects, respawn and live two-server HP propagation. `test/miniboss.js` checks normalized diagonal movement and full-body clearance through wall/furniture routes. Layout regressions cover every primary door and additional `passages`, stable IDs, reachability and nonoverlapping floor zones. Add matching openings on both sides of a shared wall.
+
+`npm run test:minimap` checks touch toggle/close, desktop hold-Tab with walking, release/blur cleanup, typing exclusions, distant-boss clipping, preserved M behavior and out-of-order health updates. `RENDERER_TOUCH=0 npm run test:renderer` and the default touch run check desktop-only mini-boss mottos and resource cleanup. These are browser/software-WebGL checks, not physical-device performance results.
+
+Rebuild both README panorama and annotated plan with `CHROMIUM_PATH=/path/to/chromium node scripts/capture-office.cjs`. The script serves the current world/renderer with an overview-only camera override; it does not alter game camera limits or spawn. Inspect both `artifacts/map-ingame.png` and `artifacts/map-overview.png` before committing. The panorama contains rendered office geometry; the plan's room names are editing annotations.
