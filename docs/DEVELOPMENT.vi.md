@@ -88,3 +88,5 @@ Trên máy cloud hạn chế tài nguyên, `TEST_WAIT_FACTOR=3 npm test` (hoặc
 Schema tự khởi tạo khi dùng DB hồ sơ lần đầu. `test:identity` kiểm tra các instance chạy đồng thời, khởi động lại giữ nguyên dữ liệu và rollback/retry transaction. Lệnh tùy chọn `npm run db:migrate` dùng `MIGRATION_DATABASE_URL` hoặc `DATABASE_URL`; test chỉ dùng DB bỏ đi.
 
 Bộ browser test account kiểm tra cột ngang laptop/cảm ứng, gửi Google login, màu số online và một nút chính tạo/sửa/vào phòng. `test/actor-collision.js` kiểm tra thân actor chia bước, trượt, tránh xuyên tường, NPC trung lập tránh người và đi qua trước/sau boss chết bằng WebSocket thật; được chạy trong `npm test`.
+
+Nhân vật đã lưu hiển thị dạng thông tin chỉ đọc; chế độ sửa mới hiện form. Browser test account kiểm tra viền focus nằm trọn trong ô, chọn giới tính bằng bàn phím/con trỏ, trả focus khi hủy và radio native được ẩn trong lúc chờ lưu.

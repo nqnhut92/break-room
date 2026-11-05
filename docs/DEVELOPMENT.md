@@ -88,3 +88,5 @@ On constrained cloud machines, `TEST_WAIT_FACTOR=3 npm test` (or `TEST_WAIT_FACT
 Schema initialization is automatic on first profile database use. `test:identity` covers simultaneous instances, repeated startup preserving existing rows, and transactional rollback/retry. Optional `npm run db:migrate` uses `MIGRATION_DATABASE_URL` or `DATABASE_URL`; tests use only disposable targets.
 
 The account UI browser suite checks laptop/touch columns, Google submission, online-count colors and the single create/edit/enter primary action. `test/actor-collision.js` covers swept actor bodies, sliding, wall safety, neutral NPC avoidance and real WebSocket passage before/after boss death; it runs in `npm test`.
+
+Saved characters render as a read-only summary; edit mode reveals the form. Account browser checks cover complete inset focus outlines, keyboard/pointer gender selection, focus return after cancel, and visually hidden native radios during pending saves.

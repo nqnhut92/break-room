@@ -184,7 +184,17 @@
           <button id="characterSave" class="btn" type="button" hidden>Sửa nhân vật</button>
         </div>
       </div>
-      <div class="joinFields">
+      <div class="joinFields" aria-busy="false">
+      <section id="characterSummary" class="character-summary" aria-label="Nhân vật đã lưu" hidden>
+        <div class="character-summary-heading"><h2>Nhân vật đã lưu</h2><span>Chỉ đọc</span></div>
+        <dl class="character-details">
+          <div><dt>Tên của bạn</dt><dd id="summaryName"></dd></div>
+          <div><dt>Công ty</dt><dd id="summaryCompany"></dd></div>
+          <div><dt>Vai trò trong công ty</dt><dd id="summaryRole"></dd></div>
+          <div><dt>Nhân vật</dt><dd id="summaryGender"></dd></div>
+        </dl>
+      </section>
+      <div id="characterEditor" class="character-editor">
 
       <label>Tên của bạn
         <input id="nameInput" maxlength="14" placeholder="Ví dụ: Nick" required>
@@ -202,6 +212,7 @@
           <label><input type="radio" name="gender" value="m" checked><span>Nam</span></label>
           <label><input type="radio" name="gender" value="f"><span>Nữ</span></label>
         </div>
+      </div>
       </div>
       </div>
       <div class="joinRooms">

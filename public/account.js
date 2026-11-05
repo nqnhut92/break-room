@@ -9,6 +9,8 @@ export function accountUI({ room, read, fill }) {
   const join = document.getElementById('joinBtn');
   const status = document.getElementById('accountStatus');
   const fields = document.querySelectorAll('.joinFields input, .joinFields select');
+  const editor = document.getElementById('characterEditor');
+  const summary = document.getElementById('characterSummary');
   let state = null, character = null, loadedRoom = null, busy = false, editing = false, profileError = false, loadVersion = 0;
   const guestNote = 'Chơi khách không bảo đảm giữ nhân vật. Đăng nhập Google để lưu nhân vật và dùng trên thiết bị khác.';
   async function api(path, options = {}) {
@@ -28,6 +30,17 @@ export function accountUI({ room, read, fill }) {
     restore.textContent = profileError ? 'Thử tải lại' : 'Hủy chỉnh sửa';
     join.textContent = !state?.authenticated ? 'Chơi khách' : busy ? 'Đang tải…' : !character ? 'Tạo nhân vật & vào phòng' : editing ? 'Lưu & vào phòng' : 'Vào văn phòng';
     join.dataset.accountBusy = String(busy || profileError);
+    const readOnly = !!state?.authenticated && !!character && !editing;
+    editor.hidden = readOnly; summary.hidden = !readOnly;
+    document.querySelector('.joinFields').setAttribute('aria-busy', String(busy));
+    if (readOnly) {
+      document.getElementById('summaryName').textContent = character.name;
+      const company = document.getElementById('summaryCompany');
+      company.textContent = character.company || 'Chưa thêm'; company.classList.toggle('is-empty', !character.company);
+      const options = document.getElementById('roleSelect').options;
+      document.getElementById('summaryRole').textContent = [...options].find(o=>o.value===character.role)?.textContent.trim() || character.role;
+      document.getElementById('summaryGender').textContent = character.gender === 'f' ? 'Nữ' : 'Nam';
+    }
     for (const field of fields) field.disabled = !!state?.authenticated && (busy || (!!character && !editing));
     if (busy || profileError) join.disabled = true;
     else document.getElementById('nameInput').dispatchEvent(new Event('input'));
@@ -71,7 +84,7 @@ export function accountUI({ room, read, fill }) {
   logout.addEventListener('click', () => authAction('signout').catch(e => { note.textContent = e.message; }));
   restore.addEventListener('click', () => {
     if (profileError) { loadProfile(); return; }
-    editing = false; if (character) fill(character); render();
+    editing = false; if (character) fill(character); render(); save.focus();
   });
   save.addEventListener('click', () => {
     if (busy || !character) return;

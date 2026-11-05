@@ -931,5 +931,28 @@ canvas {
 .account-copy { min-width: 0; }
 .account-status { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 7px; font-size: 12px; font-weight: 600; color: #7dd3a7; }
 .account-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-#joinForm input:disabled, #joinForm select:disabled { opacity: 1; color: #cbd5e1; border-color: #ffffff0d; background-color: #121721; cursor: default; }
+#joinForm input:not([type="radio"]):disabled, #joinForm select:disabled { opacity: .55; color: #94a3b8; border-color: #ffffff14; background-color: #202632; cursor: not-allowed; }
 #joinForm .gender input:disabled + span { cursor: default; }
+
+/* Keep focus inside the control, including at the edges of scrolling columns. */
+#joinForm input:not([type="radio"]):focus, #joinForm select:focus { border-color: var(--accent-2); outline: 2px solid var(--accent-2); outline-offset: -2px; }
+#joinForm .roomcard:focus-visible { outline-offset: -4px; }
+#joinForm .gender input:focus-visible + span { outline-offset: -4px; }
+/* Native radios stay accessible through their labels, never painted over them. */
+#joinForm .gender input[type="radio"], #joinForm .gender input[type="radio"]:disabled { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; clip-path: inset(50%); overflow: hidden; }
+.character-editor { display: contents; }
+.character-summary { grid-column: 1 / -1; min-width: 0; }
+.character-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+#joinForm .character-summary-heading h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.character-summary-heading > span { color: var(--muted); font-size: 12px; }
+.character-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 18px; margin: 18px 0 0; }
+.character-details > div { min-width: 0; }
+.character-details dt { color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+.character-details dd { margin: 0; color: var(--text); font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.character-details dd.is-empty { color: var(--muted); font-size: 14px; font-weight: 400; }
+@media (max-height: 559px) and (min-width: 600px) {
+  .character-summary-heading { padding-bottom: 8px; }
+  .character-details { margin-top: 10px; gap: 12px; }
+  .character-details dt { margin-bottom: 4px; }
+  .character-details dd { font-size: 14px; }
+}

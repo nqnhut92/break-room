@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 async function main() {
-  let authenticated=false, saves=0;
+  let authenticated=false, saves=0, holdMutation=null;
   const characters=new Map();
   const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://localhost');
@@ -17,6 +17,7 @@ async function main() {
       const room=url.searchParams.get('room');
       if(req.method==='GET')return json({character:characters.get(room)||null});
       let body='';for await(const c of req)body+=c;
+      if(holdMutation) await holdMutation;
       saves++;const current={...JSON.parse(body),id:characters.get(room)?.id||'test-'+room};characters.set(room,current);
       return json({character:current});
     }
@@ -49,7 +50,7 @@ async function main() {
         b.append(name,count);b.setAttribute('aria-label',label+' · 0 online');
         b.onclick=()=>{window.testRoom=room;account.roomChanged();};box.append(b);
       }
-      window.account=accountUI({room:()=>window.testRoom,read:()=>({name:$('nameInput').value,gender:'f',role:'dev',company:$('companyInput').value}),fill:p=>{$('nameInput').value=p.name;$('companyInput').value=p.company;}});
+      window.account=accountUI({room:()=>window.testRoom,read:()=>({name:$('nameInput').value,gender:document.querySelector('input[name="gender"]:checked').value,role:$('roleSelect').value,company:$('companyInput').value}),fill:p=>{$('nameInput').value=p.name;$('companyInput').value=p.company;$('roleSelect').value=p.role;for(const radio of document.querySelectorAll('input[name="gender"]'))radio.checked=radio.value===p.gender;}});
       $('joinForm').addEventListener('submit',async e=>{e.preventDefault();try{await account.beforeJoin();window.entered++;}catch(err){$('joinErr').textContent=err.message;}});
       await account.ready;sync();
     });
@@ -92,14 +93,41 @@ async function main() {
     await page.locator('#nameInput').fill('UI Player');await page.locator('#joinBtn').click();
     await page.waitForFunction(()=>window.entered===1);
     assert.equal(saves,1);const id=characters.get('br-1').id;
-    assert.ok(await page.locator('#nameInput').isDisabled());
+    assert.ok(await page.locator('#characterSummary').isVisible());
+    assert.equal(await page.locator('#characterEditor').isVisible(),false);
+    assert.equal(await page.locator('#summaryName').textContent(),'UI Player');
+    assert.equal(await page.locator('#summaryCompany').textContent(),'Chưa thêm');
+    assert.equal(await page.locator('#summaryGender').textContent(),'Nam');
+    await page.screenshot({path:'/tmp/br-profile-readonly.png'});
     assert.equal(await page.locator('#joinBtn').textContent(),'Vào văn phòng');
-    await page.locator('#characterSave').click();await page.locator('#nameInput').fill('Unsaved');
+    await page.locator('#characterSave').click();
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'nameInput');
+    assert.equal(await page.locator('#characterSummary').isVisible(),false);
+    const focus=await page.locator('#nameInput').evaluate(e=>({offset:getComputedStyle(e).outlineOffset,width:getComputedStyle(e).outlineWidth}));
+    assert.equal(focus.offset,'-2px');assert.equal(focus.width,'2px');
+    await page.screenshot({path:'/tmp/br-profile-focus.png'});
+    await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'companyInput');
+    await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'roleSelect');
+    await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.name),'gender');
+    await page.keyboard.press('ArrowRight');assert.ok(await page.locator('input[name="gender"][value="f"]').isChecked());
+    await page.locator('.gender label').filter({hasText:'Nam'}).click();assert.ok(await page.locator('input[name="gender"][value="m"]').isChecked());
+    await page.locator('#nameInput').fill('Unsaved');
     await page.locator('#characterRestore').click();
     assert.equal(await page.locator('#nameInput').inputValue(),'UI Player');assert.equal(saves,1);
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'characterSave');
     await page.locator('#characterSave').click();await page.locator('#nameInput').fill('UI Renamed');
     assert.equal(await page.locator('#joinBtn').textContent(),'Lưu & vào phòng');
-    await page.locator('#joinBtn').click();await page.waitForFunction(()=>window.entered===2);
+    let releaseMutation;holdMutation=new Promise(resolve=>{releaseMutation=resolve;});
+    await page.locator('#joinBtn').click();
+    await page.waitForFunction(()=>document.querySelector('.joinFields').getAttribute('aria-busy')==='true');
+    assert.ok(await page.locator('#nameInput').isDisabled());
+    assert.equal(await page.locator('#nameInput').evaluate(e=>getComputedStyle(e).opacity),'0.55');
+    for(const radio of await page.locator('.gender input').all()) {
+      const appearance=await radio.evaluate(e=>({opacity:getComputedStyle(e).opacity,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}));
+      assert.equal(appearance.opacity,'0');assert.ok(appearance.width<=1&&appearance.height<=1);
+    }
+    await page.screenshot({path:'/tmp/br-profile-saving.png'});
+    releaseMutation();holdMutation=null;await page.waitForFunction(()=>window.entered===2);
     assert.equal(saves,2);assert.equal(characters.get('br-1').id,id);
     assert.equal(characters.get('br-1').name,'UI Renamed');
     await page.screenshot({path:'/tmp/br-join-account-ready.png'});
@@ -111,7 +139,13 @@ async function main() {
     assert.match(await page.locator('#scoreNote').textContent(),/Điểm chưa được lưu lâu dài/);
     console.log('ok - one primary action creates/enters; returning character restores; edit/cancel and room switching preserve independent profiles');
     await page.close();
-    console.log('All 5 account UI browser checks passed (mock profile endpoints).');
+    const mobile=await browser.newPage({viewport:{width:740,height:320},hasTouch:true,isMobile:true});await setup(mobile);
+    assert.ok(await mobile.locator('#characterSummary').isVisible());
+    assert.equal(await mobile.locator('#characterEditor').isVisible(),false);
+    const action=await mobile.locator('#joinBtn').boundingBox();assert.ok(action.y>=0&&action.y+action.height<=320);
+    await mobile.screenshot({path:'/tmp/br-profile-readonly-mobile.png'});await mobile.close();
+    console.log('ok - read-only summary, keyboard/pointer editing, focus restoration and busy radios remain accessible on desktop/mobile');
+    console.log('All 6 account UI browser checks passed (mock profile endpoints).');
   }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
