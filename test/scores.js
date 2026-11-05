@@ -338,6 +338,26 @@ async function main() {
       await store.close();
     });
 
+    await step('serverless routes leave no Redis connection behind (rooms list, auth/profile handler)', async () => {
+      const count = async () => (await raw.client('LIST')).split('\n').filter(Boolean).length;
+      const saved = { ...process.env };
+      Object.assign(process.env, { REDIS_URL: redisUrl, DATABASE_URL: db });
+      delete process.env.VERCEL;
+      try {
+        const before = await count();
+        const fakeRes = () => ({ headers: {}, setHeader(k, v) { this.headers[k] = v; }, writeHead(c) { this.statusCode = c; return this; }, end(b) { this.body = b; } });
+        const rooms = require('../api/rooms'), auth = require('../lib/identity-http');
+        for (let i = 0; i < 3; i++) {
+          const res = fakeRes(); await rooms({ url: '/api/rooms', headers: {} }, res);
+          assert.equal(JSON.parse(res.body).rooms.length, 2);
+          const a = fakeRes(); await auth({ url: '/api/auth/status', method: 'GET', headers: {} }, a);
+          assert.ok(JSON.parse(a.body).enabled === false || a.statusCode === 200);
+        }
+        await sleep(300);
+        assert.equal(await count(), before, 'no Redis client survives the requests');
+      } finally { for (const k of ['REDIS_URL', 'DATABASE_URL', 'VERCEL']) { if (k in saved) process.env[k] = saved[k]; else delete process.env[k]; } }
+    });
+
     // ---- real WebSockets against the app
     await step('websocket: day board rows, chat acknowledged only after the insert, history on join, failures not shown as sent', async () => {
       const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1', MAINTENANCE_SECRET: 'maintenance-test-secret' } });
