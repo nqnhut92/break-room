@@ -80,4 +80,20 @@ appSurface.getBoundingClientRect = () => ({ width: 844, height: 390 });
 observed[0].callback();
 assert.equal(delayedWindow.GameViewport.height, 390);
 console.log('ok - dynamic app layout, not a stale root height, controls canvas and HUD; delayed layout is observed');
-console.log('All 9 viewport checks passed');
+
+// A Home Screen launch can start with a short layout height and never send a resize: later passes must catch up.
+const lateApp = { getBoundingClientRect: () => ({ width: 844, height: 350 }) };
+const timers = [];
+const lateWindow = Object.assign(surface(), { innerWidth: 844, innerHeight: 350, matchMedia: () => ({ matches: true }) });
+const lateDoc = Object.assign(surface(), { documentElement: root, activeElement: null,
+  getElementById: id => id === 'app' ? lateApp : id === 'rotateOverlay' ? rotateOverlay : null });
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/viewport.js'), 'utf8'), {
+  window: lateWindow, document: lateDoc, Event: class { constructor(type) { this.type = type; } }, setTimeout: (fn, ms) => timers.push({ fn, ms }),
+});
+assert.equal(lateWindow.GameViewport.height, 350);
+lateApp.getBoundingClientRect = () => ({ width: 844, height: 390 }); lateWindow.innerHeight = 390;
+assert.ok(timers.length >= 3 && timers.some(t => t.ms >= 1000), 'startup schedules re-measurements');
+for (const t of timers) t.fn();
+assert.equal(lateWindow.GameViewport.height, 390);
+console.log('ok - a stale first-paint height is corrected without a resize event');
+console.log('All 10 viewport checks passed');

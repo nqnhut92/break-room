@@ -62,4 +62,8 @@
   document.addEventListener('focusin', keyboardInset);
   document.addEventListener('focusout', () => setTimeout(keyboardInset, 0));
   sync();
+  // A Home Screen launch can report a short layout height at first paint and fire no resize afterwards, so
+  // only rotating the phone corrected it. Measure again once the page has loaded and while iOS settles.
+  window.addEventListener('load', resync);
+  for (const ms of [300, 1000, 2500]) setTimeout(sync, ms);
 })();
