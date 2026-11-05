@@ -127,14 +127,33 @@ async function main() {
         assert.equal((await sb.transfer(room, G, C2, 'Khác')).state, 'exists', 'logout + another account cannot move it again');
         await store.hit(room, { objId: 'd', defaultHp: 1, cost: 1, playerId: g, now: BASE });           // a late hit by the old guest connection
         let board = await top(room);
-        assert.deepEqual(byName(board), { Chi: 100 + 50 + 20 + 10 });
-        assert.equal(board.rows.some((r) => r.aid === G), false, 'no guest row is recreated');
+        assert.deepEqual(byName(board), { Chi: 100 + 50 + 20 + 10, Khách7: 0 }, 'points moved; the guest row stays at 0 and gets nothing new');
         await Promise.all([sb.sync(room), sb2.sync(room)]);
         const rows = await sqlRows(room), d = dayDate(dayOf(BASE));
-        assert.equal(rows[G + '@' + d], undefined);
+        assert.deepEqual([rows[G + '@' + d].s, rows[G + '@' + d].breaks, rows[G + '@' + d].deaths], [0, 0, 2], 'knock-outs stay with the guest');
         assert.equal(rows[C + '@' + d].s, 180);
         assert.equal(rows[C + "@" + d].breaks, 4);
+        assert.equal(rows[C + '@' + d].deaths, 1);
+        assert.deepEqual((await sb.deaths(room)).rows.map((r) => [r.name, r.n]), [['Khách7', 2], ['Chi', 1]], 'knock-outs are not transferred');
         assert.equal((await pool.query('SELECT count(*)::int AS n FROM score_transfers WHERE room_id=$1', [room])).rows[0].n, 1);
+      });
+
+      await step(`${label}: a guest with no points is not transferred: its row and knock-outs stay`, async () => {
+        const room = uniq('z');
+        const G = guestActor(room, 'zerozerozero00000001'), C = characterActor('00000000-0000-4000-8000-0000000000d9');
+        const g = await join(room, 1, G, 'Nick1');
+        await sb.touch(room, G, 'Nick1'); await sb.touch(room, C, 'Nick');
+        await store.deathAdd(room, g, BASE); await store.deathAdd(room, g, BASE);
+        assert.equal((await sb.transfer(room, G, C, 'Nick')).state, 'noop');
+        assert.deepEqual(byName(await top(room)), { Nick1: 0, Nick: 0 });
+        assert.deepEqual((await sb.deaths(room)).rows.map((r) => [r.name, r.n]), [['Nick1', 2]]);
+        await store.hit(room, { objId: 'p', defaultHp: 1, cost: 3, playerId: g, now: BASE });           // earns later: a real transfer follows
+        assert.equal((await sb.transfer(room, G, C, 'Nick')).state, 'moved');
+        await store.deathAdd(room, g, BASE);                                                             // later knock-outs still belong to the guest
+        assert.deepEqual((await sb.deaths(room)).rows.map((r) => [r.name, r.n]), [['Nick1', 3]]);
+        await sb.sync(room);
+        const rows = await sqlRows(room), d = dayDate(dayOf(BASE));
+        assert.deepEqual([rows[G + '@' + d].s, rows[G + '@' + d].deaths, rows[C + '@' + d].s], [0, 3, 30]);
       });
 
       await step(`${label}: ties share a rank and keep a stable order; rename changes the board, not history`, async () => {
