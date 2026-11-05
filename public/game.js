@@ -1301,7 +1301,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const chatKey = (m) => m.at + '|' + m.mid;
   function chatLine(m, hist) {
     const li = document.createElement('li');
-    li.className = 'chatline' + (m.id !== undefined && m.id === S.me ? ' me' : '') + (hist ? ' hist' : '');
+    li.className = 'chatline' + (m.mine || (m.id !== undefined && m.id === S.me) ? ' me' : '') + (hist ? ' hist' : '');
     li.dataset.k = chatKey(m);
     const nm = document.createElement('b');
     nm.textContent = String(m.name || '?') + ': ';

@@ -243,6 +243,9 @@ async function main() {
       for (const k of await raw.keys(`br:{${room}}:*`)) if (!/:(evq|qs|ds:|di:)/.test(k)) await raw.del(k); // what the 30 minute room expiry removes
       assert.equal((await rstore.queueStat(room)).len, 2);
       assert.equal(await raw.ttl(`br:{${room}}:evq`), -1, 'no TTL on the queue');
+      await rstore.rageSet(room, A, 42.5, BASE);
+      assert.ok(await raw.ttl(`br:{${room}}:rage`) > 86400, 'the ultimate bar is kept for days, keyed by actor');
+      assert.equal(await rstore.rageGet(room, A), 42.5);
       assert.equal((await sb.sync(room)).error, null);
       assert.equal(Number((await pool.query('SELECT score_tenths FROM daily_scores WHERE room_id=$1', [room])).rows[0].score_tenths), 60);
     });
@@ -318,7 +321,7 @@ async function main() {
       const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1', MAINTENANCE_SECRET: 'maintenance-test-secret' } });
       const port = await app.start(0);
       const room = 'br-1';
-      const a = await client(port, 'Ann', room), b = await client(port, 'Bob', room);
+      const a = await client(port, 'Ann', room), b = await client(port, 'Bob', room), extra = [];
       try {
         assert.equal(a.welcome.chatHistory, true);
         await smashPlant(a, TYPES);
@@ -372,8 +375,13 @@ async function main() {
           if (!(row && row.s > 0)) await sleep(100);
         }
         assert.ok(row && row.s > 0);
+        const back = await client(port, 'Ann', room, a.token);                                // the same player returns: her own lines are flagged
+        extra.push(back);
+        const mine = await take(back, (m) => m.t === 'chatHist');
+        assert.deepEqual(mine.messages.map((m) => [m.name, !!m.mine, 'actor' in m]), [['Ann', true, false]]);
+        assert.ok(!('mine' in hist.messages[0]), 'another player does not get them flagged');
       } finally {
-        for (const x of [a, b]) x.ws.close();
+        for (const x of [a, b, ...extra]) x.ws.close();
         await app.stop();
       }
     });

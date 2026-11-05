@@ -38,7 +38,7 @@ VKL dùng thêm ba key của cùng phòng (cùng hạn sống): `boss` (hash: `h
 
 Bạn sếp dùng thêm key `moles` (hash: id người chơi → `{hp, rev, conn}`), cũng nằm ngoài bộ chín key. Xem [MOLES.vi.md](MOLES.vi.md).
 
-State mở rộng gồm `mini`, `snakes`, `rage` và `moles`; đấu 1:1 nằm trong field `duel` của `boss`. Chúng không đổi bộ chín key cơ bản. Xem [TML/DMM](MINIBOSSES.md), [VKL](BOSS.vi.md) và `lib/store-redis.js` để tra thao tác cụ thể.
+State mở rộng gồm `mini`, `snakes`, `rage` và `moles`; đấu 1:1 nằm trong field `duel` của `boss`. Chúng không đổi bộ chín key cơ bản. Hash `rage` (thanh nộ/ulti cá nhân) khóa theo participant id (nhân vật hoặc tab khách), không theo player id bị dùng lại, và sống bảy ngày thay vì 30 phút rảnh của phòng, nên thanh nộ đi theo nhân vật qua thiết bị và renew; nó không được chép từ khách sang nhân vật khi đăng nhập. Xem [TML/DMM](MINIBOSSES.md), [VKL](BOSS.vi.md) và `lib/store-redis.js` để tra thao tác cụ thể.
 
 Hash tên còn lưu `a<id>`, actor BXH nội bộ của từng người chơi. Bảng ngày (`ds:<day>`, `di:<day>`) và hàng đợi điểm (`evq`, `qs`, không TTL) cùng slot hash-tag nhưng nằm ngoài bộ chín key và ngoài TTL của phòng. Xem [BXH ngày](SCORES.vi.md).
 
