@@ -67,7 +67,7 @@ async function main() {
       assert.ok(fields.x+fields.width<=rooms.x,'profile and rooms use horizontal columns');
       assert.ok(await page.locator('#googleLogin .google-mark').isVisible());
       assert.equal(await page.locator('#googleLogin').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
-      assert.match(await page.locator('#accountNote').textContent(),/Chơi khách không bảo đảm/);
+      assert.match(await page.locator('#accountNote').textContent(),/Chơi không đăng nhập không bảo đảm/);
       assert.equal(saves,0);
       assert.equal(await page.locator('#roomList .rc').first().evaluate(e=>getComputedStyle(e).color),'rgb(61, 220, 132)');
       assert.equal(await page.locator('#roomList .rc').first().evaluate(e=>getComputedStyle(e,'::before').backgroundColor),'rgb(61, 220, 132)');

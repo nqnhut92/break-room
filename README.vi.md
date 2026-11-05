@@ -54,4 +54,4 @@ npm run test:scores   # BXH ngày + lịch sử chat, Postgres/Redis dùng-một
 
 Code: [MIT](LICENSE). Texture sàn: [ambientCG](https://ambientcg.com/), CC0 ([ghi chú](public/assets/textures/License.txt)). Three.js: MIT ([giấy phép](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([giấy phép](public/vendor/lucide-LICENSE.txt)). Đồ đạc và nhân vật dựng bằng code.
 
-Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn chơi khách được. Khi có database, BXH là bảng xếp hạng ngày theo từng phòng (về 0 lúc 00:00 giờ Việt Nam, không có BXH all-time) và chat phòng được giữ 24 giờ; không có lịch sử điểm dài hạn. [Cấu hình identity](docs/IDENTITY.vi.md) · [BXH ngày](docs/SCORES.vi.md).
+Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn vào chơi được không cần đăng nhập. Khi có database, BXH là bảng xếp hạng ngày theo từng phòng (về 0 lúc 00:00 giờ Việt Nam, không có BXH all-time) và chat phòng được giữ 24 giờ; không có lịch sử điểm dài hạn. [Cấu hình identity](docs/IDENTITY.vi.md) · [BXH ngày](docs/SCORES.vi.md).

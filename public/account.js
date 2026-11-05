@@ -12,7 +12,7 @@ export function accountUI({ room, read, fill }) {
   const editor = document.getElementById('characterEditor');
   const summary = document.getElementById('characterSummary');
   let state = null, character = null, loadedRoom = null, busy = false, editing = false, profileError = false, loadVersion = 0;
-  const guestNote = 'Chơi khách không bảo đảm giữ nhân vật hay điểm. Đăng nhập Google để lưu nhân vật, dùng trên thiết bị khác và nhận điểm hôm nay của tab này.';
+  const guestNote = 'Chơi không đăng nhập không bảo đảm giữ nhân vật hay điểm. Đăng nhập Google để lưu nhân vật, dùng trên thiết bị khác và nhận điểm hôm nay của tab này.';
   async function api(path, options = {}) {
     const r = await fetch(path, { cache: 'no-store', ...options });
     const body = await r.json();
@@ -28,7 +28,7 @@ export function accountUI({ room, read, fill }) {
     logout.hidden = !state?.authenticated && !state?.expired;
     save.textContent = 'Sửa nhân vật';
     restore.textContent = profileError ? 'Thử tải lại' : 'Hủy chỉnh sửa';
-    join.textContent = !state?.authenticated ? 'Chơi khách' : busy ? 'Đang tải…' : !character ? 'Tạo nhân vật & vào phòng' : editing ? 'Lưu & vào phòng' : 'Vào văn phòng';
+    join.textContent = !state?.authenticated ? 'Vào chơi ngay' : busy ? 'Đang tải…' : !character ? 'Tạo nhân vật & vào phòng' : editing ? 'Lưu & vào phòng' : 'Vào văn phòng';
     join.dataset.accountBusy = String(busy || profileError);
     const readOnly = !!state?.authenticated && !!character && !editing;
     editor.hidden = readOnly; summary.hidden = !readOnly;
@@ -66,7 +66,7 @@ export function accountUI({ room, read, fill }) {
     } finally { if (version === loadVersion) { busy = false; render(); } }
   }
   async function init() {
-    try { state = await api('/api/auth/status'); render(); await loadProfile(); if (new URLSearchParams(location.search).has('error')) note.textContent = 'Chưa đăng nhập được. Thử lại sau nhé; bạn vẫn có thể chọn chơi khách.'; }
+    try { state = await api('/api/auth/status'); render(); await loadProfile(); if (new URLSearchParams(location.search).has('error')) note.textContent = 'Chưa đăng nhập được. Thử lại sau nhé; bạn vẫn có thể vào chơi ngay không cần đăng nhập.'; }
     catch (e) { note.textContent = e.message; box.hidden = false; }
   }
   async function authAction(action) {
@@ -96,7 +96,7 @@ export function accountUI({ room, read, fill }) {
     roomChanged() { loadedRoom = null; character = null; editing = false; loadProfile(); },
     async beforeJoin() {
       await ready;
-      if (state?.expired) throw Error('Phiên cũ đã hết hạn. Đăng xuất để chơi khách hoặc đăng nhập Google lại nhé.');
+      if (state?.expired) throw Error('Phiên cũ đã hết hạn. Đăng xuất để chơi không cần đăng nhập hoặc đăng nhập Google lại nhé.');
       if (!state?.authenticated) return;
       if (busy || loadedRoom !== room() || profileError) throw Error('Chưa tải được nhân vật. Bấm “Thử tải lại” nhé.');
       if (!character || editing) {
