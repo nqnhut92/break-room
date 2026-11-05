@@ -66,7 +66,7 @@ export function accountUI({ room, read, fill }) {
     } finally { if (version === loadVersion) { busy = false; render(); } }
   }
   async function init() {
-    try { state = await api('/api/auth/status'); if (state.authenticated) document.documentElement.classList.remove('autojoin'); render(); await loadProfile(); if (new URLSearchParams(location.search).has('error')) note.textContent = 'Chưa đăng nhập được. Thử lại sau nhé; bạn vẫn có thể chọn chơi khách.'; }
+    try { state = await api('/api/auth/status'); render(); await loadProfile(); if (new URLSearchParams(location.search).has('error')) note.textContent = 'Chưa đăng nhập được. Thử lại sau nhé; bạn vẫn có thể chọn chơi khách.'; }
     catch (e) { note.textContent = e.message; box.hidden = false; }
   }
   async function authAction(action) {

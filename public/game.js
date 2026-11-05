@@ -2376,7 +2376,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       $('joinForm').dispatchEvent(new Event('submit', { cancelable: true }));
     };
     if (picked !== null) resume(); // the room is in the URL: no need to wait for the server list
-    refresh(true).then(async () => { await account.ready; if (!account.authenticated()) resume(); });
+    refresh(true).then(async () => { await account.ready; resume(); }); // signed in or guest: a reload in game goes straight back in (sign-in/out clears the flag)
     setInterval(() => {
       if (!$('overlay').classList.contains('gone')) refresh();
     }, 15000);

@@ -11,6 +11,7 @@ const { createScoreboard } = require('../lib/scoreboard');
 const { createChatStore } = require('../lib/chat-store');
 const { dayOf, dayDate, guestActor, characterActor, botActor } = require('../lib/daily');
 const { createApp, TYPES } = require('../server');
+const context = require('../lib/identity-context');
 const { client, take, none, send, smashPlant, sleep } = require('./helpers');
 
 let passed = 0;
@@ -190,6 +191,29 @@ async function main() {
       assert.equal((await sb.board(room)).rows.find((r) => r.aid === A).tenths, 150);
       assert.equal((await sb.sync(room)).error, null);
       assert.equal(Number((await pool.query('SELECT score_tenths FROM daily_scores WHERE room_id=$1 AND actor_id=$2', [room, A])).rows[0].score_tenths), 150);
+    });
+
+    await step('redis: a signed-in (fenced) connection gets plain strings from the board, deaths and transfer scripts', async () => {
+      const room = uniq('fz'), sb = createScoreboard({ store: rstore, pool, clock: () => BASE, log: () => {} });
+      const A = characterActor('00000000-0000-4000-8000-0000000000fa');
+      const a = (await rstore.join(room, { token: 'account_fz0000000000001', name: 'Dev', fallbackName: 'N', connId: 'cfz', now: Date.now(), max: 5, ttlMs: 60000, spawn: { x: 1, y: 1 }, aid: A })).id;
+      await raw.set(`br:{${room}}:session:sidfz`, '1', 'EX', 100);
+      await sb.touch(room, A, 'Dev');
+      const ctx = { room, id: a, conn: 'cfz', sid: 'sidfz', valid: () => true };
+      await context.run(ctx, () => rstore.hit(room, { objId: 'o1', defaultHp: 1, cost: 8, playerId: a, now: BASE }));
+      await context.run(ctx, () => rstore.deathAdd(room, a, BASE));
+      const b = await context.run(ctx, () => sb.board(room, { limit: 50, aids: [A] }));
+      assert.deepEqual([b.rows[0].aid, b.rows[0].name, b.selfs[0].name, b.rows[0].tenths, b.rows[0].deaths], [A, 'Dev', 'Dev', 80, 1]);
+      const d = await context.run(ctx, () => sb.deaths(room, { aid: A }));
+      assert.deepEqual([d.rows[0].aid, d.rows[0].name, d.mine.n], [A, 'Dev', 1]);
+      assert.equal((await context.run(ctx, () => sb.transfer(room, guestActor(room, 'nobody0000000000'), A, 'Dev'))).state, 'noop');
+      // the same fence used to turn every boss/mole reply into a Buffer: a boss hit read as 'killed' and the boss "vanished"
+      const cfg = { maxHp: 6000, baseRegenPerSec: 0, regenPerSec: 0, regenDelayMs: 0 };
+      const boss = await context.run(ctx, () => rstore.bossHit(room, { playerId: a, dmg: 10, now: BASE, cfg, respawnAt: BASE + 60000, bounty: 500 }));
+      assert.deepEqual([boss.state, boss.hp], ['hit', 5990]);
+      await rstore.moleAdd(room, 77, { hp: 3, conn: 'm' });
+      const mole = await context.run(ctx, () => rstore.moleHit(room, { id: 77, dmg: 1, cost: 5, playerId: a, now: BASE }));
+      assert.deepEqual([mole.state, mole.hp], ['hit', 2]);
     });
 
     await step('redis: the queue and the day board outlive the room key TTL', async () => {

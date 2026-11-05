@@ -746,7 +746,8 @@ canvas {
   .wide-only, .pill.hp, #hint { display: none; }
   .narrow-only { display: inline; }
   #board { width: auto; max-width: calc(45 * var(--game-vw)); padding: 4px 8px; font-size: 11px; }
-  #boardList { display: none; }
+  #boardList { display: block; }
+  #boardList li:nth-child(n+2) { display: none; } /* a phone shows only the leader */
   .board-total { font-size: 14px; }
   .board-title { font-size: 10px; }
   #bottombar { left: auto; right: max(12px, var(--safe-right)); bottom: max(16px, var(--safe-bottom)); width: 110px; padding: 0; gap: 6px; justify-content: flex-end; }
