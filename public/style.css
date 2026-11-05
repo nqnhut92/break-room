@@ -286,7 +286,7 @@ canvas {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#boardList li::before { content: counter(rank) ". "; color: var(--muted); }
+/* the rank comes from the server (ties share a rank), so no CSS counter prefix */
 #boardList li span { color: var(--muted); }
 
 #bottombar {
