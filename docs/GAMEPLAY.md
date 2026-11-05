@@ -53,7 +53,7 @@ Call IT still replaces everything immediately when its existing cooldown permits
 
 ## Bosses and moles
 
-VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. Moles pose as ordinary players. Detailed rules and balance:
+VKL guards the server room and attacks intruders. TML and DMM roam the map and retaliate only against their aggressors. Patrol/wander speeds are 220/180/200 for VKL/TML/DMM; chase speeds are 480/440/460, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. Detailed rules and balance:
 
 - [VKL, snakes, captured duels and New Process](BOSS.md)
 - [TML and DMM](MINIBOSSES.md)

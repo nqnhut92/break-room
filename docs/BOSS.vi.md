@@ -21,7 +21,7 @@ Tất cả nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js), 
 | --- | --- | --- |
 | Máu người chơi | 100 | Bốn cú đấm. Đủ ít để thấy nguy hiểm, đủ nhiều để sống sót qua một lỗi. |
 | Cú đấm của sếp | 30 sát thương, báo trước 0,7 giây, hồi 0,6 giây | "Phải đau" nhưng né được. Người chạy hết tốc độ thoát khỏi vòng trong khoảng 0,29 giây. |
-| Tốc độ sếp | 110 khi tuần tra, 280 khi đuổi (người chơi đi 420) | Luôn chạy trốn được, chỉ là không được đứng yên. |
+| Tốc độ sếp | 220 khi tuần tra, 480 khi đuổi (người chơi đi 420) | Trên đường thoáng, sếp bắt kịp người đang chạy; né lúc báo đòn và đánh trả lúc sếp hồi đòn. Ngoài sự kiện đi tuần toàn văn phòng, ra khỏi khu boss vẫn thoát được cuộc đuổi. |
 | Máu sếp | 6.000, mỗi cú búa 10 | Chỉnh theo mô phỏng bên dưới. |
 | Hồi máu sếp | không | Người chơi thấy sếp hồi máu quá khó. Xem "Vì sao sếp không hồi máu". |
 | Hồi máu người chơi | 5/giây sau 4 giây | Vừa phải: không "không bao giờ", không "ngay lập tức". |

@@ -50,7 +50,9 @@ step('the boss punches hard enough to matter: a handful of punches kill, and the
   // a player running at full speed leaves the red circle before it lands
   const escape = (BOSS.punchRadius + W.PLAYER_RADIUS) / 420;
   assert.ok(escape < BOSS.windupMs / 1000, 'escape time ' + escape);
-  assert.ok(BOSS.chaseSpeed < 420, 'a player is faster than the boss');
+  assert.strictEqual(BOSS.patrolSpeed, 220);
+  assert.strictEqual(BOSS.chaseSpeed, 480);
+  assert.ok(BOSS.chaseSpeed > 420, 'the boss closes the gap on a fleeing player');
 });
 
 step('boss layout: home, patrol loop and the room are open floor, inside the server room', () => {

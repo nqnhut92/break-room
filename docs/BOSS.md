@@ -23,7 +23,7 @@ All of them live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); noth
 | --- | --- | --- |
 | Player health | 100 | Four punches. Few enough to feel dangerous, enough to survive a mistake. |
 | Boss punch | 30 damage, 0.7 s windup, 0.6 s recovery | "It has to hurt", but dodgeable. A player at full speed leaves the circle in about 0.29 s. |
-| Boss speed | 110 patrolling, 280 chasing (players walk at 420) | You can always run away, you just cannot stand still. |
+| Boss speed | 220 patrolling, 480 chasing (players walk at 420) | On clear floor the boss catches a fleeing player; dodge during windup and counter during recovery. Outside the office patrol event, leaving the boss zone still ends pursuit. |
 | Boss health | 6,000, hit = 10 | Tuned with the simulation below. |
 | Regeneration | none | Players found a boss that heals too hard. See "Why it does not heal". |
 | Player regeneration | 5 per second after 4 s | Moderate: not "never", not "instantly". |

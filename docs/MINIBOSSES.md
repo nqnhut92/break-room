@@ -8,10 +8,13 @@ Each room has one of each mini-boss. They wander throughout reachable floor, inc
 | Damage | 20 | 15 |
 | Windup | 850 ms | 650 ms |
 | Recovery | 1,000 ms | 800 ms |
-| Chase speed | 230 | 260 |
+| Wander speed | 180 | 200 |
+| Chase speed | 440 | 460 |
 | Bounty (million VND) | 40 | 30 |
 
 A hammer/electric hit does 10 damage; milk tea does 5 with twice the reach. Ordinary hits spend normal mana and add 1 rage. Ultimate deals 15% of the target's maximum HP and consumes the bar. A reachable mini-boss takes priority over VKL/moles for ultimate targeting, choosing the nearest mini-boss. HP does not regenerate or scale with online players. The name, health bar and numeric current/max HP are always shown overhead while alive.
+
+Both mini-bosses chase faster than players (420) on clear floor. Dodge their fixed telegraphs and counter during recovery; windup and recovery durations are unchanged.
 
 Only people who damage a mini-boss enter its threat list. The other mini-boss stays neutral. Damage over the recent eight seconds determines target priority; proximity breaks ties. Telegraph circles stay fixed through the windup, so players can dodge. Strikes can only hurt living aggressors in the circle with an unobstructed line from the mini-boss. Bystanders cannot be harmed by dragging one over them. Dead/disconnected players leave the threat list. After eight seconds without taking damage, if all aggressors are at least 600 units away, the mini-boss forgets them and resumes wandering.
 

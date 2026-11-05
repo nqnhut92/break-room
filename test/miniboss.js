@@ -10,8 +10,8 @@ const player = (id, extra = {}) => ({ id, ...at, dead: false, ...extra });
 const state = () => ({ version: 1, list: [{ ...M.createMini('TML'), ...at }] });
 async function main() {
   await check('mini-boss stats retain the approved inverted table', () => {
-    assert.deepStrictEqual([M.MINI.TML.maxHp, M.MINI.TML.damage, M.MINI.TML.speed, M.MINI.TML.bounty], [900, 20, 230, 40]);
-    assert.deepStrictEqual([M.MINI.DMM.maxHp, M.MINI.DMM.damage, M.MINI.DMM.speed, M.MINI.DMM.bounty], [600, 15, 260, 30]);
+    assert.deepStrictEqual([M.MINI.TML.maxHp, M.MINI.TML.damage, M.MINI.TML.speed, M.MINI.TML.wanderSpeed, M.MINI.TML.bounty], [900, 20, 440, 180, 40]);
+    assert.deepStrictEqual([M.MINI.DMM.maxHp, M.MINI.DMM.damage, M.MINI.DMM.speed, M.MINI.DMM.wanderSpeed, M.MINI.DMM.bounty], [600, 15, 460, 200, 30]);
   });
   await check('spawns cover connected floor across the map and avoid players', () => {
     const points = [...M.nav().values()];

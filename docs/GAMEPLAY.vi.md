@@ -49,7 +49,7 @@ Nút Gọi IT vẫn thay ngay khi hết cooldown như cũ. Đặt `RESPAWN_MS` d
 
 ## Boss và nội gián
 
-VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
+VKL canh phòng server và chủ động đánh người bước vào. TML/DMM đi quanh map, chỉ trả đũa người đã đánh mình. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/180/200; tốc độ đuổi là 480/440/460, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
 
 - [VKL, rắn, đấu 1:1 và chiêu New Process](BOSS.vi.md)
 - [TML và DMM](MINIBOSSES.md) (tiếng Anh)
