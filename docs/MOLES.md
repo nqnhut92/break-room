@@ -11,3 +11,6 @@ A mole is a fake player the server drives. It joins a room through the same door
 - **Where it lives.** `lib/moles.js` is pure behaviour (tested without sockets). `lib/realtime.js` runs it (`moleTick`, `spawnMole`, `hitMole`). The secret (health, revealed or not) is in the store's `moles` hash (`moleAdd/moleList/moleReveal/moleHit/moleDel`), so a hit on any instance is atomic. A new leader sends the previous leader's moles home.
 - **Tuning.** `MOLE_DISABLED=1` turns them off; `MOLE_SPAWN_MS=5000` makes one arrive every 5 s (for trying it). Tests shrink the timings through the `moleSpawnMs` and `moleOpts` options.
 - **Day board.** A mole has a row on the room's daily board from its first appearance, exactly like a player, and keeps it as an offline row after it leaves. Its participant id is random and server-only; nothing in a board, join or chat message says what it is. See [Scores](SCORES.md).
+
+
+During the [office patrol](BOSS.md#office-patrol), bosses also damage moles without revealing them. Concealed moles flee and suspend stabbing, while human hits still reveal them. Incoming boss damage is scaled to the mole's 8-HP units; it is not an instant 30-damage kill. A boss kill pays no player bounty and shows a normal knock-out. Server racks also shock moles when they smash them.

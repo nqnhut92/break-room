@@ -22,3 +22,6 @@ A kill pays the bounty proportionally to actual damage, capped at remaining HP; 
 Verification: `test/miniboss.js` covers rules/navigation and real WebSocket combat. `test/shared.js` exercises the store contract against both memory and Redis, plus two-server kills and respawn. Run `npm run test:redis` for the complete suite.
 
 Living TML/DMM bodies block player movement and avoid living characters while wandering/chasing. Defeated bodies are nonblocking. Touching a neutral mini-boss does not add threat or cause retaliation; only the existing aggression rules do.
+
+
+Exception: during the 30-second [office patrol](BOSS.md#office-patrol), living TML/DMM hunt nearby players and disguised moles without provocation, preferring separate targets. No dead mini-boss is revived for the event. Patrol targeting adds no lasting threat; pending patrol windups are cancelled when it ends.

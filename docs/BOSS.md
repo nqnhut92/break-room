@@ -2,7 +2,7 @@
 
 English · [Tiếng Việt](BOSS.vi.md) · [Architecture](ARCHITECTURE.md)
 
-Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. It is the only thing in the game that can hurt a player. This page says how the fight works and, more importantly, why it was built this way, so a later change does not undo a decision by accident.
+Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. This page says how the fight works and, more importantly, why it was built this way, so a later change does not undo a decision by accident.
 
 ## How it plays
 
@@ -13,7 +13,7 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. It
 - Health comes back slowly: nothing for 4 seconds after a hit, then 5 per second (a full bar about 24 seconds after the last punch). Stepping out of the room and waiting is a real option.
 - The boss has 6,000 health, a hammer hit does 10 (that is 600 hits) and it **does not heal**: damage sticks, so hit and run works. **A lone player can wear it down in the end but the punches make that very hard; about five players take it down in around a minute, and a crowd is not a walkover.**
 - When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back one minute later, at its starting spot, with full health.
-- It never leaves the server room: leave and it goes back to patrolling and healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
+- Outside the office patrol event it stays in the server room: leave and it goes back to patrolling without healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
 
 ## The numbers
 
@@ -50,7 +50,7 @@ The real fight is harder than this model because players get punched, so 3 and 4
 
 **Why the hit value scales with the crowd.** If twenty friends join, a boss tuned for five would die in 30 seconds. Each hit is divided by `max(1, players in the boss's room / 5)`, so time to kill stays near two minutes however many come. The count is the players *inside the boss's zone and alive*, not everyone online, otherwise fifteen people standing in the toilets would make it stronger for the five who fight, and a big crowd outside would not matter.
 
-**Why the boss stays in the server room.** You asked for it, and it also keeps the rest of the game safe: new players spawn in the lobby and the open office is never dangerous. It is the "boss room" of an old RPG: you choose to go in. Because it only notices people inside the room (or on the apron in front of the door), standing at the door and poking it does not turn into free hits either: the apron counts, so the boss comes out to meet you.
+**Why the boss normally stays in the server room.** Outside the announced office patrol, the room remains an opt-in boss fight. The later patrol event deliberately makes the open office dangerous for a short, announced period. Because it only notices people inside the room (or on the apron in front of the door), standing at the door and poking it does not turn into free hits either: the apron counts, so the boss comes out to meet you.
 
 **Why the red circle.** "Make it hurt" and "make it fair" pull in opposite directions. Damage is large (four punches) so it matters; the 0.7 s warning makes each punch avoidable, which is what makes the damage acceptable instead of random. On a phone, tapping to walk is slower than a keyboard, so the warning is generous.
 
@@ -121,3 +121,20 @@ Snakes have a continuous S-shaped body, a tapered tail and a forked tongue. Summ
 Tests: `test/duel.js` (rules, timing, boundaries), `test/duel-realtime.js` (two instances, reconnects and leader handover), `test/shared.js` (memory/Redis store contract).
 
 VKL has a solid living body for player movement and avoids living targets when walking; its defeated body is nonblocking. Body collision does not change attack timing or damage.
+
+
+## Electrified server racks
+
+All six server racks retain 8 object HP and the 120-million break reward. Each accepted hit returns 5 player HP per point of actual object damage, capped by the rack's remaining HP; milk tea therefore shocks for 2.5 HP across 16 half-damage hits. A full rack costs 40 HP and 40 mana with hammer/electric, or 40 HP and 80 mana with milk tea. A refused hit on an already broken rack costs neither health nor mana. Sparks and a short electric arc connect the rack to the attacker, alongside the normal HP-loss feedback. No extra action is required.
+
+Breaking a rack removes 2% of VKL's maximum HP (120 of 6,000), once per physical rack per boss life. Six racks contribute at most 12% (720 HP). IT replacement, manual reset, reconnects and runner changes do not re-arm this damage; boss respawn does. Damage stops at 1 boss HP, contributes no ultimate charge or boss-bounty credit, and is not banked while VKL is dead. The normal rack reward still applies. The rack break, money, consumed support marker and boss damage commit in the same gameplay Lua script (or RAM operation). A lethal shock still permits the already committed break/reward/support. Existing snake thresholds also react to support damage.
+
+## Office patrol
+
+After 3–5 minutes with players in the room, a banner directly below the header warns for 5 seconds: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL then leaves the server room and joins TML/DMM in hunting nearby living players for 30 seconds. Boss damage, speed and attack telegraphs stay unchanged; distant targets are not tracked globally. Minis prefer targets not already selected by another boss when alternatives are nearby. VKL uses ordinary punches during the event, not New Process or captured duels. A pending duel postpones the warning. Dead bosses are not revived for the event, and VKL dying mid-event does not end the minis' remaining patrol.
+
+At the end, VKL walks home along navigable floor without attacking; minis cancel patrol windups and resume their existing provocation rules. The next 3–5-minute interval starts when VKL returns (or is dead). Missing a whole warning/event while a room is inactive does not replay it. Fresh lobby arrivals and respawns have 3 seconds of patrol-strike protection; attacking ends this protection. Reconnects away from the lobby do not grant it.
+
+Concealed moles are valid patrol targets and flee instead of stabbing during the event. Boss damage uses the same health fraction as a human (30/100 costs 2.4 of the mole's internal 8 HP), without revealing the mole or paying a kill bounty. Unrevealed moles recover health after the same 4-second delay at the equivalent of 5 human HP/s. A knocked-out mole shows the ordinary down animation, records its knock-out and leaves after the 15-second down timer. A human attack still reveals it; already exposed moles keep their identity.
+
+The office schedule/version and roaming pose live in the existing boss hash and use the existing boss lease. Transitions are broadcast; active/returning poses save once a second for runner handover. Joining/reconnecting receives the current event and its original deadline. Idle schedules do not write every tick, and empty rooms run no patrol loop or extra Redis connection. `lib/office-patrol.js` owns timing; tests can override `patrolOpts` without production environment switches.

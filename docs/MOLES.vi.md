@@ -11,3 +11,6 @@ Bạn sếp là người chơi giả do server điều khiển. Nó vào phòng 
 - **Nằm ở đâu.** `lib/moles.js` là hành vi thuần (test không cần socket). `lib/realtime.js` chạy nó (`moleTick`, `spawnMole`, `hitMole`). Bí mật (máu, đã lộ hay chưa) nằm trong hash `moles` của store (`moleAdd/moleList/moleReveal/moleHit/moleDel`), nên đòn đánh từ instance nào cũng nguyên tử. Instance lên điều khiển mới sẽ cho các con của người trước về.
 - **Chỉnh.** `MOLE_DISABLED=1` tắt hẳn; `MOLE_SPAWN_MS=5000` cho một con mỗi 5 giây (để thử). Test thu nhỏ thời gian bằng option `moleSpawnMs` và `moleOpts`.
 - **BXH ngày.** Bạn sếp có dòng trên BXH ngày của phòng ngay từ lúc xuất hiện, y như người chơi, và giữ dòng đó dạng offline sau khi rời. ID của nó ngẫu nhiên và chỉ có ở server; không tin nhắn BXH, join hay chat nào cho biết nó là gì. Xem [BXH ngày](SCORES.vi.md).
+
+
+Trong [đợt đi tuần](BOSS.vi.md#sếp-đi-tuần), boss cũng đánh bot nhưng không làm lộ. Bot chưa lộ bỏ chạy và ngừng đâm lén; người chơi đánh vẫn làm lộ. Damage boss được quy đổi về thang 8 HP của bot, không phải trừ thẳng 30 rồi chết một hit. Boss hạ bot không phát bounty cho người chơi, chỉ hiện gục thông thường. Bot đập tủ server cũng bị phản điện.

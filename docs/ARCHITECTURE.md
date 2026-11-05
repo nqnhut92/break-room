@@ -103,3 +103,6 @@ With persistent profile reservations configured, presence renewal must arrive be
 ## Dynamic actor bodies
 
 `public/actor-collision.js` supplies the same swept circle movement to browser prediction and server validation. Furniture remains authoritative static geometry. Living boss/mini-boss centers come from the existing runner/pubsub snapshots; no new database, heartbeat or identity fields are needed. Servers correct blocked movement and separate residual overlaps after snapshot changes. Player/player and player/bot bodies remain nonblocking. Forced duel animations complete before ordinary body separation resumes. See [ADR 0007](adr/0007-dynamic-actor-collision.md).
+
+
+The boss hash also holds the versioned office-patrol schedule and one-second roaming pose. Updates require the current boss lease and expected version. Rack support markers (`rack:<object id>`) live in the same hash until boss respawn; the object-hit script atomically commits the break, normal reward and bounded boss damage. See [office patrol](BOSS.md#office-patrol).

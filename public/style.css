@@ -961,3 +961,27 @@ canvas {
 /* day board: rows of players who are not online right now, and chat lines loaded from history */
 #rankList li.off { opacity: .6; }
 #chatLog li.hist { opacity: .85; }
+
+/* Shared office event, below the header; it never captures game controls. */
+#officeNotice {
+  position: fixed;
+  top: var(--office-notice-top, 65px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(620px, calc(100% - 24px));
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 176, 46, .55);
+  border-radius: 12px;
+  background: rgba(35, 22, 15, .94);
+  color: #ffe2ae;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+}
+@media (pointer: coarse) {
+  #officeNotice { padding: 7px 11px; font-size: 12px; }
+}

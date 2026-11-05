@@ -2,7 +2,7 @@
 
 [English](BOSS.md) · Tiếng Việt · [Kiến trúc](ARCHITECTURE.vi.md)
 
-Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong phòng server. Đây là thứ duy nhất trong game làm người chơi bị thương. Trang này nói cách chơi và quan trọng hơn là **vì sao làm thế này**, để sau này sửa không vô tình phá một quyết định đã có lý do.
+Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong phòng server. Trang này nói cách chơi và quan trọng hơn là **vì sao làm thế này**, để sau này sửa không vô tình phá một quyết định đã có lý do.
 
 ## Cách chơi
 
@@ -11,7 +11,7 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong p
 - Máu hồi chậm: 4 giây đầu sau cú đấm không hồi gì, sau đó 5 máu mỗi giây (đầy lại khoảng 24 giây sau cú cuối). Ra khỏi phòng chờ một chút là lựa chọn thật sự.
 - Sếp có 6.000 máu, một cú búa gây 10 (tức 600 cú) và sếp **không hồi máu**: sát thương được giữ lại, nên đánh rồi chạy cũng được. **Một người đánh một mình rốt cuộc vẫn hạ được nhưng bị đấm nên rất khó; khoảng năm người hạ trong chừng một phút, đông người cũng không dễ.**
 - Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 1 phút sau sếp quay lại chỗ cũ với đầy máu.
-- Sếp không bao giờ rời phòng server: bạn đi ra thì sếp quay lại tuần tra và hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
+- Ngoài sự kiện đi tuần toàn văn phòng, sếp ở phòng server; ra khỏi khu vực sẽ thoát truy đuổi, nhưng sếp không hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
 
 ## Các con số
 
@@ -125,3 +125,20 @@ Rắn có thân liền uốn chữ S, đuôi thuôn và lưỡi chẻ. Khi tri�
 Test: `test/duel.js` (luật, lịch, cửa khóa), `test/duel-realtime.js` (hai instance, tải lại trang, đổi leader), `test/shared.js` (hợp đồng store trên memory và Redis).
 
 VKL còn sống chặn đường người chơi và tránh mục tiêu còn sống khi bước đi; thân đã chết không chặn đường. Va chạm thân không đổi timing hay sát thương đòn đánh.
+
+
+## Tủ server phản điện
+
+Sáu tủ server giữ 8 HP đồ vật và thưởng 120 triệu khi vỡ. Mỗi hit hợp lệ phản 5 HP người chơi cho mỗi đơn vị damage thực sự gây lên tủ, không vượt HP còn lại; trà sữa phản 2,5 HP qua 16 hit nửa damage. Phá trọn một tủ tốn 40 HP và 40 mana bằng búa/điện, hoặc 40 HP và 80 mana bằng trà sữa. Đánh tủ đã vỡ không mất máu hay mana. Tủ tóe điện và có tia điện ngắn nối tới người đánh, kèm phản hồi trừ máu thông thường. Không thêm thao tác.
+
+Tủ vỡ rút 2% máu tối đa VKL (120/6.000), mỗi tủ vật lý chỉ một lần trong mỗi mạng sếp. Sáu tủ hỗ trợ tối đa 12% (720 HP). IT thay đồ, reset thủ công, reconnect hay đổi runner không khôi phục lượt hỗ trợ; sếp hồi sinh thì có. Damage dừng ở 1 HP sếp, không nạp ulti, không tính phần chia bounty sếp và không tích sẵn khi VKL đã chết. Tiền phá tủ vẫn nhận như cũ. Tủ vỡ, tiền, dấu đã hỗ trợ và damage sếp commit cùng một script Lua gameplay (hoặc thao tác RAM). Người đánh bị điện giật gục ở hit cuối vẫn nhận kết quả phá tủ đã commit. Các ngưỡng gọi rắn vẫn phản ứng với damage hỗ trợ.
+
+## Sếp đi tuần
+
+Sau 3–5 phút có người chơi trong phòng, banner ngay dưới header báo trước 5 giây: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL ra khỏi phòng server, cùng TML/DMM chủ động săn người còn sống ở gần trong 30 giây. Damage, tốc độ và dấu báo đòn giữ nguyên; không biết vị trí mục tiêu trên toàn map. Mini-boss ưu tiên mục tiêu chưa bị boss khác chọn khi có lựa chọn gần đó. VKL chỉ đấm thường, không dùng New Process hay bắt đấu 1:1 trong sự kiện. Đấu đang diễn ra làm hoãn thông báo. Boss đã chết không được hồi sinh để tham gia; VKL chết giữa đợt không hủy phần đi tuần còn lại của hai mini-boss.
+
+Hết đợt, VKL tự đi về theo sàn đi được và không đánh trên đường về; mini-boss hủy windup đi tuần và trở lại luật bị khiêu khích cũ. Khoảng nghỉ 3–5 phút tiếp theo tính từ lúc VKL về tới nơi (hoặc đã chết). Nếu phòng ngừng hoạt động qua cả thời gian báo và sự kiện thì không phát lại đợt cũ. Người mới vào sảnh và người hồi sinh được bảo vệ khỏi đòn đi tuần 3 giây; ra đòn sẽ mất bảo vệ. Reconnect ở xa sảnh không cấp bảo vệ.
+
+Bot giả người cũng là mục tiêu đi tuần và bỏ chạy thay vì đâm lén trong sự kiện. Đòn boss trừ theo cùng tỷ lệ máu người thật (30/100 tương đương 2,4 trên 8 HP nội bộ), không làm lộ bot và không phát bounty hạ bot. Bot chưa lộ hồi sau 4 giây với tốc độ tương đương 5 HP người/giây. Bot bị hạ hiện animation gục thông thường, ghi số lần ngỏm rồi rời phòng sau thời gian nằm 15 giây. Người chơi đánh vẫn làm lộ; bot đã lộ giữ nguyên danh tính.
+
+Lịch/version và vị trí đi tuần nằm trong hash boss hiện có, dùng lease boss hiện có. Chỉ broadcast chuyển trạng thái; lúc đi tuần/đi về lưu vị trí mỗi giây để chuyển runner. Join/reconnect nhận sự kiện hiện tại cùng deadline gốc. Lịch rảnh không ghi mỗi tick; phòng trống không chạy vòng lặp đi tuần hay mở thêm connection Redis. `lib/office-patrol.js` giữ thời gian; test có thể override `patrolOpts`, không thêm biến môi trường production.

@@ -20,3 +20,5 @@
 Use guides for current behavior and instructions. Use ADRs for the context, decision, alternatives and consequences of an architectural choice. ADRs are not a changelog or a place for tuning every gameplay number.
 
 Hướng dẫn mô tả cách hệ thống đang hoạt động và cách dùng. ADR lưu bối cảnh, quyết định, phương án và hệ quả. ADR không thay changelog hay ghi mọi lần chỉnh chỉ số gameplay.
+
+Office patrol and electrified rack rules are documented in [Boss](BOSS.md#electrified-server-racks) / [tiếng Việt](BOSS.vi.md#tủ-server-phản-điện); architectural rationale is [ADR 0009](adr/0009-office-patrol-and-rack-support.md) (English).

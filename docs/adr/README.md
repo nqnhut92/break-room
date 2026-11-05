@@ -20,6 +20,8 @@ Records 0001–0004 document decisions already present in the code and project n
 
 | [0008](0008-daily-scores-and-chat.md) | Accepted | Persist daily room scores through a durable Redis queue into Postgres, and store 24-hour chat |
 
+| [0009](0009-office-patrol-and-rack-support.md) | Accepted | Share the NPC lease for office patrol and commit bounded rack support atomically |
+
 ## Adding or changing a decision
 
 Copy [template.md](template.md) to the next unused `NNNN-short-title.md`. Start new proposals as **Proposed**; mark them **Accepted** when agreed or implemented. Explain context, the choice, alternatives and consequences, and link code, relevant guides and verification evidence. Do not invent historical dates, benchmarks or rejected experiments.

@@ -76,3 +76,6 @@ Guests still join immediately. [Google sign-in](IDENTITY.md#player-behavior) sav
 ## Character collision
 
 Living VKL and TML/DMM have solid bodies: walk around them rather than through them. Defeated bosses do not block movement. Bosses and mini-bosses avoid living characters while walking. Players can pass through other players and disguised bots, preventing doorway blocking and preserving the same visible rules for both. Body contact alone does not provoke a neutral mini-boss. Damage, attack range, telegraphs and map layout are unchanged.
+
+
+Server racks now shock their attacker and can weaken VKL by at most 12% per boss life. The office patrol event sends VKL/TML/DMM hunting for 30 seconds, with a shared banner below the header and no new controls. See [rack balance and patrol rules](BOSS.md#electrified-server-racks).

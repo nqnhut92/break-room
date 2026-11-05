@@ -442,6 +442,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function onMsg(m) {
     switch (m.t) {
       case 'welcome': {
+        S.officePatrol = m.officePatrol || null;
         if (m.guestTemporary) toast('Chưa kiểm tra được tên đã giữ. Bạn đang dùng tên khách tạm trong phòng này.');
         if (m.newer || (m.build && m.build !== 'dev' && MY_BUILD && m.build !== MY_BUILD)) showUpdate(false);
         $('drinkBtn').hidden = true;
@@ -730,6 +731,27 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         sfxHit(volumeAt(victim.x, victim.y));
         break;
       }
+      case 'officePatrol':
+        if (!S.officePatrol || m.state.version >= S.officePatrol.version) S.officePatrol = m.state;
+        positionOfficeNotice();
+        break;
+      case 'serverShock': {
+        const o = S.objects[m.id], p = S.players.get(m.by);
+        if (!o) break;
+        o.electricUntil = performance.now() + 450;
+        if (p) p.electricUntil = performance.now() + 450;
+        if (scene) {
+          scene.fx.sparks(o.x, objTop(o), o.y, 14);
+          scene.fx.electric(o.x, o.y, p ? p.x : o.x + 25, p ? p.y : o.y + 20, 90);
+          scene.fx.floatText(o.x, objTop(o) + 35, o.y, '⚡ GIẬT ĐIỆN', '#b8efff', 20);
+        }
+        if (m.by === S.me && !S.serverShockHint) {
+          S.serverShockHint = true;
+          toast('⚡ Đánh server bị phản điện. Phá tủ để rút máu VKL!');
+        }
+        if (m.bossDamage > 0) floatText(o, 65, 'VKL −' + m.bossDamage + ' HP', '#ffd24a', 20);
+        break;
+      }
       case 'hit': {
         const o = S.objects[m.id];
         if (!o) break;
@@ -740,7 +762,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         const hitter = S.players.get(m.by);
         if (hitter) showSkill(hitter, m.skill, o);
         const roleWords = hitter && ROLE_BY_ID[hitter.role] ? ROLE_BY_ID[hitter.role].hit : null;
-        floatText(o, 22, roleWords && Math.random() < 0.4 ? pick(roleWords) : pick(HIT_WORDS), '#ffffff', 16);
+        if (o.type !== 'server') floatText(o, 22, roleWords && Math.random() < 0.4 ? pick(roleWords) : pick(HIT_WORDS), '#ffffff', 16);
         const v = volumeAt(o.x, o.y);
         sfxHit(v);
         S.shake = Math.min(1, S.shake + 0.25 * v);
@@ -1206,6 +1228,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const p = S.players.get(m.id);
     if (!p) return;
     p.hp = m.hp;
+    if (p.mole && typeof m.moleHp === 'number') p.moleHp = m.moleHp;
     p.hpT = performance.now();
     if (scene) scene.fx.floatText(p.x, 150, p.y, '-' + m.dmg, '#ff6b5a', 20);
     if (m.id === S.me) {
@@ -2592,7 +2615,31 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // ----------------------------------------------------------------- loop ----
   let last = performance.now();
+  function positionOfficeNotice() {
+    const bottom = $('topbar').getBoundingClientRect().bottom;
+    $('officeNotice').style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
+  }
+  if (window.ResizeObserver) new ResizeObserver(positionOfficeNotice).observe($('topbar'));
+  window.addEventListener('resize', positionOfficeNotice);
+  let officeNoticeText = '';
+  function updateOfficeNotice() {
+    const s = S.officePatrol;
+    const active = S.joined && s && s.phase !== 'idle';
+    const seconds = s ? Math.max(0, Math.ceil((s.until - Date.now()) / 1000)) : 0;
+    const text = !active ? '' : s.phase === 'warning'
+      ? 'Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm. · ' + seconds + 's'
+      : s.phase === 'active' && seconds > 0
+        ? 'VKL, TML và DMM đang đi tuần — gặp ai cũng hỏi thăm! · ' + seconds + 's'
+        : 'Ban lãnh đạo đang về phòng. Tạm thời được thở.';
+    if (text === officeNoticeText) return;
+    officeNoticeText = text;
+    $('officeNotice').textContent = text;
+    $('officeNotice').hidden = !text;
+    if (text) positionOfficeNotice();
+  }
+
   function frame(now) {
+    updateOfficeNotice();
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt);

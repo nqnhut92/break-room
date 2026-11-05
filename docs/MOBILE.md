@@ -64,3 +64,6 @@ The join screen shares a horizontal layout on laptops (760px+) and touch landsca
 After Google sign-in, an empty room profile uses “Tạo nhân vật & vào phòng”: this explicitly creates the displayed profile before joining. A returning character loads automatically as a plain read-only summary, not a disabled form, with “Vào văn phòng”. Focus indicators stay inside controls so scrolling columns cannot clip them; native radios remain visually hidden even while loading/saving. “Sửa nhân vật” enables editing; “Lưu & vào phòng” saves before joining, and cancel restores the saved profile. Room changes load that room's character. Login alone never creates or joins a character. Score limitations appear separately beneath the primary action.
 
 Verify the primary action after rotating; use `npm run test:orientation` and `npm run test:account-ui`. Physical phone keyboard and Google redirect behavior still need device checks.
+
+
+The office-patrol warning/countdown sits below the measured header, wraps within the landscape viewport and never captures taps. It adds no action button. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` checks 844×390 touch and desktop layouts with real WebGL, including visible rack electricity and player HP loss.

@@ -72,3 +72,6 @@ Khách vẫn vào chơi ngay. [Google login](IDENTITY.vi.md#hành-vi-người-ch
 ## Va chạm nhân vật
 
 VKL và TML/DMM còn sống có thân rắn: phải đi vòng, không đi xuyên. Boss đã chết không chặn đường. Boss và mini-boss tránh nhân vật còn sống khi di chuyển. Người chơi và bot ngụy trang đi xuyên nhau để không chặn cửa và giữ cùng quy tắc thể hiện cho cả hai. Chỉ chạm thân không làm mini-boss trung lập nổi giận. Không đổi sát thương, tầm đánh, báo đòn hay bố cục map.
+
+
+Tủ server phản điện lên người đánh và hỗ trợ rút tối đa 12% máu VKL mỗi mạng sếp. Sự kiện đi tuần cho VKL/TML/DMM săn người 30 giây, báo chung dưới header và không thêm nút. Xem [cân bằng tủ và luật đi tuần](BOSS.vi.md#tủ-server-phản-điện).

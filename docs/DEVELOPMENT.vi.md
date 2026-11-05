@@ -94,3 +94,6 @@ Schema tự khởi tạo khi dùng DB hồ sơ lần đầu. `test:identity` ki�
 Bộ browser test account kiểm tra cột ngang laptop/cảm ứng, gửi Google login, màu số online và một nút chính tạo/sửa/vào phòng. `test/actor-collision.js` kiểm tra thân actor chia bước, trượt, tránh xuyên tường, NPC trung lập tránh người và đi qua trước/sau boss chết bằng WebSocket thật; được chạy trong `npm test`.
 
 Nhân vật đã lưu hiển thị dạng thông tin chỉ đọc; chế độ sửa mới hiện form. Browser test account kiểm tra viền focus nằm trọn trong ô, chọn giới tính bằng bàn phím/con trỏ, trả focus khi hủy và radio native được ẩn trong lúc chờ lưu.
+
+
+`test/office-patrol.js` nằm trong `npm test`/`npm run test:redis`: kiểm tra giới hạn hỗ trợ tủ/reset/hồi sinh/bounty, điện phân số, đường boss đi/về, chọn mục tiêu mini, bot ngụy trang, fence version/lease, trừ máu qua WebSocket thật và sự kiện/reconnect/chuyển runner giữa instance Redis. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` kiểm tra tia điện WebGL thật và banner không tương tác dưới header trên desktop/mobile.

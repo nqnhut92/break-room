@@ -94,3 +94,6 @@ Schema initialization is automatic on first profile database use. `test:identity
 The account UI browser suite checks laptop/touch columns, Google submission, online-count colors and the single create/edit/enter primary action. `test/actor-collision.js` covers swept actor bodies, sliding, wall safety, neutral NPC avoidance and real WebSocket passage before/after boss death; it runs in `npm test`.
 
 Saved characters render as a read-only summary; edit mode reveals the form. Account browser checks cover complete inset focus outlines, keyboard/pointer gender selection, focus return after cancel, and visually hidden native radios during pending saves.
+
+
+`test/office-patrol.js` is part of `npm test`/`npm run test:redis`: it checks rack support caps/reset/respawn/bounty, fractional electricity, global boss navigation/return, mini targeting, concealed-mole behavior, version/lease fences, real WebSocket HP loss and Redis multi-instance event/reconnect/runner handover. `CHROMIUM_PATH=/path/to/chromium npm run test:office-ui` checks real WebGL electric arcs and the noninteractive banner below the header on desktop and mobile.
