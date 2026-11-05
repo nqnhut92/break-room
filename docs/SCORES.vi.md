@@ -69,7 +69,7 @@ curl -H "Authorization: Bearer $MAINTENANCE_SECRET" https://<domain>/api/mainten
 curl -H "Authorization: Bearer $MAINTENANCE_SECRET" "https://<domain>/api/maintenance?status=1"
 ```
 
-Endpoint tắt trừ khi có `MAINTENANCE_SECRET` (hoặc `CRON_SECRET`, Vercel Cron gửi sẵn) dài từ 16 ký tự. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
+Monitor không gắn được header (ví dụ UptimeRobot) dùng `https://<domain>/api/maintenance?key=<secret>` bằng GET mỗi 5 phút; secret khi đó nằm trong URL và log, và chỉ cho người ta chạy job idempotent này. Endpoint tắt trừ khi có `MAINTENANCE_SECRET` (hoặc `CRON_SECRET`, Vercel Cron gửi sẵn) dài từ 16 ký tự. Job idempotent, chạy đồng thời vẫn an toàn. Trên Vercel hãy tự thêm cron, ví dụ `{ "crons": [{ "path": "/api/maintenance", "schedule": "*/5 * * * *" }] }`; repo này không thêm sẵn.
 
 ## Cấu hình
 

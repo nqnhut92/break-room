@@ -258,7 +258,7 @@ async function main() {
 
     // ---- real WebSockets against the app
     await step('websocket: day board rows, chat acknowledged only after the insert, history on join, failures not shown as sent', async () => {
-      const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1' } });
+      const app = createApp({ store: createMemoryStore({ persistScores: true }), env: { DATABASE_URL: db, MOLE_DISABLED: '1', BOSS_DISABLED: '1', MAINTENANCE_SECRET: 'maintenance-test-secret' } });
       const port = await app.start(0);
       const room = 'br-1';
       const a = await client(port, 'Ann', room), b = await client(port, 'Bob', room);
@@ -302,6 +302,12 @@ async function main() {
         send(a, { t: 'rank' });
         const rank = await take(a, (m) => m.t === 'rank').catch(() => null);                 // in the top rows already: no reply needed
         assert.ok(rank === null || rank.rank >= 1);
+        const base = `http://127.0.0.1:${port}/api/maintenance`;
+        assert.equal((await fetch(base)).status, 401);
+        assert.equal((await fetch(base + '?key=wrong-secret-value')).status, 401);
+        assert.equal((await fetch(base, { headers: { Authorization: 'Bearer maintenance-test-secret' } })).status, 200);
+        const viaKey = await fetch(base + '?key=maintenance-test-secret');
+        assert.equal(viaKey.status, 200); assert.equal((await viaKey.json()).ok, true);
         let row;
         for (let i = 0; i < 40 && !(row && row.s > 0); i++) {               // the game's own 5 s drain may hold the lock; either drain is fine
           assert.ok((await app.persistence.scoreboard.sync(room)).error === null);
