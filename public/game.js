@@ -206,7 +206,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   // ---------------------------------------------------------------- state ----
-  // A "bạn sếp" gives itself away when it stabs or when somebody hits it. From then on it carries a label and a health bar.
+  // A "rắn độc" (mole) gives itself away when it stabs or when somebody hits it. From then on it carries a label and a health bar.
   const MOLE_HP = 8;
   function setRage(v) {
     S.rage = v;
@@ -221,7 +221,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     p.mole = true;
     p.moleHp = hp;
     p.alwaysHp = true;
-    p.company = '🐍 BẠN SẾP';
+    p.company = '🐍 RẮN ĐỘC';
     return p;
   }
 
@@ -411,7 +411,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         receiveDuel({ state: m.duel, ...m.duel }, true);
         const meNow = S.players.get(S.me);
         $('downOverlay').hidden = !(meNow && meNow.dead); // refreshing while knocked out keeps the countdown
-        if (meNow && meNow.dead) $('downBy').textContent = 'đã bị hạ gục'; // the cause is not in the snapshot
+        if (meNow && meNow.dead) $('downBy').textContent = 'đang trong PIP'; // the cause is not in the snapshot
         S.target = null;
         S.attackId = null;
         if (scene) scene.build(m.world, m.props, m.zones, m.rooms);
@@ -640,7 +640,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       case 'moleReveal': {
         const mole = revealMole(m.id, m.hp);
-        if (mole && scene) scene.fx.floatText(mole.x, 170, mole.y, '🐍 BẠN SẾP!', '#ff5a5a', 22);
+        if (mole && scene) scene.fx.floatText(mole.x, 170, mole.y, '🐍 RẮN ĐỘC!', '#ff5a5a', 22);
         break;
       }
       case 'moleStab': {
@@ -673,7 +673,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'moleDead': {
         const mole = S.players.get(m.id);
         const killer = S.players.get(m.by);
-        toast('🐍 ' + (killer ? killer.name : 'Ai đó') + ' hạ gục bạn sếp ' + (mole ? mole.name : '') + '! +' + m.cost);
+        toast('🐍 ' + (killer ? killer.name : 'Ai đó') + ' vạch mặt rắn độc ' + (mole ? mole.name : '') + '! +' + m.cost);
         if (mole && scene) scene.fx.floatText(mole.x, 150, mole.y, '+' + m.cost, '#7df3ba', 24);
         if (mole) S.shake = Math.min(1, S.shake + 0.4 * volumeAt(mole.x, mole.y));
         break;
@@ -1200,7 +1200,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
     S.shake = Math.min(1.4, S.shake + 0.9);
     const names = m.shares.map((s) => s.name);
-    toast('🏆 VKL đã bị hạ gục! Tiền thưởng ' + fmtMoney(m.bounty) + ' chia theo sát thương');
+    toast('🏆 VKL nộp đơn xin nghỉ! Tiền thưởng ' + fmtMoney(m.bounty) + ' chia theo sát thương');
     toast(m.shares.slice(0, 3).map((s, i) => i + 1 + '. ' + s.name + ' +' + fmtShort(s.bounty)).join('  ·  '));
     const mine = m.shares.find((s) => s.id === S.me);
     if (mine) toast('💰 Bạn nhận ' + fmtMoney(mine.bounty) + ' thưởng (gây ' + mine.dmg + ' sát thương)');
@@ -1237,12 +1237,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     }
   }
   // Who knocked a player out, from the server's `by` on 'down' (an older server sends none: it was always VKL then).
-  function downCause(by) {
-    if (by === 'TML' || by === 'DMM') return 'bị ' + by + ' hạ gục';
-    if (by === 'snake') return 'bị rắn cắn gục';
-    if (by === 'mole') return 'bị đâm lén hạ gục';
-    if (by === 'shock') return 'bị điện giật gục';
-    return 'bị VKL hạ gục';
+  // `others` picks the toast wording ("vừa bị …") instead of the card shown to the player who went down.
+  function downCause(by, others) {
+    const own = { TML: 'bị TML bắt đi daily meeting', DMM: 'bị DMM gọi lên "góp ý"', snake: 'bị rắn cắn, xin nghỉ ốm',
+      mole: 'bị rắn độc đâm lén sau lưng', shock: 'bị điện giật, cháy deadline' };
+    const other = { TML: 'bị TML gọi điện "nói chuyện chút"', DMM: 'bị DMM đánh giá engage kém', snake: 'bị rắn cắn, nghỉ ốm đột xuất',
+      mole: 'bị rắn độc đâm lén', shock: 'bị điện giật, off sớm' };
+    const text = (others ? other : own)[by] || 'bị VKL cho vào PIP';
+    return others ? 'vừa ' + text : text;
   }
   function playerDown(m) {
     if (S.duel?.target === m.id) { S.duel = null; $('duelBanner').hidden = true; }
@@ -1267,7 +1269,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       sfxHurt();
       $('downOverlay').hidden = false;
       $('downBy').textContent = downCause(m.by);
-    } else toast('💀 ' + p.name + ' ' + downCause(m.by));
+    } else toast('💀 ' + p.name + ' ' + downCause(m.by, true));
   }
   function playerUp(m) {
     const p = S.players.get(m.id);
@@ -1905,7 +1907,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     closeEmotes();
     setButtonIcon($('ultBtn'), 'zap', settingsMQ.matches ? 'ULTI!' : 'ULTI! (R)');
     $('ultBtn').title = settingsMQ.matches ? 'Dùng chiêu cuối' : 'Phím R';
-    $('ragePill').title = settingsMQ.matches ? 'Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì chạm ULTI!' : 'Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì bấm R để tung ulti';
+    $('ragePill').title = settingsMQ.matches ? 'Nộ: đánh sếp hoặc rắn độc để nạp. Đầy thì chạm ULTI!' : 'Nộ: đánh sếp hoặc rắn độc để nạp. Đầy thì bấm R để tung ulti';
     for (const { el, slot } of settingsMoves) {
       if (settingsMQ.matches) {
         const target = el.id === 'zoomBtns' ? 'sideBtns' : el.id === 'emotes' ? 'emoteTray' : el.id === 'skillBtn' ? 'bottombar'

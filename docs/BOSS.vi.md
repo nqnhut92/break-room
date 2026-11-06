@@ -96,7 +96,7 @@ Game chạy trên nhiều instance Vercel cùng lúc, nên phải có **đúng m
 | `bup` | sếp quay lại, kèm max HP của mạng mới và phiên bản máu |
 | `profk` / `profkStrike` | trạng thái và cú đấm của [Prof. K](#prof-k); sát thương thật đến qua `bhp`/`bdead` với `by: 'profk'` |
 | `hp` | người chơi bị thương: máu mới và sát thương |
-| `down` | người chơi bị hạ gục: bao nhiêu mili giây nữa hồi sinh |
+| `down` | người chơi bị PIP (bị gục): bao nhiêu mili giây nữa hồi sinh |
 | `up` | người chơi hồi sinh: ở đâu, và `shieldMs` thời gian được bảo vệ |
 | `blocked` | bảo vệ khi xuất hiện đã chặn một đòn vào người này |
 | `shield` | bảo vệ của người này kết thúc sớm (`ms: 0`) |

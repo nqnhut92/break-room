@@ -98,7 +98,7 @@ The game runs on several Vercel instances at once, so there must be **exactly on
 | `bup` | it is back, with the new life’s maximum HP and health revision |
 | `profk` / `profkStrike` | [Prof. K](#prof-k)'s state and punches; his real damage comes as `bhp`/`bdead` with `by: 'profk'` |
 | `hp` | a player was hurt: new health and the damage |
-| `down` | a player was knocked out: milliseconds until they return |
+| `down` | a player went down ("bị PIP"): milliseconds until they return |
 | `up` | a player came back: where, and `shieldMs` of spawn protection |
 | `blocked` | spawn protection absorbed a hit on this player |
 | `shield` | this player's spawn protection ended early (`ms: 0`) |
