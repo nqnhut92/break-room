@@ -51,6 +51,19 @@ Run `npm run test:joystick` with Chromium installed (or set `CHROMIUM_PATH`). Th
 
 On the actual iPhone, test repeated drags/lifts including off-pad release, joystick plus attack, opening/closing chat, app switching and native rotation. Releasing and touching the pad again should recover without opening chat; a continuously held thumb should not stop just because it stays still.
 
+### Buttons while moving
+
+iOS WebKit (Safari, and Edge or Chrome on iOS) synthesizes no `click` for a tap while another finger is down, so with the joystick held only SMASH worked: it acts on `pointerdown`. ULTI, Skill, Em xin lỗi, Đồng nghiệp mời nước, zoom +/−, the emoji button and the emoji in its tray now act on the touch itself: a touch `pointerup` inside the button (12px slop) calls `click()`, and a trusted click arriving within 700ms on the same element is dropped so a plain tap still fires once. Mouse and pen keep ordinary clicks. Chat, settings, map, help, copy link and Call IT are deliberately left out: nobody needs them mid-run, and they open panels over the game. `npm run test:joystick` holds the pad with one CDP touch point and taps Skill and + with a second (Chromium, like iOS, sends no click there), and checks that a plain single tap still acts once. Confirm on a physical iPhone/iPad.
+
+### Home Screen suggestion
+
+On a coarse-pointer device that opened the game in a browser tab (`navigator.standalone` is not true and `display-mode: standalone` does not match), a small card appears under the header 2.5s after joining, only while the office notice is empty, for at most 20s, once per page load; × hides it for good (`localStorage` key `br-install-hidden`). An office notice takes the spot and hides it.
+
+- Android/Chromium: the page keeps `beforeinstallprompt`; the card's **Cài app** button calls `prompt()`, which opens the browser's own install dialog (the player still confirms there). Without the event (other browsers, installability not met) no card is shown. `manifest.json` lists 192px and 512px PNG icons (`public/icon-192.png`, `public/icon-512.png`, rendered from `favicon.svg` with a full-bleed background like `apple-touch-icon.png`). There is no service worker; whether Chrome on a given device fires the event without one must be checked on the phone.
+- iOS/iPadOS: no browser exposes an install API (all use WebKit), so the card shows steps only: Safari "Chia sẻ → Thêm vào Màn hình chính", Edge/Chrome/Firefox on iOS "⋯ → Chia sẻ → Thêm vào Màn hình chính". iPadOS reporting a Mac user agent is recognised by `maxTouchPoints > 1`. Whether a shortcut added from Edge opens without browser bars is unverified; Safari's "Open as Web App" does.
+
+`npm run test:install` emulates iPhone Safari, Edge on iPhone, a Home Screen launch, Android with and without the prompt event, and a desktop.
+
 ## Settings layout
 
 Touch settings contains five actions in one grid: Help/Map on the first row, High graphics/Copy server link on the second, and Call IT across the final row. Existing button elements are moved rather than recreated, preserving their listeners and state. Zoom stays at the right edge; skill sits beside attack and chat/emoji stay at the bottom center; sound stays in the header. Desktop controls return to their original toolbar positions. [Current panel screenshot](../artifacts/settings-mobile.png).

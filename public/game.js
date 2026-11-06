@@ -417,6 +417,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         mm.rooms = m.rooms || [];
         mmBuild(m.world, m.props, m.zones);
         S.joined = true;
+        setTimeout(showInstall, 2500); // after the welcome toasts
         syncOrientation();
         autoJoin.set();
         document.documentElement.classList.remove('autojoin');
@@ -1810,7 +1811,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
           '<b>Bấm 💬</b> để nhắn cho cả server, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ; chạm bản đồ nhỏ để xem toàn văn phòng.',
-          'Tắt khóa xoay và cầm máy ngang để chơi. Trong Safari, chọn <b>Chia sẻ → Thêm vào Màn hình chính</b> (bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt.',
+          'Tắt khóa xoay và cầm máy ngang để chơi. Bấm <b>Chia sẻ → Thêm vào Màn hình chính</b> (Edge/Chrome trên iPhone: <b>⋯ → Chia sẻ</b>; bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt. Android: bấm <b>Cài app</b> khi game gợi ý.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
@@ -2337,6 +2338,32 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     emoteBox.appendChild(b);
   });
 
+  // iOS WebKit (Safari, and Edge or Chrome on iOS) sends no click for a tap while another finger holds the joystick,
+  // so only SMASH (which acts on pointerdown) used to work on the run. These actions now answer the touch itself;
+  // the browser's own click that may follow is dropped so nothing fires twice. Mouse and pen are unchanged.
+  const tapped = new WeakMap();
+  document.addEventListener('click', e => {
+    const el = e.target instanceof Element && e.target.closest('[data-tap]');
+    if (el && e.isTrusted && performance.now() - (tapped.get(el) || -1e9) < 700) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  function tapWhileMoving(el) {
+    let id = null;
+    el.dataset.tap = '';
+    el.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') id = e.pointerId; });
+    el.addEventListener('pointercancel', e => { if (e.pointerId === id) id = null; });
+    el.addEventListener('pointerup', e => {
+      if (e.pointerId !== id) return;
+      id = null;
+      const r = el.getBoundingClientRect(), slop = 12;
+      if (e.clientX < r.left - slop || e.clientX > r.right + slop || e.clientY < r.top - slop || e.clientY > r.bottom + slop) return;
+      tapped.set(el, performance.now());
+      el.click();
+    });
+  }
+  // Worth reaching while running; chat, settings, map and help are not (they open panels over the game).
+  for (const id of ['ultBtn', 'skillBtn', 'duelApologyBtn', 'drinkBtn', 'zoomIn', 'zoomOut', 'emoteBtn']) tapWhileMoving($(id));
+  for (const b of emoteBox.children) tapWhileMoving(b);
+
   $('copyLink').addEventListener('click', () => {
     const url = location.origin + location.pathname + '?server=' + encodeURIComponent(S.room);
     const done = () => toast('Đã copy link server, gửi cho đồng nghiệp nhé');
@@ -2751,7 +2778,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   let last = performance.now();
   function positionOfficeNotice() {
     const bottom = $('topbar').getBoundingClientRect().bottom - $('app').getBoundingClientRect().top;
-    $('officeNotice').style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
+    for (const id of ['officeNotice', 'installCard']) $(id).style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
   }
   if (window.ResizeObserver) new ResizeObserver(positionOfficeNotice).observe($('topbar'));
   window.addEventListener('resize', positionOfficeNotice);
@@ -2776,8 +2803,49 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     officeNoticeText = text;
     $('officeNotice').textContent = text;
     $('officeNotice').hidden = !text;
-    if (text) positionOfficeNotice();
+    if (text) { positionOfficeNotice(); hideInstall(false); } // an office event takes the spot
   }
+
+  // Suggest the Home Screen app on phones and tablets that opened the game in a browser tab: it then runs full screen,
+  // without browser bars. Android/Chromium fires beforeinstallprompt, so our button opens the browser's own install
+  // dialog. iOS has no such API in any browser (Safari, Edge and Chrome all run on WebKit), so it only shows the steps.
+  const install = { prompt: null, shown: false, timer: 0 };
+  const standaloneApp = () => navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  const iosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installHidden = () => { try { return localStorage.getItem('br-install-hidden') === '1'; } catch (e) { return false; } };
+  function installSteps() {
+    if (install.prompt) return 'Cài game ra màn hình chính để chơi toàn màn hình.';
+    const ua = navigator.userAgent;
+    if (/EdgiOS|CriOS|FxiOS/.test(ua)) return 'Chơi toàn màn hình: ⋯ → Chia sẻ → Thêm vào Màn hình chính.';
+    return 'Chơi toàn màn hình: Chia sẻ → Thêm vào Màn hình chính.';
+  }
+  function showInstall() {
+    if (install.shown || !S.joined || !coarseUi || standaloneApp() || installHidden() || !$('officeNotice').hidden) return;
+    if (!install.prompt && !iosDevice) return;
+    install.shown = true; // once per page load; × hides it for good
+    $('installText').textContent = installSteps();
+    $('installBtn').hidden = !install.prompt;
+    $('installCard').hidden = false;
+    positionOfficeNotice();
+    clearTimeout(install.timer);
+    install.timer = setTimeout(() => hideInstall(false), 20000);
+  }
+  function hideInstall(forever) {
+    $('installCard').hidden = true;
+    clearTimeout(install.timer);
+    if (forever) try { localStorage.setItem('br-install-hidden', '1'); } catch (e) { /* ignore */ }
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); install.prompt = e; showInstall(); });
+  window.addEventListener('appinstalled', () => { install.prompt = null; hideInstall(true); });
+  $('installClose').addEventListener('click', () => hideInstall(true));
+  $('installBtn').addEventListener('click', async () => {
+    const ask = install.prompt;
+    if (!ask) return;
+    install.prompt = null;
+    ask.prompt();
+    const choice = await ask.userChoice.catch(() => null);
+    hideInstall(choice && choice.outcome === 'accepted');
+  });
 
   function frame(now) {
     updateOfficeNotice();

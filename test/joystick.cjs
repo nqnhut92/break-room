@@ -20,7 +20,7 @@ async function main() {
       const marker='  requestAnimationFrame(frame);\n})();';assert.ok(source.includes(marker));
       return route.fulfill({contentType:'application/javascript',body:source.replace(marker,'  window.joystickCheck={S};\n'+marker)});
     });
-    await page.route('**/scene3d.js',route=>route.fulfill({contentType:'application/javascript',body:`export function createScene3D(){return {resize(){},setQuality(){},update(){},build(){},zoom(){},cameraTo(){},zoomLimits(){return {atMin:false,atMax:false}},fx:new Proxy({},{get:()=>()=>{}})}}` }));
+    await page.route('**/scene3d.js',route=>route.fulfill({contentType:'application/javascript',body:`export function createScene3D(){return {resize(){},setQuality(){},update(){},build(){},zoom(){},zoomStep(){},cameraTo(){},zoomLimits(){return {atMin:false,atMax:false}},fx:new Proxy({},{get:()=>()=>{}})}}` }));
     await page.addInitScript(()=>{Element.prototype.requestFullscreen=()=>Promise.reject(new Error('unsupported'));if(screen.orientation)screen.orientation.lock=()=>Promise.reject(new Error('unsupported'));});
     await page.goto(`http://localhost:${port}/?room=br-1`);
     await page.fill('#nameInput','Joystick check');await page.click('#joinBtn');
@@ -91,6 +91,24 @@ async function main() {
     await page.evaluate(()=>document.getElementById('chatInput').blur());await end();
     for(let i=0;i<8;i++){await start();assert.ok((await state()).x>0.5);await end();await neutral();}
     ok('chat focus still resets controls and repeated fresh gestures remain responsive');
+    // A second finger reaches the action buttons while the thumb holds the joystick; each tap acts exactly once.
+    for(const id of ['skillBtn','zoomIn']){
+      const at=await page.evaluate(id=>{const el=document.getElementById(id),r=el.getBoundingClientRect();window.tapCount=0;el.addEventListener('click',()=>window.tapCount++);return {x:r.x+r.width/2,y:r.y+r.height/2};},id);
+      const skillBefore=await page.evaluate(()=>joystickCheck.S.skill);
+      await start();
+      await touch('touchStart',[right,{id:4,...at}]);
+      await touch('touchEnd',[{id:4,...at}]); // CDP lists the point that ends: the button finger lifts, the thumb stays on the pad
+      await page.waitForTimeout(400);
+      assert.equal(await page.evaluate(()=>window.tapCount),1,id+' acted once');
+      assert.ok((await state()).x>0.5,'the joystick kept moving');
+      if(id==='skillBtn')assert.notEqual(await page.evaluate(()=>joystickCheck.S.skill),skillBefore);
+      await end();await neutral();
+    }
+    ok('action buttons answer a second finger while the joystick is held, once per tap');
+    await page.evaluate(()=>{window.tapCount=0;document.getElementById('zoomOut').addEventListener('click',()=>window.tapCount++);});
+    await page.tap('#zoomOut');await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(()=>window.tapCount),1,'a plain tap (with the browser\'s own click) acts once');
+    ok('a plain single-finger tap still acts exactly once');
     assert.deepEqual(errors,[]);ok('no browser page errors');
     console.log(`All ${passed} joystick browser checks passed. Missing-event cases are fault injection, not proof of a specific Safari bug.`);
   } finally {if(browser)await browser.close();await app.stop();}

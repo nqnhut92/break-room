@@ -22,7 +22,8 @@
     "maintenance": "node scripts/maintenance.js",
     "test:identity": "bash scripts/test-identity.sh",
     "test:scores": "bash scripts/test-scores.sh",
-    "test:account-ui": "node test/account-ui.cjs"
+    "test:account-ui": "node test/account-ui.cjs",
+    "test:install": "node test/install-card.cjs"
   },
   "engines": {
     "node": ">=20"

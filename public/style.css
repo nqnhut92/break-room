@@ -1040,6 +1040,30 @@ canvas {
 @media (pointer: coarse) {
   #officeNotice { padding: 7px 11px; font-size: 12px; }
 }
+/* "Add to Home Screen" suggestion: same spot as the office notice, shown only while that is empty. */
+#installCard {
+  position: fixed;
+  top: var(--office-notice-top, 65px);
+  left: var(--hud-center, 50%);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(560px, calc(100% - 24px));
+  padding: 6px 6px 6px 12px;
+  border: 1px solid rgba(125, 211, 255, .45);
+  border-radius: 12px;
+  background: rgba(14, 26, 38, .95);
+  color: #d8efff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  z-index: 6;
+}
+#installCard[hidden] { display: none; }
+#installCard .btn { min-height: 34px; padding: 6px 10px; font-size: 12px; flex: 0 0 auto; }
+#installBtn { background: #1a5f86; border-color: #7dd3ff; color: #fff; }
 
 /* Backgrounds extend to the edges; important content stays inside the reported safe area.
    Applies equally to iPhone sensor housings and Android cutouts/gesture bars. */
