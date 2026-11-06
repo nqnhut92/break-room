@@ -1033,6 +1033,7 @@ canvas {
   font-weight: 600;
   line-height: 1.45;
   text-align: center;
+  white-space: pre-line; /* the patrol and Prof. K's outing can share it, one line each */
   pointer-events: none;
   z-index: 5;
 }

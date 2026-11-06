@@ -96,6 +96,7 @@ The game runs on several Vercel instances at once, so there must be **exactly on
 | `bhp` | health change from a hit, rack or population growth: current/max HP and monotonic health revision; older revisions are ignored |
 | `bdead` | it fell: who did how much, the bounty each gets, time until it returns |
 | `bup` | it is back, with the new life’s maximum HP and health revision |
+| `profk` / `profkStrike` | [Prof. K](#prof-k)'s state and punches; his real damage comes as `bhp`/`bdead` with `by: 'profk'` |
 | `hp` | a player was hurt: new health and the damage |
 | `down` | a player was knocked out: milliseconds until they return |
 | `up` | a player came back: where, and `shieldMs` of spawn protection |
@@ -144,7 +145,7 @@ Breaking a rack removes 2% of VKL’s stored maximum HP at that moment, once per
 
 ## Office patrol
 
-After 2–3 minutes with players in the room, a banner directly below the header warns for 5 seconds: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL then leaves the server room and joins TML/DMM in hunting nearby living players for 30 seconds. Boss damage, speed and attack telegraphs stay unchanged; distant targets are not tracked globally. Minis prefer targets not already selected by another boss when alternatives are nearby. VKL uses ordinary punches during the event, not New Process or captured duels. A pending duel postpones the warning. Dead bosses are not revived for the event, and VKL dying mid-event does not end the minis' remaining patrol.
+After 2–3 minutes with players in the room, a banner directly below the header warns for 5 seconds: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL then leaves the server room and joins TML/DMM in hunting nearby living players for 30 seconds. Boss damage, speed and attack telegraphs stay unchanged; distant targets are not tracked globally. Minis prefer targets not already selected by another boss when alternatives are nearby. VKL uses ordinary punches during the event, not New Process or captured duels. A pending duel postpones the warning. [Prof. K](#prof-k) still goes out during the patrol and follows VKL around the office. Dead bosses are not revived for the event, and VKL dying mid-event does not end the minis' remaining patrol.
 
 At the end, VKL walks home along navigable floor without attacking; minis cancel patrol windups and resume their existing provocation rules. The next 2–3-minute interval starts when VKL returns (or is dead). Missing a whole warning/event while a room is inactive does not replay it. Wind-up circles that the server cancels (for example when the patrol ends) disappear on clients too.
 
@@ -159,3 +160,28 @@ The office schedule/version and roaming pose live in the existing boss hash and 
 On desktop, VKL displays “Mọi người nghĩ dì dẫy?” on one line directly under its name. Tablets (touch landscape at least 1000×600, every iPad including mini) show it too; phone labels omit the motto.
 
 The server room sits in the north row, beside the lobby spine, with its door in the south wall onto the north corridor. Home/patrol/racks, the capture landing, the doorway apron and expelled-player positions all derive from that door (`WORLD.duelDoor`, whose `axis` is `'x'` for a south door and `'y'` for a west door): the apron is the floor just outside the door, and expelled players are placed outside it. During capture an opaque red/amber gate spans the doorway, the room floor is tinted/bordered, and a world-anchored “PHÒNG KHÓA” sign counts down. These indicators clear together at release/expiry/death and restore from remaining duel time on reconnect. A saved active capture whose landing belongs to the old room is released after relocation.
+
+## Prof. K
+
+**Prof. K** is a supporter NPC, not a boss. He lives in the DIRECTOR room (south row, door in its north wall) and strolls around it between outings. Every random 60–90 seconds he goes out to fight VKL:
+
+1. **Warning, 5 s.** The banner below the header (the same slot as the office patrol notice, a second line when both are on) says Prof. K is about to go and find VKL, with a countdown (the wording does not name a place, because VKL may be out on the office patrol). Clients play a short rising chime instead of music. Mute silences it.
+2. **Fight, 30 s.** He walks out along navigable floor and punches VKL wherever VKL is: in the server room, or out in the office during an [office patrol](#office-patrol). His punch is VKL's own (115 start distance, 700 ms wind-up with a green circle 105 in radius, 600 ms recovery), and his walk and swing are the shared character rig the mini-bosses use. No new moves.
+3. **Home.** He walks back without punching. The next 60–90 s wait starts when he is home.
+
+**Damage.** A landed punch takes **20 HP** off VKL only while players are fighting too: some player damaged VKL (a hit, an ultimate or a rack shock) within the last **2 seconds**. Otherwise the punch is for show. Moles hitting VKL do not count. His damage is credited to nobody: not on the damage board, and if VKL falls the whole bounty is split among players by their own damage, even when Prof. K lands the last punch.
+
+**He cannot be hurt.** Prof. K has no HP and no health bar. Players cannot target him, VKL never targets him, and TML/DMM ignore him. His living body blocks players like a mini-boss.
+
+| Setting | Prof. K | Compared with |
+| --- | --- | --- |
+| Body radius | 28 | TML/DMM 22, VKL 34 |
+| Model scale | 1.75 × 1.65 × 1.65 | DMM 1.65 × 1.3 × 1.5, VKL 2.1 |
+| Walk speed | 210 | TML/DMM 200/180, VKL 220 |
+| Run speed | 470 | TML/DMM 460/440, VKL 480 |
+
+**Other events.** An outing is skipped (not replayed) when VKL is dead, nobody is online or a [captured duel](#captured-11-duel) is on; a new duel cannot start while Prof. K is warning or out. The office patrol does not postpone him and he does not postpone it. If VKL dies mid-outing he walks home. With `BOSS_DISABLED` there is no Prof. K.
+
+**Look.** Grey jacket, silver hair, his name with the motto “Ngon thì vô làm” below it (desktop and tablets, like the mini-bosses), and a green dot on the radar and the full map.
+
+**Across instances.** The instance holding the boss lease runs him in `profkTick` (`lib/realtime.js`), using the rules in `lib/profk.js`. His state (phase, deadlines, position, wind-up) is a versioned record in the boss hash (`profk`), saved with the lease when something changed; a new leader resumes the same outing and deadline. The store refuses a warning during a duel and a duel during a warning or fight. Messages: `profk` (the state; `ms` is the time left in the warning or fight) and `profkStrike` (a punch lands: `hit`, `real`); real damage arrives as `bhp`/`bdead` with `by: 'profk'`. Tests: `test/profk.js` (rules, memory/Redis store contract, a real WebSocket outing); tests shorten timing with `profkOpts`.

@@ -81,6 +81,7 @@ Measure room-state memory using Redis diagnostics and the provider dashboard. Ba
 | Store selection, limits, TTLs from env | `lib/config.js` |
 | Server list (`BR-1`, `BR-2`) | `lib/world.js` (`ROOMS`), `lib/room-list.js` |
 | Contract tests for both stores | `test/shared.js` |
+| Boss, mini-boss and Prof. K rules | `lib/boss.js`, `lib/miniboss.js`, `lib/profk.js` |
 | Furniture layout and facing (`rot`: 0 south, PI/2 east, PI north, -PI/2 west) | `lib/world.js` |
 | 3D scene, lighting and the ✨ graphics switch (high / safe, direct render, no post-processing) | `public/scene3d.js` |
 
@@ -105,7 +106,7 @@ With persistent profile reservations configured, presence renewal must arrive be
 `public/actor-collision.js` supplies the same swept circle movement to browser prediction and server validation. Furniture remains authoritative static geometry. Living boss/mini-boss centers come from the existing runner/pubsub snapshots; no new database, heartbeat or identity fields are needed. Servers correct blocked movement and separate residual overlaps after snapshot changes. Player/player and player/bot bodies remain nonblocking. Forced duel animations complete before ordinary body separation resumes. See [ADR 0007](adr/0007-dynamic-actor-collision.md).
 
 
-The boss hash also holds the versioned office-patrol schedule and one-second roaming pose. Updates require the current boss lease and expected version. Rack support markers (`rack:<object id>`) live in the same hash until boss respawn; the object-hit script atomically commits the break, normal reward and bounded boss damage. See [office patrol](BOSS.md#office-patrol).
+The boss hash also holds the versioned office-patrol schedule and one-second roaming pose. Updates require the current boss lease and expected version. Rack support markers (`rack:<object id>`) live in the same hash until boss respawn; the object-hit script atomically commits the break, normal reward and bounded boss damage. See [office patrol](BOSS.md#office-patrol). Prof. K's versioned record (`profk`) lives in the same hash under the same lease; see [Prof. K](BOSS.md#prof-k).
 
 
 Canvas and fixed HUD share the dynamic `#app` layout surface, observed by `viewport.js`; layout `innerHeight` supplies a floor when rotation leaves older root/dynamic-unit values. Browser safe-area insets protect content without shrinking the world background. Visual viewport measurements remain limited to keyboard placement. See [mobile layout and verification limits](MOBILE.md#safe-areas-and-rotation-previews).

@@ -94,6 +94,7 @@ Game chạy trên nhiều instance Vercel cùng lúc, nên phải có **đúng m
 | `bhp` | đổi máu do đánh, tủ hoặc tăng dân số: HP hiện tại/tối đa và phiên bản máu tăng dần; bỏ qua bản cũ |
 | `bdead` | sếp gục: ai gây bao nhiêu, mỗi người nhận bao nhiêu thưởng, bao lâu nữa quay lại |
 | `bup` | sếp quay lại, kèm max HP của mạng mới và phiên bản máu |
+| `profk` / `profkStrike` | trạng thái và cú đấm của [Prof. K](#prof-k); sát thương thật đến qua `bhp`/`bdead` với `by: 'profk'` |
 | `hp` | người chơi bị thương: máu mới và sát thương |
 | `down` | người chơi bị hạ gục: bao nhiêu mili giây nữa hồi sinh |
 | `up` | người chơi hồi sinh: ở đâu, và `shieldMs` thời gian được bảo vệ |
@@ -148,7 +149,7 @@ Phá một tủ trừ 2% max HP VKL trong store tại thời điểm đó, một
 
 ## Sếp đi tuần
 
-Sau 2–3 phút có người chơi trong phòng, banner ngay dưới header báo trước 5 giây: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL ra khỏi phòng server, cùng TML/DMM chủ động săn người còn sống ở gần trong 30 giây. Damage, tốc độ và dấu báo đòn giữ nguyên; không biết vị trí mục tiêu trên toàn map. Mini-boss ưu tiên mục tiêu chưa bị boss khác chọn khi có lựa chọn gần đó. VKL chỉ đấm thường, không dùng New Process hay bắt đấu 1:1 trong sự kiện. Đấu đang diễn ra làm hoãn thông báo. Boss đã chết không được hồi sinh để tham gia; VKL chết giữa đợt không hủy phần đi tuần còn lại của hai mini-boss.
+Sau 2–3 phút có người chơi trong phòng, banner ngay dưới header báo trước 5 giây: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL ra khỏi phòng server, cùng TML/DMM chủ động săn người còn sống ở gần trong 30 giây. Damage, tốc độ và dấu báo đòn giữ nguyên; không biết vị trí mục tiêu trên toàn map. Mini-boss ưu tiên mục tiêu chưa bị boss khác chọn khi có lựa chọn gần đó. VKL chỉ đấm thường, không dùng New Process hay bắt đấu 1:1 trong sự kiện. Đấu đang diễn ra làm hoãn thông báo. [Prof. K](#prof-k) vẫn ra trong lúc đi tuần và đuổi theo VKL khắp văn phòng. Boss đã chết không được hồi sinh để tham gia; VKL chết giữa đợt không hủy phần đi tuần còn lại của hai mini-boss.
 
 Hết đợt, VKL tự đi về theo sàn đi được và không đánh trên đường về; mini-boss hủy windup đi tuần và trở lại luật bị khiêu khích cũ. Khoảng nghỉ 2–3 phút tiếp theo tính từ lúc VKL về tới nơi (hoặc đã chết). Nếu phòng ngừng hoạt động qua cả thời gian báo và sự kiện thì không phát lại đợt cũ. Vòng báo đòn bị server hủy (ví dụ khi hết đợt đi tuần) cũng biến mất trên client.
 
@@ -163,3 +164,28 @@ Lịch/version và vị trí đi tuần nằm trong hash boss hiện có, dùng 
 Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” trên một dòng ngay dưới tên. Máy tính bảng (cảm ứng nằm ngang từ 1000×600, gồm mọi iPad kể cả mini) cũng hiện; nhãn trên điện thoại không có đề từ.
 
 Phòng server nằm ở hàng phía bắc, cạnh trục sảnh, cửa ở tường nam mở ra hành lang bắc. Chỗ đứng/đường tuần tra/rack, điểm kéo vào, khoảng sân trước cửa và điểm đẩy người ra đều lấy từ cửa này (`WORLD.duelDoor`, `axis` là `'x'` với cửa phía nam và `'y'` với cửa phía tây): khoảng sân là phần sàn ngay ngoài cửa, người bị đẩy ra được đặt bên ngoài cửa. Lúc bắt đấu, rào đỏ/vàng đặc chắn đúng cửa, nền phòng đổi màu/có viền và bảng “PHÒNG KHÓA” tại cửa đếm ngược. Các dấu hiệu cùng biến mất khi mở cửa/hết giờ/có người chết và phục hồi theo thời gian đấu còn lại khi reconnect. Đấu đang lưu mà điểm kéo thuộc phòng cũ được giải phóng sau lần chuyển phòng.
+
+## Prof. K
+
+**Prof. K** là NPC hỗ trợ, không phải boss. Ông ở phòng DIRECTOR (hàng phía nam, cửa ở tường bắc) và đi lại trong phòng giữa các lượt. Cứ 60–90 giây (ngẫu nhiên) ông ra đánh VKL:
+
+1. **Báo trước 5 giây.** Banner ngay dưới header (cùng chỗ với thông báo đi tuần, thành dòng thứ hai nếu cả hai cùng lúc) báo Prof. K sắp đi tìm VKL, có đếm ngược (câu không nói địa điểm, vì VKL có thể đang đi tuần ngoài văn phòng). Client phát một tiếng chuông ngắn đi lên thay vì nhạc. Tắt tiếng thì chuông cũng im.
+2. **Đánh 30 giây.** Ông đi theo sàn đi được và đấm VKL ở bất cứ đâu VKL đang đứng: trong phòng server, hoặc ngoài văn phòng trong lúc [sếp đi tuần](#sếp-đi-tuần). Cú đấm là cú đấm của chính VKL (bắt đầu ở khoảng cách 115, gồng 700 ms với vòng xanh bán kính 105, hồi 600 ms), dáng đi và vung tay là rig nhân vật dùng chung với mini-boss. Không có chiêu mới.
+3. **Về phòng.** Ông đi bộ về và không đấm trên đường. Khoảng chờ 60–90 giây tiếp theo tính từ lúc về tới phòng.
+
+**Sát thương.** Một cú trúng trừ **20 HP** của VKL chỉ khi người chơi cũng đang đánh: có người chơi gây sát thương lên VKL (đánh thường, ulti hoặc giật điện từ tủ) trong **2 giây** vừa qua. Nếu không, cú đấm chỉ để cho vui. Nội gián đánh VKL không tính. Sát thương của ông không tính cho ai: không lên bảng sát thương, và nếu VKL gục thì toàn bộ tiền thưởng chia cho người chơi theo sát thương của chính họ, kể cả khi Prof. K đấm cú cuối.
+
+**Ông không bị đánh.** Prof. K không có HP và không có thanh máu. Người chơi không nhắm được ông, VKL không bao giờ đánh ông, TML/DMM cũng lờ ông đi. Thân ông chặn đường người chơi như mini-boss.
+
+| Thông số | Prof. K | So với |
+| --- | --- | --- |
+| Bán kính thân | 28 | TML/DMM 22, VKL 34 |
+| Tỷ lệ mô hình | 1,75 × 1,65 × 1,65 | DMM 1,65 × 1,3 × 1,5, VKL 2,1 |
+| Tốc độ đi | 210 | TML/DMM 200/180, VKL 220 |
+| Tốc độ chạy | 470 | TML/DMM 460/440, VKL 480 |
+
+**Sự kiện khác.** Lượt ra bị bỏ (không phát lại) khi VKL đã chết, không có ai online hoặc đang [bắt đấu 1:1](#bắt-đấu-11); khi Prof. K đang báo trước hoặc đang đánh thì không bắt đầu đấu mới. Đi tuần không làm hoãn Prof. K và ngược lại. VKL chết giữa lượt thì ông đi về. Với `BOSS_DISABLED` thì không có Prof. K.
+
+**Ngoại hình.** Áo vest xám, tóc bạc, tên kèm đề từ “Ngon thì vô làm” bên dưới (desktop và máy tính bảng, như mini-boss), chấm xanh lá trên radar và bản đồ lớn.
+
+**Trên nhiều instance.** Instance giữ lease boss chạy ông trong `profkTick` (`lib/realtime.js`), theo luật ở `lib/profk.js`. Trạng thái (giai đoạn, hạn giờ, vị trí, gồng đòn) là một bản ghi có phiên bản trong hash boss (`profk`), lưu kèm lease khi có thay đổi; leader mới tiếp tục đúng lượt và hạn giờ cũ. Store từ chối báo trước khi đang đấu, và từ chối đấu khi Prof. K đang báo trước hoặc đang đánh. Tin nhắn: `profk` (trạng thái; `ms` là thời gian còn lại của giai đoạn báo trước/đánh) và `profkStrike` (một cú đấm rơi: `hit`, `real`); sát thương thật đến qua `bhp`/`bdead` với `by: 'profk'`. Test: `test/profk.js` (luật, hợp đồng store memory/Redis, một lượt ra thật qua WebSocket); test rút ngắn thời gian bằng `profkOpts`.

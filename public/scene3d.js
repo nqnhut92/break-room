@@ -941,16 +941,19 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   const miniRigs = new Map();
+  // Prof. K (S.profk) uses the same rig, walk and punch as the minis; he has no HP, so his bar stays hidden.
+  const PROFK_SCALE = [1.75, 1.65, 1.65]; // between DMM (1.65, 1.3, 1.5) and VKL (2.1)
   function updateMinis(dt, S) {
-    for (const [id, b] of S.minis) {
+    for (const [id, b] of S.profk ? [...S.minis, ['PROFK', S.profk]] : S.minis) {
       let rig = miniRigs.get(id);
       if (!rig) {
         rig = makePlayer(b.pl);
         // TML keeps a compact silhouette; DMM is broad despite its lower HP.
-        rig.g.scale.set(id === 'TML' ? 1.15 : 1.65, 1.3, id === 'TML' ? 1.15 : 1.5);
+        if (id === 'PROFK') rig.g.scale.set(...PROFK_SCALE);
+        else rig.g.scale.set(id === 'TML' ? 1.15 : 1.65, 1.3, id === 'TML' ? 1.15 : 1.5);
         rig.hpb.classList.add('boss');
         const wind = new THREE.Group();
-        const mat = new THREE.MeshBasicMaterial({ color: id === 'TML' ? 0xffa13d : 0xc87dff, transparent: true, opacity: 0.65, depthWrite: false });
+        const mat = new THREE.MeshBasicMaterial({ color: id === 'TML' ? 0xffa13d : id === 'PROFK' ? 0x2fd08e : 0xc87dff, transparent: true, opacity: 0.65, depthWrite: false });
         const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 48), mat);
         const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 48), mat.clone());
         ring.rotation.x = fill.rotation.x = -Math.PI / 2;
@@ -973,7 +976,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig.miniFill.scale.setScalar(Math.max(0.02, Math.min(1, (performance.now() - b.wind.t0) / b.wind.ms)));
       }
     }
-    for (const [id, rig] of miniRigs) if (!S.minis.has(id)) {
+    for (const [id, rig] of miniRigs) if (id === 'PROFK' ? !S.profk : !S.minis.has(id)) {
       disposePlayer(rig);
       scene.remove(rig.miniWind);
       for (const m of rig.miniWind.children) { m.geometry.dispose(); m.material.dispose(); }
@@ -1337,9 +1340,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const mini = !!p.mini;
     const bossLook = boss || mini;
     const female = p.gender === 'f';
-    const jacket = boss ? '#1f2a44' : mini ? (p.mini === 'TML' ? '#68432c' : '#49315e') : shirtHex;
+    const jacket = boss ? '#1f2a44' : mini ? (p.mini === 'TML' ? '#68432c' : p.mini === 'PROFK' ? '#5d6675' : '#49315e') : shirtHex;
     const pantsHex = bossLook ? '#161c2c' : '#2a3040';
-    const hairHex = boss ? '#d3d9e3' : mini ? (p.mini === 'TML' ? '#a8a2a0' : '#24202e') : hair;
+    const hairHex = boss ? '#d3d9e3' : mini ? (p.mini === 'TML' ? '#a8a2a0' : p.mini === 'PROFK' ? '#eceef2' : '#24202e') : hair;
     // hairstyles: 0 long bob, 1 spiky, 2 bun, 3 side part. Girls get 0 or 2, boys 1 or 3, the boss is always spiky silver.
     const style = boss ? 1 : female ? (p.id % 2 ? 0 : 2) : p.id % 2 ? 1 : 3;
 
@@ -1573,7 +1576,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const motto = document.createElement('span');
       motto.className = 'boss-motto';
       motto.textContent = p.mini === 'TML' ? 'Tranh công, chối tội, đổ lỗi, thanh minh'
-        : p.mini === 'DMM' ? 'Thiên hạ đệ nhất thái giám' : 'Mọi người nghĩ dì dẫy?';
+        : p.mini === 'DMM' ? 'Thiên hạ đệ nhất thái giám' : p.mini === 'PROFK' ? 'Ngon thì vô làm' : 'Mọi người nghĩ dì dẫy?';
       label.appendChild(motto);
     }
     label.append(rl, hpb, bar);
@@ -2479,7 +2482,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       if (on) bossRig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
     }
     for (const [id, rig] of miniRigs) {
-      const b = S.minis.get(id), pr = b ? project(b.x, 190, b.y) : null;
+      const b = id === 'PROFK' ? S.profk : S.minis.get(id), pr = b ? project(b.x, id === 'PROFK' ? 240 : 190, b.y) : null; // Prof. K is taller
       const on = !!pr && b.hp > 0 && pr.ok && pr.sx > -120 && pr.sx < W + 120 && pr.sy > -60 && pr.sy < H + 60;
       rig.label.style.display = on ? '' : 'none';
       if (on) rig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';

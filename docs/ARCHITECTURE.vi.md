@@ -83,6 +83,7 @@ Dọn nén (compaction): khi dọn dẹp, mỗi phòng còn chạy một lượt
 | Chọn store, giới hạn, TTL từ biến môi trường | `lib/config.js` |
 | Danh sách server (`BR-1`, `BR-2`) | `lib/world.js` (`ROOMS`), `lib/room-list.js` |
 | Test hợp đồng cho cả hai store | `test/shared.js` |
+| Luật boss, mini-boss và Prof. K | `lib/boss.js`, `lib/miniboss.js`, `lib/profk.js` |
 | Bố cục đồ đạc và hướng quay (`rot`: 0 nam, PI/2 đông, PI bắc, -PI/2 tây) | `lib/world.js` |
 | Cảnh 3D, ánh sáng và nút ✨ đổi đồ họa (cao / an toàn, vẽ thẳng, không có hậu kỳ) | `public/scene3d.js` |
 
@@ -107,7 +108,7 @@ Khi cấu hình hồ sơ lâu dài có giữ tên, heartbeat phải gia hạn tr
 `public/actor-collision.js` cung cấp cùng phép di chuyển chia bước theo hình tròn cho dự đoán ở browser và xác minh ở server. Đồ đạc vẫn dùng hình học tĩnh có thẩm quyền. Tâm boss/mini-boss còn sống lấy từ snapshot runner/pubsub hiện có; không thêm database, heartbeat hay field identity. Server sửa vị trí bị chặn và tách phần chồng lấn còn lại sau cập nhật snapshot. Người/người và người/bot không chặn nhau. Animation kéo/thổi trong duel hoàn tất trước khi tách thân thông thường tiếp tục. Xem [ADR 0007](adr/0007-dynamic-actor-collision.md).
 
 
-Hash boss còn giữ lịch đi tuần có version và vị trí lưu mỗi giây; cập nhật phải có lease boss hiện tại cùng version mong đợi. Dấu tủ đã hỗ trợ (`rack:<object id>`) nằm trong cùng hash tới lúc boss hồi sinh; script đánh đồ commit nguyên tử tủ vỡ, tiền thưởng và damage sếp có giới hạn. Xem [sếp đi tuần](BOSS.vi.md#sếp-đi-tuần).
+Hash boss còn giữ lịch đi tuần có version và vị trí lưu mỗi giây; cập nhật phải có lease boss hiện tại cùng version mong đợi. Dấu tủ đã hỗ trợ (`rack:<object id>`) nằm trong cùng hash tới lúc boss hồi sinh; script đánh đồ commit nguyên tử tủ vỡ, tiền thưởng và damage sếp có giới hạn. Xem [sếp đi tuần](BOSS.vi.md#sếp-đi-tuần). Bản ghi có phiên bản của Prof. K (`profk`) cũng nằm trong hash này, dùng cùng lease; xem [Prof. K](BOSS.vi.md#prof-k).
 
 
 Canvas và HUD fixed dùng chung mặt phẳng layout động `#app`, được `viewport.js` theo dõi; `innerHeight` của layout đặt chiều cao tối thiểu khi xoay còn để lại giá trị root/đơn vị động cũ. Safe-area inset do trình duyệt cung cấp bảo vệ nội dung mà không thu nhỏ nền game. Số đo visual viewport vẫn chỉ dùng cho bàn phím. Xem [layout mobile và giới hạn kiểm tra](MOBILE.md#safe-areas-and-rotation-previews).

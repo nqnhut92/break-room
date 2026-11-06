@@ -2,7 +2,7 @@
 
 [English](README.md) · Tiếng Việt · [Tài liệu](docs/README.md)
 
-Văn phòng đập phá nhiều người chơi, dựng 3D bằng three.js. Đập đồ cùng đồng nghiệp, đua tổng thiệt hại hoặc hợp sức đánh VKL, TML và DMM. IT tự thay đồ trong 25–60 giây tùy số người và số đồ vỡ; nút Gọi IT thay hết ngay.
+Văn phòng đập phá nhiều người chơi, dựng 3D bằng three.js. Đập đồ cùng đồng nghiệp, đua tổng thiệt hại hoặc hợp sức đánh VKL, TML và DMM; thỉnh thoảng Prof. K cũng ra đánh VKL cùng mọi người. IT tự thay đồ trong 25–60 giây tùy số người và số đồ vỡ; nút Gọi IT thay hết ngay.
 
 ![Toàn cảnh văn phòng hiện tại, chụp từ game](artifacts/map-ingame.png)
 

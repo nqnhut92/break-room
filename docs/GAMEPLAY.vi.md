@@ -58,11 +58,12 @@ Nút Gọi IT vẫn thay ngay khi hết cooldown như cũ. Đặt `RESPAWN_MS` d
 
 ## Boss và nội gián
 
-VKL canh phòng server và chủ động đánh người bước vào. Ngoài đợt đi tuần toàn văn phòng, TML/DMM đi quanh map và chỉ trả đũa người đánh mình; trong đợt đi tuần đã báo trước, chúng chủ động săn mục tiêu ở gần. New Process đánh dấu vòng tròn cố định bán kính 350, báo trước 1,2 giây rồi gây 20 sát thương. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/200/180; tốc độ đuổi là 480/460/440, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. Luật và cân bằng chi tiết:
+VKL canh phòng server và chủ động đánh người bước vào. Ngoài đợt đi tuần toàn văn phòng, TML/DMM đi quanh map và chỉ trả đũa người đánh mình; trong đợt đi tuần đã báo trước, chúng chủ động săn mục tiêu ở gần. New Process đánh dấu vòng tròn cố định bán kính 350, báo trước 1,2 giây rồi gây 20 sát thương. Tốc độ tuần tra/đi thường của VKL/TML/DMM là 220/200/180; tốc độ đuổi là 480/460/440, đều cao hơn người chơi (420). Trên đường thoáng, chỉ chạy không thể giữ khoảng cách mãi: hãy né vòng báo đòn và tranh thủ đánh trả lúc boss hồi đòn. Nội gián giả làm người chơi. **Prof. K** đứng về phía người chơi: cứ 60–90 giây (báo trước 5 giây) ông rời phòng DIRECTOR và đấm VKL trong 30 giây; cú đấm chỉ trừ 20 HP khi người chơi cũng đang đánh VKL, và ông không bị đánh. Luật và cân bằng chi tiết:
 
 - [VKL, rắn, đấu 1:1 và chiêu New Process](BOSS.vi.md)
 - [TML và DMM](MINIBOSSES.md) (tiếng Anh)
 - [Nội gián](MOLES.vi.md)
+- [Prof. K, người hỗ trợ đánh VKL](BOSS.vi.md#prof-k)
 
 Max HP VKL tăng theo nhóm bốn người thật online: 6.000 cho 1–4 người, sau đó +3.000 mỗi nhóm khi giữ ngưỡng 15 giây. Tăng máu giữ sát thương đã gây, không hạ mức trong cùng mạng boss; hồi sinh thì tính lại. Nội gián/rắn không tính, đòn thường không còn giảm damage theo đám đông. Ulti gây 20% max HP lên cả ba boss; máu mini boss vẫn cố định.
 

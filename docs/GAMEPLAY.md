@@ -62,11 +62,12 @@ Call IT still replaces everything immediately when its existing cooldown permits
 
 ## Bosses and moles
 
-VKL guards the server room and attacks intruders. Outside office patrols, TML and DMM roam the map and retaliate only against their aggressors; during the announced patrol they hunt nearby targets without provocation. New Process marks a fixed circle of radius 350, with a 1.2-second warning before dealing 20 damage. Patrol/wander speeds are 220/200/180 for VKL/TML/DMM; chase speeds are 480/460/440, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. Detailed rules and balance:
+VKL guards the server room and attacks intruders. Outside office patrols, TML and DMM roam the map and retaliate only against their aggressors; during the announced patrol they hunt nearby targets without provocation. New Process marks a fixed circle of radius 350, with a 1.2-second warning before dealing 20 damage. Patrol/wander speeds are 220/200/180 for VKL/TML/DMM; chase speeds are 480/460/440, all above player speed (420). On clear floor, running alone cannot keep them away indefinitely: dodge the attack telegraphs and use recovery windows to counterattack. Moles pose as ordinary players. **Prof. K** is on your side: every 60–90 seconds (announced 5 seconds ahead) he leaves the DIRECTOR room and punches VKL for 30 seconds; his punches take 20 HP only while players are hitting VKL too, and he cannot be hurt. Detailed rules and balance:
 
 - [VKL, snakes, captured duels and New Process](BOSS.md)
 - [TML and DMM](MINIBOSSES.md)
 - [Moles](MOLES.md)
+- [Prof. K, the supporter who punches VKL](BOSS.md#prof-k)
 
 VKL maximum HP grows by groups of four real online players: 6,000 for 1–4, then +3,000 per group after a sustained 15-second threshold. Growth preserves damage dealt and never lowers the current life’s tier; respawn recalculates it. Moles/snakes do not count, and ordinary hits no longer lose damage in a crowd. Ultimate deals 20% of maximum HP on all three bosses; mini-boss HP stays fixed.
 

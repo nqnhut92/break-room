@@ -119,6 +119,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     milkTeaRangeMultiplier: 2,
     players: new Map(),
     minis: new Map(), miniVersion: 0,
+    profk: null, profkVersion: 0, // Prof. K, the supporter from the DIRECTOR room (lib/profk.js)
     snakes: new Map(),
     objects: [],
     duel: null,
@@ -404,6 +405,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.snakes = new Map((m.snakes || []).map(s => [s.id, { ...s, tx: s.x, ty: s.y }]));
         S.minis.clear(); S.miniVersion = 0;
         receiveMinis(m.minis);
+        S.profk = null; S.profkVersion = 0;
+        receiveProfK(m.profk, true);
         initBoss(m.boss);
         receiveDuel({ state: m.duel, ...m.duel }, true);
         const meNow = S.players.get(S.me);
@@ -569,6 +572,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         sfxHit(volumeAt(b.x, b.y), 'body', m.skill);
         if (scene) { scene.fx.sparks(b.x, 100, b.y, 6); scene.fx.floatText(b.x, 180, b.y, '-' + Math.round(m.dmg), '#ffd27c', 20); }
         if (m.hp <= 0) toast(m.id + ' bị hạ! Thưởng ' + b.cfg.bounty + ' triệu, hồi sinh sau 30 giây.');
+        break;
+      }
+      case 'profk':
+        receiveProfK(m.state);
+        break;
+      case 'profkStrike': {
+        const b = S.profk;
+        if (b) { b.pl.swing = 1; b.wind = null; }
+        sfxPunch(volumeAt(m.x, m.y), 'mini');
+        // A punch for show (nobody else is hitting VKL) still lands visibly, it just takes no HP.
+        if (!m.real && m.hit && scene && S.boss && !S.boss.dead) scene.fx.sparks(S.boss.x, 120, S.boss.y, 4);
         break;
       }
       case 'miniStrike': {
@@ -948,7 +962,36 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       b.wind = item.wind ? { ...item.wind, t0: performance.now() - (item.wind.ms - item.wind.remainingMs) } : null;
     }
   }
+  // Prof. K moves like a mini-boss on screen (same snapshots, same rig), but has no HP and cannot be attacked,
+  // so he is kept out of S.minis.
+  function receiveProfK(item, quiet = false) {
+    if (!item || item.version <= S.profkVersion) return;
+    S.profkVersion = item.version;
+    let b = S.profk;
+    if (!b) {
+      b = S.profk = { hp: 1 /* never hurt; the rig shows living bodies */, x: item.x, y: item.y, tx: item.x, ty: item.y, phase: item.phase, pl: { id: -12, mini: 'PROFK', name: 'Prof. K', gender: 'm', role: '', company: '', hue: 160, heading: item.d, swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0 } };
+    }
+    if (!quiet && item.phase === 'warning' && b.phase !== 'warning') audio.cue(0.9, 'profk'); // heard everywhere: it is an announcement
+    const at = performance.now(), dtSnap = (at - (b.snapT || 0)) / 1000;
+    if ((item.mode === 'chase' || item.mode === 'wander') && b.snapT && dtSnap > 0.04 && dtSnap < 1) {
+      const vx = (item.x - b.tx) / dtSnap, vy = (item.y - b.ty) / dtSnap;
+      b.vx = Math.hypot(vx, vy) < 700 ? vx : 0; b.vy = Math.hypot(vx, vy) < 700 ? vy : 0;
+    } else { b.vx = 0; b.vy = 0; }
+    b.snapT = at;
+    b.cfg = item.cfg; b.mode = item.mode; b.phase = item.phase; b.tx = item.x; b.ty = item.y; b.d = item.d;
+    b.until = Date.now() + item.ms;
+    b.wind = item.wind ? { ...item.wind, t0: performance.now() - (item.wind.ms - item.wind.remainingMs) } : null;
+  }
   function miniTick(dt) {
+    if (S.profk) {
+      const b = S.profk, age = Math.min(0.35, (performance.now() - (b.snapT || 0)) / 1000);
+      const gx = b.tx + (b.vx || 0) * age, gy = b.ty + (b.vy || 0) * age, ox = b.x, oy = b.y, k = Math.min(1, dt * 10);
+      b.x += (gx - b.x) * k; b.y += (gy - b.y) * k;
+      const p = b.pl;
+      p.x = b.x; p.y = b.y; p.heading = b.d; p.dead = false;
+      p.moving = Math.hypot(b.x - ox, b.y - oy) > 0.15;
+      p.swing = Math.max(0, p.swing - dt * 3.5);
+    }
     for (const b of S.minis.values()) {
       const age = Math.min(0.35, (performance.now() - (b.snapT || 0)) / 1000); // never run on past a missed snapshot
       const gx = b.tx + (b.vx || 0) * age, gy = b.ty + (b.vy || 0) * age;
@@ -1679,6 +1722,16 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.fill();
       c.stroke();
     }
+    // Prof. K: a green dot, he is on the players' side
+    if (S.profk && inside(S.profk)) {
+      c.fillStyle = '#2fd08e';
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.2 * mm.dpr;
+      c.beginPath();
+      c.arc(x(S.profk.x), y(S.profk.y), 4.2 * mm.dpr, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
     if (me) {
       c.fillStyle = '#ffd34d';
       c.strokeStyle = '#000000';
@@ -1999,6 +2052,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const circles = [];
     if (S.boss && !S.boss.dead) circles.push({ x:S.boss.tx ?? S.boss.x, y:S.boss.ty ?? S.boss.y, r:S.boss.cfg.radius });
     for (const b of S.minis.values()) if (b.hp > 0) circles.push({ x:b.tx ?? b.x, y:b.ty ?? b.y, r:b.cfg.radius || 22 });
+    if (S.profk) circles.push({ x:S.profk.tx ?? S.profk.x, y:S.profk.ty ?? S.profk.y, r:S.profk.cfg.radius });
     return circles;
   }
 
@@ -2706,13 +2760,18 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const s = S.officePatrol;
     const active = S.joined && s && s.phase !== 'idle';
     const seconds = s ? Math.max(0, Math.ceil((s.until - Date.now()) / 1000)) : 0;
-    const text = !active ? '' : s.phase === 'warning'
+    let text = !active ? '' : s.phase === 'warning'
       ? 'Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm. · ' + seconds + 's'
       : s.phase === 'active' && seconds > 0
         ? 'VKL, TML và DMM đang đi tuần — gặp ai cũng hỏi thăm! · ' + seconds + 's'
         : 'Ban lãnh đạo đang về phòng. Tạm thời được thở.';
     // Tense music while the bosses are out: a heartbeat for the warning, the full loop for the hunt.
     audio.music(!active ? 0 : s.phase === 'warning' ? 1 : s.phase === 'active' && seconds > 0 ? 2 : 0);
+    // Prof. K's outing shares the banner (a second line when the patrol is on too); his own cue is a chime, not music.
+    const k = S.joined && S.profk, kSeconds = k ? Math.max(0, Math.ceil((k.until - Date.now()) / 1000)) : 0;
+    const profkText = !k ? '' : k.phase === 'warning' ? 'Prof. K chuẩn bị đi tìm VKL nói chuyện phải trái. Ngon thì vô làm! · ' + kSeconds + 's'
+      : k.phase === 'out' && kSeconds > 0 ? 'Prof. K đang đánh VKL — đánh cùng thì cú đấm của Prof. K mới trừ máu! · ' + kSeconds + 's' : '';
+    text = [text, profkText].filter(Boolean).join('\n');
     if (text === officeNoticeText) return;
     officeNoticeText = text;
     $('officeNotice').textContent = text;

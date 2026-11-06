@@ -217,6 +217,8 @@ export function createGameAudio(isMuted) {
       sample('Soft','heavy',v*.4,.75,.09,{boss:true});
     },
     cue(v,kind='cast') {
+      // Prof. K's announcement: a friendly rising three-note chime, nothing like the bosses' cues.
+      if (kind==='profk') { tone(523,.09,v*.14);tone(659,.09,v*.13,0,.1);tone(784,.16,v*.13,0,.2); return; }
       // Rare abilities only: a short two-note cue, never the old sawtooth wind-up.
       tone(kind==='newProcess'?660:440,.065,v*.16,0);
       tone(kind==='newProcess'?880:660,.075,v*.12,0,.075);
