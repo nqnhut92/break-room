@@ -5,7 +5,8 @@
 
 process.env.FIXED_ROOMS = '0';
 const assert = require('node:assert/strict');
-const { PROFK, DIRECTOR, inDirector, home, createProfK, stepProfK, profkView } = require('../lib/profk');
+const { PROFK, DIRECTOR, inDirector, home, createProfK, stepProfK, profkView, profkNear } = require('../lib/profk');
+const { EVENT_GAP_MS, nextPatrol, emptyPatrol } = require('../lib/office-patrol');
 const { BOSS } = require('../lib/boss');
 const { DUEL } = require('../lib/duel');
 const { MINI, RADIUS: MINI_RADIUS } = require('../lib/miniboss');
@@ -27,7 +28,10 @@ async function main() {
       assert.ok(PROFK.runSpeed > m.speed && PROFK.walkSpeed > m.wanderSpeed);
     }
     assert.ok(PROFK.runSpeed < BOSS.chaseSpeed && PROFK.walkSpeed < BOSS.patrolSpeed);
-    assert.equal(PROFK.windupMs, BOSS.windupMs, 'the punch is VKL\'s own');
+    // VKL's punch at twice the pace (owner's request) for 12 instead of 20 damage
+    assert.equal(PROFK.windupMs + PROFK.recoverMs, Math.round((BOSS.windupMs + BOSS.recoverMs) / 2));
+    assert.equal(PROFK.damage, 12);
+    assert.equal(PROFK.punchRadius, BOSS.punchRadius);
   });
 
   await check('stays in the DIRECTOR room between outings and waits 60–90 s', () => {
@@ -49,6 +53,31 @@ async function main() {
       assert.equal(s.phase, 'home');
       assert.equal(s.nextAt, 2000);
     }
+  });
+
+  await check('Prof. K and the office patrol usually keep 20 s apart (whichever falls due waits, neither is skipped); about one outing in four may overlap', () => {
+    const due = (patrol, t = 1000) => { const s = createProfK(0, () => 0, cfg); stepProfK(s, t, 0.1, world({ patrol }), () => 0, cfg); return s; };
+    for (const patrol of [{ phase: 'warning' }, { phase: 'active' }, { phase: 'returning' }, { phase: 'idle', endedAt: 1000 - EVENT_GAP_MS + 1, nextAt: 1e9 },
+      { phase: 'idle', nextAt: 1000 + PROFK.warningMs + PROFK.fightMs + EVENT_GAP_MS - 1 }]) {
+      const s = due(patrol);
+      assert.equal(s.phase, 'home', JSON.stringify(patrol)); assert.equal(s.nextAt, 3000, 'retries soon instead of skipping a whole rest');
+    }
+    assert.equal(due({ phase: 'idle', endedAt: 1000 - EVENT_GAP_MS, nextAt: 1e9 }).phase, 'warning', 'goes once the gap has passed');
+    assert.equal(due({ phase: 'idle', nextAt: 1000 + PROFK.warningMs + PROFK.fightMs + EVENT_GAP_MS }).phase, 'warning');
+    // the patrol waits for Prof. K: while he is out or walking home, and for 20 s after he is back
+    const env = { alive: true, duel: false, humans: 1, home: true };
+    const old = { ...emptyPatrol(), nextAt: 5000 };
+    for (const k of [{ phase: 'warning' }, { phase: 'out' }, { phase: 'returning' }, { phase: 'home', homeAt: 10000 - EVENT_GAP_MS + 1 }])
+      assert.equal(nextPatrol(old, 10000, { ...env, profk: profkNear(k, 10000) }).phase, 'idle', JSON.stringify(k));
+    const late = nextPatrol(old, 10000, { ...env, profk: profkNear({ phase: 'home', homeAt: 10000 - EVENT_GAP_MS }, 10000) });
+    assert.equal(late.phase, 'warning');
+    assert.equal(nextPatrol({ ...late, phase: 'returning' }, 50000, env).endedAt, 50000, 'the patrol records when it ended');
+    // about one outing in four may overlap, in both directions
+    assert.equal(createProfK(0, () => 0.8, cfg).mayOverlap, true); assert.equal(createProfK(0, () => 0.7, cfg).mayOverlap, false);
+    const free = createProfK(0, () => 0, cfg); free.mayOverlap = true;
+    stepProfK(free, 1000, 0.1, world({ patrol: { phase: 'active' } }), () => 0, cfg);
+    assert.equal(free.phase, 'warning', 'an overlapping outing starts during the patrol');
+    assert.equal(nextPatrol(old, 10000, { ...env, profk: profkNear({ ...free, phase: 'out' }, 10000) }).phase, 'warning', 'and the patrol does not wait for it');
   });
 
   await check('warns 5 s, walks out to VKL and punches with VKL\'s telegraph; damage only counts with a player hitting', () => {

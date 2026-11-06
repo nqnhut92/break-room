@@ -1810,7 +1810,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
           '<b>Bấm 💬</b> để nhắn cho cả server, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ; chạm bản đồ nhỏ để xem toàn văn phòng.',
-          'Tắt khóa xoay và cầm máy ngang để chơi. Bấm <b>Chia sẻ → Thêm vào Màn hình chính</b> (Edge/Chrome trên iPhone: <b>⋯ → Chia sẻ</b>; bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt. Android: bấm <b>Cài app</b> khi game gợi ý.',
+          'Tắt khóa xoay và cầm máy ngang để chơi.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
@@ -1828,14 +1828,20 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 15 giây rồi hồi sinh ở sảnh.',
       'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, máu tối đa tăng theo từng nhóm 4 người online trên server. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ngoài sự kiện đi tuần, ra khỏi khu phòng server là sếp không đuổi theo.',
+      'Vừa vào ở sảnh hoặc vừa hồi sinh, bạn được <b>🛡️ bảo vệ 10 giây</b>: không gì làm mất máu. Đi hoặc đánh là hết bảo vệ.',
       touch ? 'Bấm <b>Skill</b> để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Giữ nút ra đòn bên phải để dùng skill.' : 'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> hoặc nút <b>Skill</b>. Giữ <b>Space</b> để dùng.',
       'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng server vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b>' + (touch ? '' : ' (phím <b>E</b>)') + ' để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Đợt 70% và 40% có số rắn nguyên ngẫu nhiên từ 1,3 đến 2 lần số người online (làm tròn lên ở mức tối thiểu); đợt cuối ở 10% thả rắn đỏ, tăng lên 2–3 lần. Rắn xanh cắn 5 máu, rắn đỏ cắn 7 máu mỗi 1,2 giây; cả hai chịu 4 cú búa và đuổi khắp bản đồ. Rắn còn lại biến mất khi boss hồi sinh.',
-      '<b>TML và DMM</b> đi khắp bản đồ, chỉ trả đũa người đánh mình. TML có 900 máu, đánh 20; DMM có 600 máu, đánh 15. Né vòng báo đòn, hạ được thưởng 40/30 triệu chia theo damage. Chết sau 30 giây sẽ xuất hiện ở nơi khác. Đánh mỗi cú tăng 1 nộ; ulti gây 20% máu tối đa.',
+      '<b>TML và DMM</b> đi khắp bản đồ, chỉ trả đũa người đánh mình. TML có 900 máu, đánh 20; DMM có 600 máu, đánh 15. Né vòng báo đòn, hạ được thưởng 40/30 triệu chia theo damage. Chết sau 30 giây sẽ xuất hiện ở nơi khác.',
+      'Đánh VKL, TML hoặc DMM để nạp <b>nộ</b> (thanh ⚡ trên cùng). Đầy thì bấm <b>ULTI</b>' + (touch ? '' : ' (phím <b>R</b>)') + ' để gây 20% máu tối đa lên cả ba boss.',
+      '<b>Sếp đi tuần</b>: cứ 2–3 phút, sau 5 giây báo trước, VKL, TML và DMM đi khắp văn phòng 30 giây và đánh bất kỳ ai gặp được, ở đâu cũng không an toàn. Hết giờ thì cả ba về phòng.',
+      '<b>Prof. K</b> đứng về phía nhân viên: thỉnh thoảng (báo trước 5 giây) ông rời phòng DIRECTOR đi đấm VKL liên tục trong 30 giây. Cú đấm của ông chỉ trừ máu VKL khi có người chơi đang đánh VKL cùng, nên hãy xông vào đánh chung. Ông không bị đánh và không lấy tiền thưởng.',
+      '<b>Bạn sếp nằm vùng</b> giả làm người chơi: đi dạo, đập đồ rồi bất ngờ đâm lén (mất 30 máu). Nghi ai thì đánh thử: đánh người thật không sao, trúng bạn sếp thì nó lộ mặt; hạ nó được 120 triệu.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút' + (touch ? '' : ' (phím <b>Q</b>)') + ' trong 5 giây để hồi đầy máu và mana cho cả server.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. ' + (touch ? 'Mở cài đặt và bấm <b>Gọi IT</b>' : 'Bấm <b>Gọi IT</b> (phím <b>I</b>)') + ' để thay hết đồ mới ngay.',
+      'Bảng là <b>BXH hôm nay</b> của server, về 0 lúc 0 giờ (giờ Việt Nam). Đăng nhập Google để giữ nhân vật và điểm trên mọi thiết bị.',
       'Đứng yên khoảng 3 phút thì bị ngắt kết nối để tiết kiệm tài nguyên, bấm vào lại là về đúng chỗ cũ.',
     );
     $('helpList').innerHTML = items.map((t) => '<li>' + t + '</li>').join('');
