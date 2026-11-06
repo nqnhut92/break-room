@@ -98,12 +98,14 @@ canvas {
   touch-action: none;
 }
 
+/* Names, health bars, chat bubbles and damage numbers follow the 3D world: above the canvas (earlier in the DOM), below
+   every HUD panel (later in the DOM, z-index auto). At z-index 1 a boss name and bar used to cover the board. */
 #labels {
   position: fixed;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 .plabel {
   position: absolute;
@@ -903,7 +905,7 @@ canvas {
 }
 
 @media (pointer: coarse) and (orientation: landscape) {
-  #toasts { position: fixed; top: max(58px, var(--safe-top)); left: 50%; transform: translateX(-50%); width: min(360px, calc(100% - 300px)); pointer-events: none; }
+  #toasts { position: fixed; top: max(58px, var(--safe-top), var(--notice-bottom, 0px)); left: 50%; transform: translateX(-50%); width: min(360px, calc(100% - 300px)); pointer-events: none; }
 }
 
 @media (pointer: coarse) and (orientation: landscape) {
@@ -1098,7 +1100,7 @@ canvas {
   #bottombar { right: calc(var(--safe-right) + 12px); bottom: calc(var(--safe-bottom) + 16px); }
   #mobileBottomControls { left: var(--hud-center); bottom: calc(var(--safe-bottom) + 16px); width: min(340px, calc(var(--safe-width) - 320px)); max-width: calc(var(--safe-width) - 300px); }
   #emoteTray { bottom: calc(var(--safe-bottom) + 76px); }
-  #toasts { top: calc(var(--safe-top) + 58px); left: var(--hud-center); width: min(360px, calc(var(--safe-width) - 300px)); }
+  #toasts { top: max(calc(var(--safe-top) + 58px), var(--notice-bottom, 0px)); left: var(--hud-center); width: min(360px, calc(var(--safe-width) - 300px)); }
 }
 
 /* The overview never captures walking/attack controls; only its close button takes input. */

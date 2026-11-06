@@ -51,9 +51,20 @@ async function main(){
       assert.equal(await page.locator('#emotes').evaluate(e=>e.parentElement.id),'emoteTray');
       if(process.env.SETTINGS_SCREENSHOT&&width===844)await page.screenshot({path:process.env.SETTINGS_SCREENSHOT});
       await page.click('#settingsClose');assert.equal(await page.locator('#settingsDlg').isVisible(),false);
+      // World labels (names, bars, bubbles) pass under every HUD panel, not over it: a boss name used to cover the board.
+      const under=await page.evaluate(()=>{const out={};for(const id of ['board','topLeft','joystick','smashBtn','skillBtn','mobileBottomControls','sideBtns','minimap']){const r=document.getElementById(id).getBoundingClientRect();if(!r.width)continue;
+        const l=document.createElement('div');l.className='plabel';Object.assign(l.style,{position:'absolute',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',pointerEvents:'auto',background:'red'});
+        document.getElementById('labels').appendChild(l);const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);out[id]=!!hit&&hit!==l;l.remove();}return out;});
+      for(const [id,covered] of Object.entries(under))assert.ok(covered,'a world label covers #'+id+' at '+width+'x'+height);
+      // Toasts share the top centre with the office/Prof. K notice: while the notice is up they sit below it.
+      const stack=await page.evaluate(async()=>{const n=document.getElementById('officeNotice');n.textContent='Prof. K chuẩn bị đi tìm VKL nói chuyện phải trái. Ngon thì vô làm! · 2s';n.hidden=false;dispatchEvent(new Event('resize'));
+        const t=document.createElement('div');t.className='toast';t.textContent='🛡️ Được bảo vệ 10 giây.';document.getElementById('toasts').appendChild(t);await new Promise(r=>requestAnimationFrame(()=>r()));
+        const a=n.getBoundingClientRect(),b=t.getBoundingClientRect();n.hidden=true;dispatchEvent(new Event('resize'));await new Promise(r=>requestAnimationFrame(()=>r()));const back=t.getBoundingClientRect().top;t.remove();return {nb:a.bottom,tt:b.top,back};});
+      assert.ok(stack.tt>=stack.nb,'toast under the notice at '+width+'x'+height+' '+JSON.stringify(stack));
+      assert.ok(stack.back<stack.tt,'and back up when the notice goes');
       await page.click('#settingsBtn');await page.click('#helpBtn');
       assert.equal(await page.locator('#help').isVisible(),true);assert.match(await page.locator('#helpList').innerText(),/25–60 giây/);assert.equal(await page.locator('#settingsDlg').isVisible(),false);
-      assert.deepEqual(errors,[]);ok(width+'x'+height+': existing actions work, gameplay controls remain outside settings, zoom stays stacked and uncovered');
+      assert.deepEqual(errors,[]);ok(width+'x'+height+': existing actions work, gameplay controls remain outside settings, zoom stays stacked and uncovered, world labels pass under the HUD, toasts clear the notice');
       await page.close();
     }
     const desktop=await browser.newPage({viewport:{width:1100,height:720}});

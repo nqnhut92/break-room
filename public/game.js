@@ -1836,7 +1836,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       'Đánh VKL, TML hoặc DMM để nạp <b>nộ</b> (thanh ⚡ trên cùng). Đầy thì bấm <b>ULTI</b>' + (touch ? '' : ' (phím <b>R</b>)') + ' để gây 20% máu tối đa lên cả ba boss.',
       '<b>Sếp đi tuần</b>: cứ 2–3 phút, sau 5 giây báo trước, VKL, TML và DMM đi khắp văn phòng 30 giây và đánh bất kỳ ai gặp được, ở đâu cũng không an toàn. Hết giờ thì cả ba về phòng.',
       '<b>Prof. K</b> đứng về phía nhân viên: thỉnh thoảng (báo trước 5 giây) ông rời phòng DIRECTOR đi đấm VKL liên tục trong 30 giây. Cú đấm của ông chỉ trừ máu VKL khi có người chơi đang đánh VKL cùng, nên hãy xông vào đánh chung. Ông không bị đánh và không lấy tiền thưởng.',
-      '<b>Bạn sếp nằm vùng</b> giả làm người chơi: đi dạo, đập đồ rồi bất ngờ đâm lén (mất 30 máu). Nghi ai thì đánh thử: đánh người thật không sao, trúng bạn sếp thì nó lộ mặt; hạ nó được 120 triệu.',
       'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút' + (touch ? '' : ' (phím <b>Q</b>)') + ' trong 5 giây để hồi đầy máu và mana cho cả server.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
@@ -2681,9 +2680,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!S.joined) return;
 
     const duelOn = duelActive();
+    const bannerWas = $('duelBanner').hidden + ':' + $('duelApologyBtn').hidden;
     $('duelBanner').hidden = !duelOn;
     $('duelApologyBtn').hidden = !(duelOn && S.duel.target === S.me && !S.players.get(S.me)?.dead && performance.now() >= S.duel.apologyAt);
     $('duelApologyHint').hidden = $('duelApologyBtn').hidden;
+    if (bannerWas !== $('duelBanner').hidden + ':' + $('duelApologyBtn').hidden) positionOfficeNotice(); // the toasts make room
     updateApologyButton();
     if (duelOn) {
       const name = S.players.get(S.duel.target)?.name || 'Đồng nghiệp';
@@ -2844,6 +2845,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function positionOfficeNotice() {
     const bottom = $('topbar').getBoundingClientRect().bottom - $('app').getBoundingClientRect().top;
     $('officeNotice').style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
+    // On landscape touch screens the toasts share the top centre with the office notice and the duel banner: while
+    // either is up they move just below the lower one.
+    const banners = ['officeNotice', 'duelBanner'].map($).filter(e => !e.hidden);
+    if (!banners.length) $('app').style.removeProperty('--notice-bottom');
+    else $('app').style.setProperty('--notice-bottom', Math.ceil(Math.max(...banners.map(e => e.getBoundingClientRect().bottom)) - $('app').getBoundingClientRect().top + 6) + 'px');
   }
   if (window.ResizeObserver) new ResizeObserver(positionOfficeNotice).observe($('topbar'));
   window.addEventListener('resize', positionOfficeNotice);
@@ -2868,7 +2874,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     officeNoticeText = text;
     $('officeNotice').textContent = text;
     $('officeNotice').hidden = !text;
-    if (text) positionOfficeNotice();
+    positionOfficeNotice(); // also moves the toasts below the notice, or back up
   }
 
   function frame(now) {
