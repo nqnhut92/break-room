@@ -40,8 +40,8 @@ async function open(browser, port, device, { standalone = false, prompt = false,
     if (standalone) Object.defineProperty(navigator, 'standalone', { value: true });
   }, { standalone, ipadOs });
   await page.goto(`http://localhost:${port}/?server=br-1`);
-  await page.waitForSelector('#joinForm h1', { state: 'visible' });
-  await page.waitForTimeout(300);
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(400);
   if (prompt) await page.evaluate(() => {
     const e = new Event('beforeinstallprompt', { cancelable: true });
     window.prompted = 0; e.prompt = () => { window.prompted++; }; e.userChoice = Promise.resolve({ outcome: 'accepted' });
@@ -54,16 +54,21 @@ async function open(browser, port, device, { standalone = false, prompt = false,
   return { context, page, errors };
 }
 
-// Gated: the steps sit in the join form on screen, and nothing to join with is shown.
+// Gated: a full-screen prompt like the rotate one covers the screen, and nothing to join with is reachable.
+const stepsText = page => page.locator('#installSteps').innerText();
 async function gated(page) {
-  const card = page.locator('#installCard');
-  assert.ok(await card.isVisible(), 'steps on the join screen');
-  const box = await card.boundingBox(), vp = page.viewportSize();
-  assert.ok(box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height, 'steps inside the screen ' + JSON.stringify(box));
-  for (const id of ['#joinBtn', '#nameInput', '#googleLogin', '#scoreNote']) assert.equal(await page.locator(id).isVisible(), false, id + ' hidden in a tab');
+  const overlay = page.locator('#installOverlay');
+  assert.ok(await overlay.isVisible(), 'install prompt shown');
+  const box = await overlay.boundingBox(), vp = page.viewportSize();
+  assert.deepEqual([box.x, box.y, box.width, box.height].map(Math.round), [0, 0, vp.width, vp.height], 'covers the whole screen');
+  const card = await page.locator('#installOverlay .card').boundingBox();
+  assert.ok(card.y >= 0 && card.y + card.height <= vp.height + 1, 'the steps fit on screen');
+  assert.equal(await page.locator('#installOverlay .card').evaluate(e => e.scrollHeight <= e.clientHeight + 1), true, 'nothing scrolled out of the card');
+  assert.equal(await page.locator('#installOverlay').evaluate(e => document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest('#installOverlay') === e), true, 'on top of everything, including the rotate prompt');
+  for (const id of ['#joinBtn', '#nameInput', '#googleLogin']) assert.equal(await page.locator(id).isVisible(), false, id + ' not reachable in a tab');
 }
 async function joins(page) {
-  assert.equal(await page.locator('#installCard').isVisible(), false);
+  assert.equal(await page.locator('#installOverlay').isVisible(), false);
   await page.fill('#nameInput', 'Install check ' + Math.floor(Math.random() * 1e4)); await page.click('#joinBtn');
   await page.waitForSelector('#topbar', { state: 'visible' });
 }
@@ -78,7 +83,7 @@ async function main() {
 
     let t = await open(browser, port, IPHONE_SAFARI);
     await gated(t.page);
-    assert.match(await t.page.locator('#installText').textContent(), /Bấm Chia sẻ → Thêm vào Màn hình chính, rồi mở game từ icon mới/);
+    assert.match(await stepsText(t.page), /^Bấm Chia sẻ\nChọn Thêm vào Màn hình chính\nMở game từ icon mới$/);
     assert.equal(await t.page.locator('#installBtn').isVisible(), false, 'no install button on iOS');
     assert.equal(await t.page.locator('#installCopy').isVisible(), false);
     // Not even a scripted submit or the reload auto-join gets in from the tab.
@@ -92,18 +97,18 @@ async function main() {
 
     t = await open(browser, port, EDGE_IOS);
     await gated(t.page);
-    assert.match(await t.page.locator('#installText').textContent(), /⋯ → Chia sẻ → Thêm vào Màn hình chính/);
+    assert.match(await stepsText(t.page), /^Bấm ⋯\nChọn Chia sẻ\nChọn Thêm vào Màn hình chính/);
     await t.context.close();
     ok('Edge on iPhone: the steps through its menu');
 
     t = await open(browser, port, IPAD_SAFARI);
     await gated(t.page);
-    assert.match(await t.page.locator('#installText').textContent(), /Bấm Chia sẻ → Thêm vào Màn hình chính/);
+    assert.match(await stepsText(t.page), /^Bấm Chia sẻ\nChọn Thêm vào Màn hình chính/);
     await t.context.close();
     for (const device of [IPAD_EDGE, IPAD_EDGE_IOS_UA]) {
       t = await open(browser, port, device);
       await gated(t.page);
-      assert.match(await t.page.locator('#installText').textContent(), /mở trang bằng Safari/, 'Edge on iPad has no Add to Home Screen');
+      assert.match(await stepsText(t.page), /mở trang bằng Safari/, 'Edge on iPad has no Add to Home Screen');
       assert.ok(await t.page.locator('#installCopy').isVisible(), 'a link to paste into Safari');
       await t.context.close();
     }
@@ -116,25 +121,25 @@ async function main() {
 
     t = await open(browser, port, ANDROID);
     await gated(t.page);
-    assert.match(await t.page.locator('#installText').textContent(), /⋮ → Thêm vào màn hình chính/);
+    assert.match(await stepsText(t.page), /Bấm ⋮\nChọn Thêm vào màn hình chính/);
     await t.context.close();
     t = await open(browser, port, ANDROID, { prompt: true });
     await gated(t.page);
     assert.ok(await t.page.locator('#installBtn').isVisible(), 'Android gets an install button');
     await t.page.tap('#installBtn'); await t.page.waitForTimeout(200);
     assert.equal(await t.page.evaluate(() => window.prompted), 1, 'the browser dialog is asked for');
-    assert.match(await t.page.locator('#installText').textContent(), /Mở game từ icon/);
+    assert.match(await stepsText(t.page), /Mở game từ icon/);
     assert.equal(await t.page.locator('#installBtn').isVisible(), false);
     assert.deepEqual(t.errors, []); await t.context.close();
     ok('Android tab: manual steps, or the install button when the browser offers it; then "open the icon"');
 
-    for (const viewport of [{ width: 740, height: 320 }, { width: 667, height: 375 }]) {
+    for (const viewport of [{ width: 740, height: 320 }, { width: 667, height: 375 }, { width: 390, height: 844 }]) {
       t = await open(browser, port, { ...IPHONE_SAFARI, viewport });
       await gated(t.page);
       await t.page.screenshot({ path: path.join(require('os').tmpdir(), `br-install-${viewport.width}x${viewport.height}.png`) });
       await t.context.close();
     }
-    ok('small landscape phones: the steps fit on screen');
+    ok('small landscape phones and a portrait phone (above the rotate prompt): the prompt fills the screen');
 
     t = await open(browser, port, { viewport: { width: 1280, height: 720 } });
     await joins(t.page);

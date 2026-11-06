@@ -12,7 +12,7 @@ Constraints: web pages cannot tell whether the icon already exists, only whether
 
 ## Decision
 
-On touch devices (`pointer: coarse`, or iOS/iPadOS including iPads that report a Mac), a launch that is not standalone shows only the title and install steps on the join screen; nothing can join from the tab, including the reload auto-join. Android gets the browser's install dialog through `beforeinstallprompt` when offered, otherwise menu steps; iPads in another browser are sent to Safari with a copy-link button. Desktops are not gated. Automated browsers (`navigator.webdriver`) are exempt so the existing touch test suites can join.
+On touch devices (`pointer: coarse`, or iOS/iPadOS including iPads that report a Mac), a launch that is not standalone gets a full-screen prompt like the rotate prompt, with the install steps and no join form; nothing can join from the tab, including the reload auto-join. Android gets the browser's install dialog through `beforeinstallprompt` when offered, otherwise menu steps; iPads in another browser are sent to Safari with a copy-link button. Desktops are not gated. Automated browsers (`navigator.webdriver`) are exempt so the existing touch test suites can join.
 
 The gate is client-side (`public/game.js`, plus an inline first-paint class in `public/index.html`); the server does not enforce it.
 

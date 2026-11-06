@@ -1040,33 +1040,25 @@ canvas {
 @media (pointer: coarse) {
   #officeNotice { padding: 7px 11px; font-size: 12px; }
 }
-/* Home Screen steps: a full-width block under the join screen's title (part of the form, so it scrolls with it). */
-#installCard {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 4px 4px 4px 12px;
-  border: 1px solid rgba(125, 211, 255, .45);
-  border-radius: 12px;
-  background: rgba(14, 26, 38, .95);
-  color: #d8efff;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.4;
-  text-align: left;
+/* Home Screen gate: a full-screen prompt like the rotate one (and above it: adding the icon works in portrait too). */
+#installOverlay { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 20px; background: var(--bg); }
+#installOverlay[hidden] { display: none; }
+.install-gate #installOverlay[hidden] { display: grid; } /* from the first paint, before game.js runs */
+.install-gate #overlay { visibility: hidden; } /* nothing to join with underneath */
+#installOverlay .card { text-align: center; width: min(440px, 100%); max-height: 100%; overflow-y: auto; }
+#installOverlay p { color: var(--muted); line-height: 1.5; }
+.install-icon { display: block; width: 72px; height: 72px; margin: 0 auto 4px; border-radius: 16px; }
+#installSteps { align-self: center; display: flex; flex-direction: column; gap: 6px; margin: 4px 0 16px; padding-left: 1.4em; text-align: left; line-height: 1.45; }
+#installOverlay .btn { min-height: 44px; margin: 0 4px 8px; }
+/* Short landscape phones: a wider, tighter card so everything fits without scrolling. */
+@media (max-height: 500px) and (orientation: landscape) {
+  #installOverlay .card { width: min(640px, 100%); max-width: none; gap: 8px; padding: 16px 20px; }
+  .install-icon { width: 40px; height: 40px; border-radius: 9px; margin-bottom: 0; }
+  #installOverlay h2 { margin: 0; font-size: 20px; }
+  #installOverlay p { margin: 0; font-size: 13px; }
+  #installSteps { gap: 2px; margin: 2px 0 4px; }
+  #installOverlay .btn { margin: 0 4px; }
 }
-#installCard[hidden] { display: none; }
-#installText { flex: 1; }
-#installCard .btn { min-height: 32px; padding: 4px 10px; font-size: 12px; flex: 0 0 auto; }
-/* Home Screen gate (phones and tablets in a browser tab): only the title and the steps; nothing to join with. */
-.install-gate #joinForm > :not(.joinIntro) { display: none !important; }
-.install-gate #joinForm { grid-template-rows: auto; }
-.install-gate #installCard { flex-wrap: wrap; gap: 10px 12px; margin-top: 14px; padding: 14px 16px; font-size: 15px; line-height: 1.5; border-width: 2px; }
-.install-gate #installText { flex: 1 1 260px; }
-.install-gate #installCard .btn { min-height: 44px; padding: 8px 16px; font-size: 15px; }
-#installBtn { background: #1a5f86; border-color: #7dd3ff; color: #fff; }
 
 /* Backgrounds extend to the edges; important content stays inside the reported safe area.
    Applies equally to iPhone sensor housings and Android cutouts/gesture bars. */
@@ -1076,7 +1068,7 @@ canvas {
   --safe-height: calc(100 * var(--game-vh) - var(--safe-top) - var(--safe-bottom));
 }
 @media (pointer: coarse) {
-#overlay, #settingsDlg, #help, #ranking, #exitDlg, #updateDlg, #rotateOverlay {
+#overlay, #settingsDlg, #help, #ranking, #exitDlg, #updateDlg, #rotateOverlay, #installOverlay {
   padding-top: calc(var(--safe-top) + 12px);
   padding-right: calc(var(--safe-right) + 12px);
   padding-bottom: calc(var(--safe-bottom) + 12px);

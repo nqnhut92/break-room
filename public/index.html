@@ -184,8 +184,6 @@
       <img class="logo" src="/favicon.svg" width="64" height="64" alt="">
       <h1>Office Rage Room</h1>
       <p class="sub">Vào văn phòng, xả stress cùng đồng nghiệp. Đập laptop, màn hình, máy in thoải mái, IT sẽ thay đồ mới sau.</p>
-      <!-- Phones and tablets in a browser tab: how to add the game to the Home Screen, in place of the form (game.js) -->
-      <div id="installCard" role="region" aria-label="Cài game ra màn hình chính" hidden><span id="installText"></span><button id="installBtn" class="btn smash" type="button" hidden>Cài app</button><button id="installCopy" class="btn" type="button" hidden>Copy link</button></div>
       </div>
       <div id="accountBox" hidden>
         <div class="account-copy"><span id="accountStatus" class="account-status" hidden>Đã đăng nhập Google</span><p id="accountNote" class="sub" role="status"></p></div>
@@ -241,6 +239,18 @@
       <p id="joinErr" class="err" role="alert"></p>
       </div>
     </form>
+  </div>
+
+  <!-- Phones and tablets in a browser tab: a full-screen prompt like the rotate one; the game only runs from the Home
+       Screen app. html.install-gate (inline script above) shows it from the first paint; game.js fills in the steps. -->
+  <div id="installOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <div class="card"><img class="install-icon" src="/apple-touch-icon.png" width="72" height="72" alt="">
+      <h2 id="installTitle">Thêm game vào Màn hình chính</h2>
+      <p>Trên điện thoại và máy tính bảng, game chỉ chơi bằng app ở Màn hình chính: toàn màn hình, không có thanh trình duyệt.</p>
+      <ol id="installSteps"><li>Bấm <b>Chia sẻ</b></li><li>Chọn <b>Thêm vào Màn hình chính</b></li><li>Mở game từ icon mới</li></ol>
+      <button id="installBtn" class="btn smash" type="button" hidden>Cài app</button>
+      <button id="installCopy" class="btn" type="button" hidden>Copy link</button>
+    </div>
   </div>
 
   <div id="rotateOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rotateTitle">

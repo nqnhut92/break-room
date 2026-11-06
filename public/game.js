@@ -2398,9 +2398,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // ------------------------------------------------------- Home Screen gate ----
   // Phones and tablets play from the Home Screen app only (owner's decision): it runs full screen, without browser bars.
-  // In a browser tab the join screen shows how to add the game instead of the form; nothing can join from the tab
-  // (also not the reload auto-join). Web pages cannot tell whether the icon already exists, only whether this launch
-  // came from it (navigator.standalone / display-mode). Android/Chromium fires beforeinstallprompt, so the card gets a
+  // In a browser tab a full-screen prompt (#installOverlay, like the rotate prompt) shows how to add the game; nothing
+  // can join from the tab (also not the reload auto-join). Web pages cannot tell whether the icon already exists, only whether this launch
+  // came from it (navigator.standalone / display-mode). Android/Chromium fires beforeinstallprompt, so the prompt gets a
   // button for the browser's own install dialog; iOS has no install API in any browser (all run on WebKit).
   // User-observed (Nov 2026): Edge on iPhone has "Add to Home Screen" and its icon works like Safari's; Edge on iPad
   // has none, so iPads outside Safari are sent to Safari. Automated browsers (navigator.webdriver: the test suites)
@@ -2413,22 +2413,27 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // Other iOS browsers name themselves in the user agent (on iPad also in desktop mode: Edg/ or EdgiOS/ and so on).
   const otherIosBrowser = () => /EdgiOS|Edg\/|CriOS|FxiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|Brave|FBAN|FBAV|Instagram|Line\/|Zalo/i.test(navigator.userAgent);
   const installGate = () => (coarseUi || iosDevice) && !standaloneApp() && !navigator.webdriver;
+  // The steps for this browser, as list items ([text, bold part] pairs).
   function installSteps() {
-    const then = ', rồi mở game từ icon mới.';
-    if (install.installed) return 'Đã cài xong. Mở game từ icon trên màn hình chính để chơi.';
-    if (install.prompt) return 'Trên điện thoại và máy tính bảng, game chỉ chơi bằng app ở màn hình chính. Bấm Cài app' + then;
-    const lead = 'Trên điện thoại và máy tính bảng, game chỉ chơi bằng app ở màn hình chính. ';
-    if (!iosDevice) return lead + 'Bấm ⋮ → Thêm vào màn hình chính (hoặc Cài đặt ứng dụng)' + then;
-    if (otherIosBrowser() && iPadDevice) return lead + 'Trình duyệt này trên iPad không thêm được: mở trang bằng Safari → Chia sẻ → Thêm vào Màn hình chính' + then;
-    if (otherIosBrowser()) return lead + 'Bấm ⋯ → Chia sẻ → Thêm vào Màn hình chính' + then;
-    return lead + 'Bấm Chia sẻ → Thêm vào Màn hình chính' + then;
+    const open = [['Mở game từ icon mới', '']];
+    if (install.installed) return [['Đã cài xong. ', 'Mở game từ icon trên màn hình chính']];
+    if (install.prompt) return [['Bấm ', 'Cài app'], ...open];
+    if (!iosDevice) return [['Bấm ', '⋮'], ['Chọn ', 'Thêm vào màn hình chính (hoặc Cài đặt ứng dụng)'], ...open];
+    if (otherIosBrowser() && iPadDevice) return [['Trình duyệt này trên iPad không thêm được: ', 'mở trang bằng Safari'], ['Bấm ', 'Chia sẻ'], ['Chọn ', 'Thêm vào Màn hình chính'], ...open];
+    if (otherIosBrowser()) return [['Bấm ', '⋯'], ['Chọn ', 'Chia sẻ'], ['Chọn ', 'Thêm vào Màn hình chính'], ...open];
+    return [['Bấm ', 'Chia sẻ'], ['Chọn ', 'Thêm vào Màn hình chính'], ...open];
   }
   function syncInstallGate() {
     const gate = installGate();
     document.documentElement.classList.toggle('install-gate', gate);
-    $('installCard').hidden = !gate;
+    $('installOverlay').hidden = !gate;
     if (!gate) return;
-    $('installText').textContent = installSteps();
+    $('installSteps').replaceChildren(...installSteps().map(([text, bold]) => {
+      const li = document.createElement('li');
+      li.append(text);
+      if (bold) { const b = document.createElement('b'); b.textContent = bold; li.append(b); }
+      return li;
+    }));
     $('installBtn').hidden = !install.prompt;
     $('installCopy').hidden = !(iPadDevice && otherIosBrowser());
   }
