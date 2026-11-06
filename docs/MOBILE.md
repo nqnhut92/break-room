@@ -43,6 +43,8 @@ The iPhone 17 Pro Max stutter report is still open. See [Performance](PERFORMANC
 
 ## Joystick recovery
 
+The pad is 27% of the game height, clamped to 104–176px: landscape phones stay at about 104–110px, an 11-inch iPad reaches the 176px cap (the old 136px cap looked small there). The knob reaches full speed at 30% of the pad width, so the thumb travel grows with the pad (about 53px at 176px). Confirm the larger pad on a physical iPad.
+
 Joystick ownership is a pointer id plus pointer type. Move/up/cancel are observed at window capture phase so a terminal event delivered outside the pad still clears movement. Native touchend/touchcancel provide a fallback when no touch originating on the pad remains, even if an attack finger is still down. A new primary touch can replace stale ownership; a secondary finger cannot steal a valid capture. Before movement, a pointer that no longer owns capture is returned to neutral. Capture/release failures also clear state, and a delayed lost-capture event is ignored if capture is currently active.
 
 There is no inactivity timeout on a stationary held thumb. Chat focus, window blur, rotation and visibility changes retain their existing reset paths. The iPhone report (a direction sometimes sticks until opening/closing chat) suggests stale input state but does not establish which native event Safari lost.

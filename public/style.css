@@ -758,7 +758,7 @@ canvas {
     position: fixed;
     left: max(20px, var(--safe-left));
     bottom: max(20px, var(--safe-bottom));
-    width: clamp(104px, calc(27 * var(--game-vh)), 136px);
+    width: clamp(104px, calc(27 * var(--game-vh)), 176px); /* phones stay 104–110px; an 11" iPad reaches the 176px cap (136px looked small there) */
     aspect-ratio: 1;
     border: 2px solid rgba(255, 255, 255, 0.22);
     border-radius: 50%;
