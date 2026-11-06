@@ -76,6 +76,26 @@ Both probes completed with zero page errors. CPU profiles include quality change
 
 Implement P0 and a measured P1 comparison before a broad renderer rewrite. Resource cleanup addresses longer sessions; shadow work can affect a fresh session too, so a new session stuttering does not rule out the shadow finding. Do not reset the user's graphics preference silently.
 
+## High mode on iPad and iPhone (November 2026)
+
+Measured with the overlay on an iPad Pro M4 11-inch (2420×1572 drawing buffer) and an iPhone with an A19 Pro, Safari, high mode, standing in the lobby. Game logic, scene update and labels took about 2 ms together; nearly all the frame was `renderer.render`, which in Safari waits for the GPU.
+
+| iPad, high mode | render | FPS |
+|---|---|---|
+| Before | 17.1 ms | 35 |
+| Pixel ratio 1.5 instead of 2 | 17.0 ms | 36 |
+| PCF instead of PCFSoft shadows | 18.1 ms | 34 |
+| No environment map | 16.5 ms | 37 |
+| No real-time shadows | 10.8 ms | 53 |
+| Shadow box fitted to the view, no shadows from screens/laptops/bins on touch | 12.5 ms | 42 |
+| …and untouched objects share one material | 11.6 ms | 48 |
+
+So the cost was not pixels but the shadow pass: its box was a square sized from the camera distance, 5400 units wide when zoomed out, and drew 726 draws and 2.2M triangles (counted in the headless renderer; the overlay's draw count leaves out the shadow pass because three.js resets its counter after it) against 327 for the picture. The box is now fitted to the ground the camera sees, in light space, with a 220-unit margin, which brings that view to 488 shadow draws; on touch screens the 393 screens, laptops and bins do not cast real-time shadows (bins keep their contact blob), which brings it to 215. Objects also used to carry their own clone of the body material, so every draw re-uploaded its uniforms; they now share `bodyMat` and get a private copy only while damaged, flashing or electrified. The workspace (about 600 draws) still runs near 37 FPS on the iPad while smashing; batching or instancing the furniture would be the next step.
+
+## Frame-time overlay
+
+Open the game with `?perf=1` (on a phone or tablet this also skips the Home Screen gate, so it works in a browser tab; the parameter survives joining and reloading). There is deliberately no chat command for it, so nobody turns it on by accident, and a Home Screen app cannot show it. The overlay shows, over the last 5 seconds: FPS, frame interval p50/p95/p99, the count of frames over 50 ms since the page loaded, and this page's JS + render submission time per frame (not GPU time). A third line averages that work over the same 5 seconds into game logic and HUD, scene update, `renderer.render` and world labels (averages, because Safari rounds `performance.now()` to whole milliseconds). The last line gives the quality, drawing-buffer size and pixel ratio, the device pixel ratio, draw calls and triangles of the last frame (without the shadow pass: three.js resets its counter after it), and shadow-map size / shadow box width. Compare devices at the same spot and zoom, after a few seconds of warmup.
+
 ## iPhone acceptance plan
 
 Use the same iPhone 17 Pro Max in Safari and the Home Screen app, recording actual viewport, browser/OS, quality, DPR and refresh cadence. Compare one change at a time with a cool phone and unchanged Low Power Mode/brightness; repeat after 10–15 minutes to distinguish sustained thermal behavior. These are checks to perform, not conditions already tested here.

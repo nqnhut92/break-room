@@ -46,7 +46,7 @@
     try {
       var ipad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
       var touch = matchMedia('(pointer: coarse)').matches || ipad || /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (touch && navigator.standalone !== true && !matchMedia('(display-mode: standalone)').matches && !navigator.webdriver) document.documentElement.classList.add('install-gate');
+      if (touch && navigator.standalone !== true && !matchMedia('(display-mode: standalone)').matches && !navigator.webdriver && !/[?&]perf=1(&|$)/.test(location.search)) document.documentElement.classList.add('install-gate');
     } catch (e) { /* show the form */ }
   </script>
   <script>

@@ -147,6 +147,7 @@ const RUBBLE = {
   table: ['#d9c7a3', '#8a8f99', '#f0e6d0'],
   conference: ['#d9c7a3', '#8a8f99', '#f0e6d0'],
 };
+const NO_SHADOW_ON_TOUCH = new Set(['monitor', 'laptop', 'trash']);
 const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv', 'fridge', 'speaker']);
 
 const BOSS_SCALE = 2.1; // the boss is a big man
@@ -1606,9 +1607,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const mod = models[modelKey];
     const group = new THREE.Group();
     group.position.set(o.x, lift(o.type), o.y);
-    const mat = bodyMat.clone();
-    const body = new THREE.Mesh(mod.body, mat);
-    body.castShadow = true;
+    // Untouched objects share bodyMat, so the renderer does not re-upload a full set of uniforms for each of the
+    // hundreds of draws (expensive in Safari, where every WebGL call crosses to another process). An object gets its
+    // own copy (created once, kept) only while it is damaged, flashing or electrified; see update.
+    const mat = null;
+    const body = new THREE.Mesh(mod.body, bodyMat);
+    // On touch screens the small, numerous things (393 screens, laptops and bins) cast no real-time shadow: each one
+    // is a draw in the shadow pass, which Safari on iPad/iPhone pays for. Bins keep their contact blob on the floor.
+    body.castShadow = !(coarse && NO_SHADOW_ON_TOUCH.has(o.type));
     body.receiveShadow = true;
     group.add(body);
     let glow = null;
@@ -1619,7 +1625,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const wreck = new THREE.Mesh(mod.wrecks[wreckVariant(o.id)], bodyMat);
     wreck.rotation.y = idNoise(o.id, 7) * (types[o.type].w > 100 ? 0.2 : 0.8);
     wreck.receiveShadow = true;
-    wreck.castShadow = true;
+    wreck.castShadow = body.castShadow;
     wreck.visible = false;
     group.add(wreck);
     // a scorch, puddle, soil or dust mark on the floor under the wreck
@@ -2835,8 +2841,55 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- per-frame ----------------------------------------------------------
   let time = 0;
+  // Shadow box fitted to the view (see update). Scratch objects are reused: this runs every frame.
+  const SHADOW_MARGIN = 220; // the tallest walls (280) throw shadows about 170 long; a little extra for safety
+  const fitRay = new THREE.Raycaster();
+  const fitNdc = new THREE.Vector2();
+  const fitHit = new THREE.Vector3();
+  const fitGround = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const fitView = new THREE.Matrix4();
+  const fitPts = [];
+  for (let i = 0; i < 8; i++) fitPts.push(new THREE.Vector3());
+  let fitKey = '';
+  function fitShadowBox() {
+    camera.updateMatrixWorld();
+    let n = 0;
+    for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      fitNdc.set(x, y);
+      fitRay.setFromCamera(fitNdc, camera);
+      // a corner above the horizon (never with this camera, but be safe) is clamped to a far ground point
+      if (!fitRay.ray.intersectPlane(fitGround, fitHit) || fitHit.distanceTo(camera.position) > 6000) fitRay.ray.at(6000, fitHit);
+      fitPts[n++].set(fitHit.x, 0, fitHit.z);
+      fitPts[n++].set(fitHit.x, 160, fitHit.z); // the tops of furniture standing at the edge of the view
+    }
+    // light space: the shadow camera sits at the sun and looks at its target
+    fitView.lookAt(sun.position, sun.target.position, THREE.Object3D.DEFAULT_UP);
+    fitView.setPosition(sun.position);
+    fitView.invert();
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const p of fitPts) {
+      p.applyMatrix4(fitView);
+      x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x);
+      y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+      z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z);
+    }
+    // snap to 40 units so the box does not change size (and the shadows shimmer) on every small camera move
+    const q = (v, up) => (up ? Math.ceil(v / 40) : Math.floor(v / 40)) * 40;
+    const l = q(x0 - SHADOW_MARGIN, false), r = q(x1 + SHADOW_MARGIN, true), b = q(y0 - SHADOW_MARGIN, false), t = q(y1 + SHADOW_MARGIN, true);
+    const near = Math.max(10, -z1 - 400), far = -z0 + 400;
+    const key = l + ',' + r + ',' + b + ',' + t + ',' + Math.round(near / 40) + ',' + Math.round(far / 40);
+    if (key === fitKey) return;
+    fitKey = key;
+    const sc2 = sun.shadow.camera;
+    sc2.left = l; sc2.right = r; sc2.bottom = b; sc2.top = t;
+    sc2.near = near; sc2.far = far;
+    sc2.updateProjectionMatrix();
+    shadowR = Math.max(r - l, t - b) / 2;
+  }
+  const timing = { scene: 0, render: 0, labels: 0 }; // ms spent in the last update(), for the perf overlay
   function update(dt, S) {
     if (!loaded || !built) return; // models still loading
+    const t0 = performance.now();
     time += dt;
     const me = S.players.get(S.me);
     localPlayerId = S.me;
@@ -2873,20 +2926,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     camera.position.set(cam.x + jx, Math.sin(cam.pitch) * d + 40 + jy, cam.z + Math.cos(cam.pitch) * d);
     camera.lookAt(cam.x, 30, cam.z);
 
-    // The sun's shadow box follows the view: wide enough to cover everything visible, so zooming out does not
-    // reveal the edge of the shadowed area (it used to be a fixed 1800-wide box).
-    const R = Math.min(2700, Math.max(900, d * 1.6));
-    if (Math.abs(R - shadowR) > 8) {
-      shadowR = R;
-      const sc2 = sun.shadow.camera;
-      sc2.left = -R; sc2.right = R; sc2.top = R; sc2.bottom = -R;
-      sc2.near = 10;
-      sc2.far = 1300 + R * 1.8 + 400;
-      sc2.updateProjectionMatrix();
-    }
+    // The sun's shadow box is fitted to the ground the camera actually sees (plus a margin for shadows cast into the
+    // view from just outside it), in the light's own space. It used to be a square sized from the camera distance:
+    // 5400 wide when zoomed out, so the shadow pass drew almost the whole office (726 draws, 2.2M triangles on an
+    // iPad view, against 327 for the picture itself) and cost about 6 ms a frame in Safari on iPad and iPhone.
     const sunDist = 1280 + shadowR * 0.9; // further away for a bigger box, so no ground point ends up behind the light
     sun.position.set(cam.x - (500 / 1280) * sunDist, (1100 / 1280) * sunDist, cam.z + (450 / 1280) * sunDist);
     sun.target.position.set(cam.x, 0, cam.z);
+    fitShadowBox();
 
     // objects
     if (!contactBuilt && built && S.objects.length) buildContactShadows(S.objects, S.types);
@@ -2931,8 +2978,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const dmg = 1 - o.hp / o.hpMax;
       const dark = 1 - dmg * 0.45;
       const f = o.flash;
-      rig.mat.color.setRGB(dark, dark, dark);
-      rig.mat.emissive.setRGB(f * 0.7 + electric * 0.18, f * 0.6 + electric * 0.3, f * 0.5 + electric * 0.65);
+      if (dmg > 0.001 || f > 0 || electric > 0) {
+        if (!rig.mat) rig.mat = bodyMat.clone();
+        if (rig.body.material !== rig.mat) rig.body.material = rig.mat;
+        rig.mat.color.setRGB(dark, dark, dark);
+        rig.mat.emissive.setRGB(f * 0.7 + electric * 0.18, f * 0.6 + electric * 0.3, f * 0.5 + electric * 0.65);
+      } else if (rig.body.material !== bodyMat) rig.body.material = bodyMat;
       rig.group.rotation.z = o.broken ? 0 : dmg * 0.05 * (o.id % 2 ? 1 : -1); // a wreck lies flat on the floor
       if (o.broken && ELECTRONIC.has(o.type)) {
         o.smokeT -= dt;
@@ -2966,7 +3017,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     updateSpells(dt, S);
     updateParticles(dt);
+    const t1 = performance.now();
     renderer.render(scene, camera);
+    const t2 = performance.now();
+    timing.scene = t1 - t0;
+    timing.render = t2 - t1;
     if (effectPrograms.visible) {
       scene.remove(effectPrograms);
       effectPrograms.visible = false;
@@ -3009,6 +3064,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       t.el.style.opacity = String(Math.min(1, t.life * 2));
       t.el.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-50%)';
     }
+    timing.labels = performance.now() - t2;
   }
 
   // ---- picking ------------------------------------------------------------
@@ -3112,6 +3168,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
+    // for the ?perf=1 / "/perf" overlay: what the last frame drew (shadow pass included) and at what size
+    timing,
+    stats: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, w: renderer.domElement.width, h: renderer.domElement.height, pr: renderer.getPixelRatio(), shadow: renderer.shadowMap.enabled ? sun.shadow.mapSize.x : 0, shadowBox: Math.round(shadowR * 2), quality }),
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomStep, zoomLimits, cameraTo, ready,
     fx: { summon: fxSummon, duelCast: fxDuelCast, blow: fxBlow, rope: fxRope, process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),

@@ -76,6 +76,26 @@ Cả hai lượt đo hoàn tất, không có page error. CPU profile chứa cả
 
 Nên làm P0 và đối chứng P1 trước khi viết lại renderer. Cleanup nhắm tới phiên chơi dài; bóng nặng có thể ảnh hưởng ngay phiên mới. Không tự xoá lựa chọn đồ họa đã lưu của người dùng.
 
+## Chế độ đẹp trên iPad và iPhone (tháng 11/2026)
+
+Đo bằng overlay trên iPad Pro M4 11 inch (bộ đệm vẽ 2420×1572) và iPhone chip A19 Pro, Safari, chế độ đẹp, đứng ở sảnh. Logic game, cập nhật cảnh và nhãn cộng lại khoảng 2 ms; gần như cả khung hình là `renderer.render`, mà trên Safari hàm này chờ GPU.
+
+| iPad, chế độ đẹp | render | FPS |
+|---|---|---|
+| Trước khi sửa | 17,1 ms | 35 |
+| Pixel ratio 1,5 thay vì 2 | 17,0 ms | 36 |
+| Bóng PCF thay vì PCFSoft | 18,1 ms | 34 |
+| Không có environment map | 16,5 ms | 37 |
+| Không có bóng thời gian thực | 10,8 ms | 53 |
+| Vùng bóng ôm theo khung nhìn, màn hình/laptop/thùng rác không đổ bóng trên cảm ứng | 12,5 ms | 42 |
+| …và đồ còn nguyên dùng chung một material | 11,6 ms | 48 |
+
+Vậy chỗ tốn không phải số điểm ảnh mà là lượt vẽ bóng: vùng bóng là hình vuông tính theo khoảng cách camera, rộng 5400 đơn vị khi zoom xa, và vẽ 726 draw call, 2,2 triệu tam giác (đếm trong renderer headless; số draw của overlay không gồm lượt vẽ bóng vì three.js đặt lại bộ đếm sau lượt đó) so với 327 cho hình chính. Giờ vùng bóng ôm theo phần sàn camera thấy, tính trong không gian của nguồn sáng, cộng biên 220 đơn vị, còn 488 draw ở góc nhìn đó; trên màn hình cảm ứng, 393 màn hình, laptop và thùng rác không đổ bóng thời gian thực (thùng rác vẫn có vệt bóng tiếp xúc), còn 215. Trước đây mỗi món đồ còn mang một bản sao material riêng nên mỗi draw call phải gửi lại uniform; giờ chúng dùng chung `bodyMat` và chỉ có bản riêng khi đang hư hại, chớp sáng hoặc bị điện giật. Khu làm việc (khoảng 600 draw) vẫn chỉ khoảng 37 FPS trên iPad lúc đang đập; bước tiếp theo sẽ là gộp hoặc instancing đồ đạc.
+
+## Overlay đo frame time
+
+Mở game với `?perf=1` (trên điện thoại, máy tính bảng thì link này còn bỏ qua màn hình bắt thêm vào Màn hình chính, nên mở được trong tab trình duyệt; tham số được giữ khi vào phòng và khi tải lại). Cố ý không có lệnh chat để bật, để không ai bật nhầm, nên app Home Screen không hiện được overlay. Overlay hiện số liệu của 5 giây gần nhất: FPS, khoảng cách khung hình p50/p95/p99, số khung trên 50 ms kể từ lúc tải trang, và thời gian JS + gửi lệnh vẽ mỗi khung của trang (không phải thời gian GPU). Dòng thứ ba chia trung bình phần việc đó trong cùng 5 giây thành logic game và HUD, cập nhật cảnh, `renderer.render` và nhãn trong thế giới (dùng trung bình vì Safari làm tròn `performance.now()` tới mili giây). Dòng cuối ghi chế độ đồ họa, kích thước bộ đệm vẽ và pixel ratio, device pixel ratio, số draw call và tam giác của khung vừa vẽ (không gồm lượt vẽ bóng: three.js đặt lại bộ đếm sau lượt đó), và kích thước shadow map / bề rộng vùng bóng. So sánh các máy ở cùng vị trí và mức zoom, sau vài giây khởi động.
+
 ## Kiểm tra trên iPhone
 
 Dùng cùng iPhone 17 Pro Max với Safari và app Home Screen; ghi viewport, OS/browser, chất lượng, DPR và nhịp frame thực tế. Đổi từng yếu tố, bắt đầu khi máy mát, giữ nguyên Low Power Mode/độ sáng; lặp sau 10–15 phút để phân biệt ảnh hưởng nhiệt. Đây là kế hoạch kiểm tra, chưa phải các lượt đã chạy.
