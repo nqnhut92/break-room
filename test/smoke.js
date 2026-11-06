@@ -555,6 +555,23 @@ async function main() {
     await app.stop();
   });
 
+  await step('being punched, knocked out and respawned is not activity: an idle player in VKL\'s reach is still disconnected', async () => {
+    // Bug: hurt() and revive() refreshed lastActive, so a player standing still where bosses, snakes or the patrol kept
+    // hitting them (and respawning them) was almost never disconnected.
+    const lobbySpawn = { ...world.WORLD.spawn };
+    world.WORLD.spawn = { ...world.serverPoint(420, 380), rx: 0, ry: 0 }; // in the server room, next to VKL
+    const app = server.createApp({ afkMs: 2000, spawnProtectionMs: 0, playerRespawnMs: 400, moleEnabled: false, maxConnPerIp: 100 });
+    try {
+      const p = await app.start(0);
+      const idle = await h.client(p, 'Punchbag', 'afkboss');
+      const hits = [];
+      idle.ws.on('message', raw => { try { const m = JSON.parse(raw); if (m.t === 'bstrike' || m.t === 'hurt' || m.t === 'down') hits.push(m.t); } catch (e) { /* binary */ } });
+      for (let i = 0; i < 50 && idle.closeCode === null; i++) await sleep(100);
+      assert.ok(hits.length > 0, 'VKL really was hitting the idle player');
+      assert.strictEqual(idle.closeCode, 4002, 'disconnected for doing nothing, despite the punches');
+    } finally { world.WORLD.spawn = lobbySpawn; await app.stop(); }
+  });
+
   await step('only the fixed rooms exist; unknown names land in the first; /api/rooms lists them with counts', async () => {
     const app = server.createApp({ rooms: world.ROOMS });
     const p = await app.start(0);
