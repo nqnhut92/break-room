@@ -911,9 +911,15 @@ canvas {
   #bottombar #smashBtn { order: 3; }
   #bottombar #drinkBtn { order: 1; }
 }
+/* Short landscape phones: + and − stay stacked like everywhere else, with smaller buttons so the column ends above ULTI
+   (which sits over ĐẬP! when the rage bar is full). */
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 360px) {
-  #sideBtns { align-items: flex-end; }
-  #sideBtns #zoomBtns { flex-direction: row; }
+  #sideBtns { align-items: flex-end; gap: 4px; }
+  #sideBtns .btn, #sideBtns #zoomBtns .btn, #sideBtns #settingsBtn { width: 40px; height: 40px; }
+  #sideBtns #zoomBtns { flex-direction: column; gap: 4px; }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 340px) {
+  #sideBtns .btn, #sideBtns #zoomBtns .btn, #sideBtns #settingsBtn { width: 36px; height: 36px; font-size: 20px; }
 }
 
 #accountBox { display: flex; flex-direction: column; gap: 12px; }
@@ -1111,6 +1117,8 @@ canvas {
   #mobileBottomControls { left: var(--dock-left, calc(var(--safe-left) + 160px)); right: var(--dock-right, calc(var(--safe-right) + 232px)); width: auto; max-width: 480px; margin-inline: auto; transform: none; }
   #bottombar #skillBtn { position: fixed; right: calc(var(--safe-right) + 126px); bottom: calc(var(--safe-bottom) + 16px); width: 90px; height: 58px; min-height: 58px; padding: 10px; }
   #bottombar #skillBtn .ui-icon { width: 34px; height: 34px; }
+  /* the drink offer sits above Skill, not above ULTI/ĐẬP!, where it covered the zoom buttons on short phones */
+  #bottombar #drinkBtn { position: fixed; right: calc(var(--safe-right) + 126px); bottom: calc(var(--safe-bottom) + 80px); width: 110px; }
   #mobileBottomControls #chatDock { order: 2; flex: 1; min-width: 0; position: relative; height: 48px; }
   #mobileBottomControls #chatBtn { order: 3; }
   #mobileBottomControls #emoteBtn { order: 4; flex: 0 0 48px; width: 48px; }

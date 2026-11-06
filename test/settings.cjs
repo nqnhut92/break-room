@@ -12,7 +12,7 @@ async function main(){
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true});
     let passed=0;const ok=name=>{passed++;console.log('ok - '+name)};
     const stubRenderer=process.env.SETTINGS_REAL_RENDERER!=='1';
-    for(const [width,height] of (stubRenderer ? [[740,320],[844,390],[956,440]] : [[844,390]])){
+    for(const [width,height] of (stubRenderer ? [[740,320],[800,360],[844,390],[956,440]] : [[844,390]])){
       const page=await browser.newPage({viewport:{width,height},isMobile:true,hasTouch:true});
       const errors=[];page.on('pageerror',e=>errors.push(e.message));
       if(stubRenderer)await page.route('**/scene3d.js',r=>r.fulfill({contentType:'application/javascript',body:`export function createScene3D(){return {resize(){},setQuality(q){window.testQuality=q},update(){},build(){},zoom(){},cameraTo(){},zoomLimits(){return {atMin:false,atMax:false}},fx:new Proxy({},{get:()=>()=>{}})}}`}));
@@ -40,12 +40,20 @@ async function main(){
       assert.equal(skill.width,attack.width);assert.equal(skill.height,attack.height);
       assert.equal(attack.x-skill.x-skill.width,24,'skill and attack have a deliberate 24px gap');
       assert.equal(skill.y,attack.y);
+      // + and − stay stacked on every landscape phone, and nothing on the right covers them, even with ULTI and the drink offer up.
+      await page.evaluate(()=>{document.getElementById('ultBtn').hidden=false;document.getElementById('drinkBtn').hidden=false;});
+      const right=await page.evaluate(()=>Object.fromEntries(['settingsBtn','zoomIn','zoomOut','ultBtn','drinkBtn','smashBtn','skillBtn'].map(id=>{const r=document.getElementById(id).getBoundingClientRect();return [id,{l:r.left,t:r.top,r:r.right,b:r.bottom}]})));
+      assert.ok(Math.abs(right.zoomIn.l-right.zoomOut.l)<1&&right.zoomOut.t>=right.zoomIn.b,'zoom buttons stacked at '+width+'x'+height);
+      const hit=(a,b)=>a.l<b.r&&b.l<a.r&&a.t<b.b&&b.t<a.b;
+      for(const z of ['settingsBtn','zoomIn','zoomOut'])for(const o of ['ultBtn','drinkBtn','smashBtn','skillBtn'])assert.ok(!hit(right[z],right[o]),z+' overlaps '+o+' at '+width+'x'+height);
+      assert.ok(!hit(right.drinkBtn,right.ultBtn)&&!hit(right.drinkBtn,right.skillBtn),'drink offer clear of ULTI and Skill');
+      await page.evaluate(()=>{document.getElementById('ultBtn').hidden=true;document.getElementById('drinkBtn').hidden=true;});
       assert.equal(await page.locator('#emotes').evaluate(e=>e.parentElement.id),'emoteTray');
       if(process.env.SETTINGS_SCREENSHOT&&width===844)await page.screenshot({path:process.env.SETTINGS_SCREENSHOT});
       await page.click('#settingsClose');assert.equal(await page.locator('#settingsDlg').isVisible(),false);
       await page.click('#settingsBtn');await page.click('#helpBtn');
       assert.equal(await page.locator('#help').isVisible(),true);assert.match(await page.locator('#helpList').innerText(),/25–60 giây/);assert.equal(await page.locator('#settingsDlg').isVisible(),false);
-      assert.deepEqual(errors,[]);ok(width+'x'+height+': existing actions work and gameplay controls remain outside settings');
+      assert.deepEqual(errors,[]);ok(width+'x'+height+': existing actions work, gameplay controls remain outside settings, zoom stays stacked and uncovered');
       await page.close();
     }
     const desktop=await browser.newPage({viewport:{width:1100,height:720}});
