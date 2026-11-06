@@ -56,6 +56,14 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) resync(); });
   if (app && window.ResizeObserver) new window.ResizeObserver(sync).observe(app);
 
+  // The page itself never zooms: the game owns pinch (camera zoom). iOS ignores user-scalable=no, so cancel its
+  // pinch gesture events here; double-tap zoom is off through touch-action: manipulation in style.css.
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, e => e.preventDefault(), { passive: false });
+  }
+  // A double tap that still reaches the browser (dblclick) must not smart-zoom either.
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+
   // Keyboard/zoom changes can update the chat inset, but never the canvas or HUD scale.
   window.visualViewport?.addEventListener('resize', keyboardInset);
   window.visualViewport?.addEventListener('scroll', keyboardInset);

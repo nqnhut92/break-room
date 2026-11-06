@@ -534,12 +534,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
   // The closest view is also the starting view, and it scales with the height of the game in CSS pixels: a taller screen
-  // has room to show more of the office. Fitted to the views players chose: 900 on a 390px-tall phone, 1450 on an
-  // 802px-tall iPad, so a 950px-tall desktop window starts near 1650. Players zoom further out with −; + only returns
-  // towards this start. The furthest view stays at least 2300 and 1.6x the start.
+  // has room to show more of the office. Players on an iPhone and an iPad each settled one 25% step further out than
+  // 380 + 1.335 * height (which gave 900 on a 390px phone and 1450 on an 802px iPad), so the start is 1.25x that:
+  // about 1125 on a phone, 1815 on an iPad, 2060 on a 950px-tall desktop window. The furthest view is at least 2300
+  // and 1.6x the start, capped at 3600 for fog/shadow range. The +/− buttons move between ZOOM_STEPS evenly spaced
+  // (geometric) levels across that range; pinch and the mouse wheel stay continuous within it.
+  const ZOOM_STEPS = 4;
   const zoomRange = h => {
-    const min = Math.round(Math.min(2600, Math.max(700, 380 + 1.335 * h)));
-    return { min, max: Math.max(2300, Math.round(min * 1.6)) };
+    const min = Math.round(Math.min(2600, Math.max(800, 1.25 * (380 + 1.335 * h))));
+    return { min, max: Math.min(3600, Math.max(2300, Math.round(min * 1.6))) };
   };
   let zoomMin, zoomMax;
   ({ min: zoomMin, max: zoomMax } = zoomRange(window.innerHeight || 600));
@@ -2591,6 +2594,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     } catch (e) { /* ignore */ }
   }
 
+  // One button press: snap to the next of the evenly spaced levels between the closest and furthest view.
+  function zoomStep(dir) {
+    const ratio = Math.log(zoomMax / zoomMin) / ZOOM_STEPS;
+    const level = Math.log(cam.dist / zoomMin) / ratio;
+    const next = Math.min(ZOOM_STEPS, Math.max(0, dir > 0 ? Math.floor(level + 0.01) + 1 : Math.ceil(level - 0.01) - 1));
+    zoom(zoomMin * Math.exp(next * ratio) / cam.dist - 1);
+  }
+
   function cameraTo(x, y) {
     cam.x = x;
     cam.z = y;
@@ -2598,7 +2609,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomLimits, cameraTo, ready,
+    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomStep, zoomLimits, cameraTo, ready,
     fx: { summon: fxSummon, duelCast: fxDuelCast, blow: fxBlow, rope: fxRope, process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),

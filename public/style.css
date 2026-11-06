@@ -9,6 +9,10 @@
   --play-top: 0px;
 }
 #statusBand { display: none; }
+/* No gesture zooms the page. `manipulation` keeps scrolling and plain taps but turns off double-tap zoom on every
+   element (WebKit did not apply an ancestor's pan-y to a double tap on the leaderboard). Pinch is blocked by the
+   viewport meta (Android) and by cancelling iOS gesture events in viewport.js. Game controls override with none. */
+:where(html, body, body *) { touch-action: manipulation; }
 /* One layout surface for both WebGL and fixed HUD elements after mobile rotation. */
 #app {
   position: fixed;
@@ -31,10 +35,10 @@
   #statusBand { display: block; position: fixed; top: 0; left: 0; right: 0; height: 12px; background: var(--bg); -webkit-background-clip: text; background-clip: text; color: transparent; pointer-events: none; z-index: 2147483647; }
   /* The system band is outside the play surface; HUD coordinates start below it. */
   #app { --safe-top: 0px; --safe-height: calc(100 * var(--game-vh) - var(--safe-bottom)); }
-  #app :is(button, input, select, textarea) { touch-action: pan-y; }
+  #app :is(button, input, select, textarea) { touch-action: manipulation; }
   #app #joystick, #app #smashBtn { touch-action: none; }
   #app :is(#overlay, #settingsDlg .card, #helpContent, #help ul, #rankList, #chatLog, .roomlist) {
-    touch-action: pan-y;
+    touch-action: manipulation;
   }
   #nameInput, #roleSelect { font-size: 16px; }
 }
@@ -802,7 +806,7 @@ canvas {
 #help .card { max-height: calc(calc(100 * var(--game-vh)) - 32px); min-height: 0; overflow: hidden; }
 #helpTitle { flex: 0 0 auto; margin: 0; }
 #help #helpList { overflow: visible; overscroll-behavior: auto; }
-#helpContent { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-right: 8px; }
+#helpContent { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: manipulation; padding-right: 8px; }
 #helpClose { flex: 0 0 auto; }
 #duelBanner { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: min(440px, calc(65 * var(--game-vw))); padding: 8px 14px; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(34, 23, 12, 0.9); color: #ffd38a; text-align: center; font-size: 14px; pointer-events: auto; }
 @media (pointer: coarse) {
@@ -861,7 +865,7 @@ canvas {
 #rotateOverlay p { color: var(--muted); line-height: 1.5; }
 .rotate-icon { font-size: 56px; color: var(--accent-2); }
 @media (pointer: coarse) {
-  #app { touch-action: pan-y; }
+  #app { touch-action: manipulation; }
   #app #joystick, #app #smashBtn, #app #c { touch-action: none; }
   #topLeft #mute { width: 36px; min-width: 36px; padding: 0; justify-content: center; }
   #topLeft .pill.hp { display: none; }

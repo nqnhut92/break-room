@@ -1737,10 +1737,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     mmPlace();
     sidePlace();
     mmDraw();
-    // + is hidden at the closest (starting) view; − fades out at the furthest
+    // + fades out at the closest (starting) view, − at the furthest
     if (scene) {
       const z = scene.zoomLimits();
-      $('zoomIn').style.visibility = z.atMin ? 'hidden' : '';
+      $('zoomIn').classList.toggle('dim', z.atMin);
       $('zoomOut').classList.toggle('dim', z.atMax);
       $('zoomIn').setAttribute('aria-disabled', String(z.atMin));
       $('zoomOut').setAttribute('aria-disabled', String(z.atMax));
@@ -2218,8 +2218,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       pinchLast = 0;
     });
   }
-  $('zoomIn').addEventListener('click', () => scene && scene.zoom(-0.2));
-  $('zoomOut').addEventListener('click', () => scene && scene.zoom(0.25));
+  $('zoomIn').addEventListener('click', () => scene && scene.zoomStep(-1));
+  $('zoomOut').addEventListener('click', () => scene && scene.zoomStep(1));
 
   canvas.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || !S.joined || typing()) return;

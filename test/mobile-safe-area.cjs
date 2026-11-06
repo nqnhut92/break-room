@@ -16,6 +16,17 @@ async function main() {
       'Home Screen app uses the system status bar instead of forcing deprecated translucency');
     await page.fill('#nameInput','Safe area'); await page.click('#joinBtn');
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
+    // No gesture may zoom the page itself: the meta blocks pinch on Android, iOS gesture events are cancelled, and
+    // every element (the leaderboard included) uses manipulation so a double tap cannot smart-zoom.
+    assert.match(await page.getAttribute('meta[name="viewport"]','content'),/maximum-scale=1,user-scalable=no/);
+    const zoomGuard=await page.evaluate(()=>{const ta=id=>getComputedStyle(document.getElementById(id)).touchAction;
+      const gesture=new Event('gesturestart',{bubbles:true,cancelable:true});document.getElementById('board').dispatchEvent(gesture);
+      const dbl=new MouseEvent('dblclick',{bubbles:true,cancelable:true});document.getElementById('board').dispatchEvent(dbl);
+      return {board:ta('board'),rank:ta('rankList'),boardText:getComputedStyle(document.querySelector('#board *')||document.getElementById('board')).touchAction,
+        settings:ta('settingsBtn'),body:getComputedStyle(document.body).touchAction,canvas:ta('c'),stick:ta('joystick'),
+        gesture:gesture.defaultPrevented,dbl:dbl.defaultPrevented};});
+    assert.deepEqual(zoomGuard,{board:'manipulation',rank:'manipulation',boardText:'manipulation',settings:'manipulation',body:'manipulation',canvas:'none',stick:'none',gesture:true,dbl:true});
+    console.log('ok - no double tap or pinch can zoom the page; game controls keep their own gestures');
     const profiles = [
       ['iPhone landscape left/right housing',844,390,59,59,0,21],
       ['short landscape with housing',740,320,59,59,0,21],
