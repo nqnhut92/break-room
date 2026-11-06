@@ -413,7 +413,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         $('downOverlay').hidden = !(meNow && meNow.dead); // refreshing while knocked out keeps the countdown
         S.target = null;
         S.attackId = null;
-        if (scene) scene.build(m.world, m.props, m.zones);
+        if (scene) scene.build(m.world, m.props, m.zones, m.rooms);
         mm.rooms = m.rooms || [];
         mmBuild(m.world, m.props, m.zones);
         S.joined = true;

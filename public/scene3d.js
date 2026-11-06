@@ -364,20 +364,306 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
       body.push(box(30, 30, 30, '#888888', 0, 15, 0));
   }
 
-  // collapsed pile: dark slab plus tilted shards in the same colours
-  const t = types[type];
-  const rnd = seeded(type.length * 977 + type.charCodeAt(0));
-  const wreck = [box(t.w * 0.9, 2.5, t.h * 0.9, '#17171b', 0, 1.2, 0)];
-  const pal = RUBBLE[type] || ['#888888'];
-  for (let i = 0; i < 9; i++) {
-    const s = 5 + rnd() * 11;
-    wreck.push(
-      box(s, s * (0.3 + rnd() * 0.5), s * (0.6 + rnd()), shade(pal[i % pal.length], 0.55 + rnd() * 0.3),
-        (rnd() - 0.5) * t.w * 0.8, 3 + rnd() * 6, (rnd() - 0.5) * t.h * 0.8,
-        (rnd() - 0.5) * 1.2, rnd() * 3, (rnd() - 0.5) * 1.2),
-    );
+  // wrecks first: they clone the parts before merge() strips them
+  const wrecks = [];
+  for (let v = 0; v < WRECK_VARIANTS; v++) wrecks.push(buildWreck(type, body, glow, types[type], v));
+  return { body: bakeAO(merge(body)), glow: merge(glow), wrecks, pick };
+}
+
+// ------------------------------------------------------------------ wrecks ----
+// A broken object leaves a wreck made of its own parts, so a smashed chair still reads as a chair: free-standing
+// things topple, desks and tables collapse onto their legs, boxy machines are crushed, porcelain shatters. Screens
+// go dark and monitors/TVs crack. Loose parts and chips lie around it until IT replaces the object. Each type has
+// WRECK_VARIANTS variants and the object's id picks one, so every player (also one who joins later) sees the same
+// wreck.
+const WRECK_VARIANTS = 3;
+const WRECK_MODE = {
+  desk: 'collapse', table: 'collapse', conference: 'collapse',
+  printer: 'crush', coffee: 'crush', safe: 'crush', laptop: 'crush',
+  toilet: 'shatter', sink: 'shatter', sofa: 'shatter', // a sofa loses its cushions and back
+  lamp: 'snap', coatrack: 'snap', // too tall to fall over whole without going through a wall: the pole snaps
+}; // everything else topples
+// These stand free and may fall any way; the other tall things stand against a wall and fall forward (+z).
+const TOPPLE_ANY_WAY = new Set(['monitor', 'tv', 'trash', 'plant', 'chair']);
+const WRECK_DESK_TOP = 12; // a screen or laptop on a collapsed desk ends up about this high
+const MARK_KIND = { cooler: 'water', toilet: 'water', sink: 'water', fridge: 'water', plant: 'soil' }; // electronics scorch, the rest dust
+const MARK_KINDS = ['scorch', 'water', 'soil', 'dust'];
+// is o (a screen or laptop) standing on the desk or table d?
+function standsOn(o, d, types) {
+  const t = types[d.type];
+  const sideways = Math.abs(Math.sin(d.rot || 0)) > 0.7;
+  const hw = (sideways ? t.h : t.w) / 2 + 4;
+  const hd = (sideways ? t.w : t.h) / 2 + 4;
+  return Math.abs(o.x - d.x) <= hw && Math.abs(o.y - d.y) <= hd;
+}
+// Irregular soft blobs in one atlas, one cell per mark kind; drawn once, no image files.
+function drawMarks(ctx, w, h) {
+  const cell = w / MARK_KINDS.length;
+  const rnd = seeded(4242);
+  const style = {
+    scorch: [[24, 18, 15, 0.8], 7],
+    water: [[118, 168, 214, 0.5], 5],
+    soil: [[74, 48, 30, 0.85], 9],
+    dust: [[150, 140, 128, 0.42], 8],
+  };
+  MARK_KINDS.forEach((k, i) => {
+    const [[cr, cg, cb, ca], blobs] = style[k];
+    const ox = i * cell;
+    for (let b = 0; b < blobs; b++) {
+      const x = ox + cell / 2 + (rnd() - 0.5) * cell * 0.35;
+      const y = h / 2 + (rnd() - 0.5) * h * 0.35;
+      const rad = cell * (0.16 + rnd() * 0.16);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, `rgba(${cr},${cg},${cb},${ca * 0.7})`);
+      g.addColorStop(0.6, `rgba(${cr},${cg},${cb},${ca * 0.35})`);
+      g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(ox, 0, cell, h);
+    }
+    if (k === 'water') { // a few highlights so it reads as wet
+      for (let s = 0; s < 3; s++) {
+        const x = ox + cell / 2 + (rnd() - 0.5) * cell * 0.3;
+        const y = h / 2 + (rnd() - 0.5) * h * 0.3;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, cell * 0.07);
+        g.addColorStop(0, 'rgba(235,245,255,.55)');
+        g.addColorStop(1, 'rgba(235,245,255,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(ox, 0, cell, h);
+      }
+    }
+    if (k === 'scorch') { // soot streaks
+      ctx.strokeStyle = 'rgba(10,8,7,.45)';
+      ctx.lineWidth = 2;
+      for (let s = 0; s < 9; s++) {
+        const a = rnd() * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(ox + cell / 2 + Math.cos(a) * cell * 0.08, h / 2 + Math.sin(a) * h * 0.08);
+        ctx.lineTo(ox + cell / 2 + Math.cos(a) * cell * (0.25 + rnd() * 0.17), h / 2 + Math.sin(a) * h * (0.25 + rnd() * 0.17));
+        ctx.stroke();
+      }
+    }
+  });
+}
+const wreckVariant = (id) => (Math.imul(id + 1, 2654435761) >>> 0) % WRECK_VARIANTS;
+const idNoise = (id, salt) => ((Math.imul(id + salt, 40503) >>> 0) % 1000) / 1000 - 0.5; // -0.5..0.5, fixed per id
+const strSeed = (s) => {
+  let h = 7;
+  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % 1000003;
+  return h;
+};
+const _box3 = new THREE.Box3();
+function boundsOf(list) {
+  _box3.makeEmpty();
+  for (const g of list) {
+    g.computeBoundingBox();
+    _box3.union(g.boundingBox);
   }
-  return { body: bakeAO(merge(body)), glow: merge(glow), wreck: bakeAO(merge(wreck)), pick };
+  return _box3;
+}
+function centreOf(g) {
+  g.computeBoundingBox();
+  return g.boundingBox.getCenter(new THREE.Vector3());
+}
+// rotate a part about a pivot
+function turn(g, rx, ry, rz, px, py, pz) {
+  g.translate(-px, -py, -pz);
+  _e.set(rx, ry, rz);
+  g.applyMatrix4(_m.makeRotationFromEuler(_e));
+  g.translate(px, py, pz);
+  return g;
+}
+function restOnFloor(list, floor = 0) {
+  const y = boundsOf(list).min.y;
+  for (const g of list) g.translate(0, floor - y, 0);
+}
+
+function buildWreck(type, body, glow, t, variant) {
+  const rnd = seeded(strSeed(type) * 13 + variant * 7919);
+  const r = (a, b) => a + rnd() * (b - a);
+  const parts = body.map((g) => g.clone());
+  // a bent, cracked look: every part is knocked a little out of place
+  for (const g of parts) {
+    const c = centreOf(g);
+    turn(g, r(-0.1, 0.1), r(-0.1, 0.1), r(-0.1, 0.1), c.x, c.y, c.z);
+    g.translate(r(-1.2, 1.2), 0, r(-1.2, 1.2));
+  }
+  // screens go dark, small lights go out
+  let screen = null;
+  for (const g of glow) {
+    g.computeBoundingBox();
+    const size = g.boundingBox.getSize(new THREE.Vector3());
+    const area = size.x * size.y;
+    if (area < 120) continue;
+    const dark = paint(g.clone(), '#0a0d13');
+    parts.push(dark);
+    if (!screen || area > screen.area) screen = { area, box: g.boundingBox.clone() };
+  }
+  if (screen && (type === 'monitor' || type === 'tv')) {
+    const b = screen.box;
+    const bw = b.max.x - b.min.x;
+    const bh = b.max.y - b.min.y;
+    const cx = b.min.x + bw * r(0.35, 0.65);
+    const cy = b.min.y + bh * r(0.35, 0.65);
+    const n = 6 + Math.floor(rnd() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + r(-0.3, 0.3);
+      // stop at the edge of the screen
+      const room = Math.min(Math.abs((Math.cos(a) > 0 ? b.max.x - cx : cx - b.min.x) / (Math.cos(a) || 1e-6)),
+        Math.abs((Math.sin(a) > 0 ? b.max.y - cy : cy - b.min.y) / (Math.sin(a) || 1e-6)));
+      const len = room * r(0.55, 0.95);
+      parts.push(sbox(len, 0.7, 0.5, '#aebbd0', cx + (Math.cos(a) * len) / 2, cy + (Math.sin(a) * len) / 2, b.max.z + 0.3, 0, 0, a));
+    }
+  }
+
+  // knocked-off parts lie on the floor around the wreck
+  const loose = [];
+  const detach = (g) => {
+    const c = centreOf(g);
+    // lies on its widest side (a panel lies flat, it does not stand on its edge), a little askew
+    const s = g.boundingBox.getSize(new THREE.Vector3());
+    const thin = s.x < s.y && s.x < s.z ? 'x' : s.z < s.y ? 'z' : 'y';
+    turn(g, thin === 'z' ? Math.PI / 2 : 0, 0, thin === 'x' ? Math.PI / 2 : 0, c.x, c.y, c.z);
+    turn(g, r(-0.25, 0.25), r(0, Math.PI * 2), r(-0.25, 0.25), c.x, c.y, c.z);
+    const a = r(0, Math.PI * 2);
+    const d = r(0.35, 0.75);
+    g.translate(Math.cos(a) * t.w * d - c.x, 0, Math.sin(a) * t.h * d - c.z);
+    restOnFloor([g]);
+    loose.push(g);
+  };
+  const mode = WRECK_MODE[type] || 'topple';
+  let surface = null;
+  let main = parts.slice(0, body.length);
+  const extra = parts.slice(body.length); // dark screens and cracks stay with the main body
+  if (mode === 'shatter' || mode === 'snap') main.push(...extra.splice(0)); // a lamp's bulb falls with the shade
+  if (mode === 'shatter') {
+    const top = boundsOf(main).max.y;
+    const keep = [];
+    for (const g of main) (centreOf(g).y < top * 0.45 ? keep : loose).push(g);
+    main = keep;
+    for (const g of loose.splice(0)) detach(g);
+  } else if (mode === 'snap') {
+    // long upright parts break: a stub stays, the upper piece falls; everything up top comes down
+    const top = boundsOf(main).max.y;
+    const keep = [];
+    for (const g of main) {
+      g.computeBoundingBox();
+      const b = g.boundingBox;
+      if (b.max.y - b.min.y > top * 0.4) {
+        const upper = g.clone();
+        const y0 = b.min.y;
+        const k = r(0.3, 0.45);
+        g.translate(0, -y0, 0).scale(1, k, 1).translate(0, y0, 0);
+        upper.translate(0, -y0, 0).scale(1, 1 - k, 1).translate(0, y0, 0);
+        keep.push(g);
+        detach(upper);
+      } else if (centreOf(g).y < top * 0.3) keep.push(g);
+      else detach(g);
+    }
+    main = keep;
+  } else if (main.length > 2) {
+    // one to three of the smaller parts come off
+    const vol = (g) => {
+      g.computeBoundingBox();
+      const s = g.boundingBox.getSize(new THREE.Vector3());
+      return s.x * s.y * s.z;
+    };
+    const total = main.reduce((sum, g) => sum + vol(g), 0);
+    const small = main.filter((g) => vol(g) < total * 0.2);
+    const k = Math.min(small.length, 1 + Math.floor(rnd() * 3));
+    for (let i = 0; i < k; i++) {
+      const g = small.splice(Math.floor(rnd() * small.length), 1)[0];
+      main.splice(main.indexOf(g), 1);
+      detach(g);
+    }
+  }
+  main.push(...extra);
+
+  if (mode === 'topple') {
+    const b = boundsOf(main);
+    const [x0, y0, z0, x1, z1] = [b.min.x, b.min.y, b.min.z, b.max.x, b.max.z];
+    const dir = TOPPLE_ANY_WAY.has(type) ? [0, 1, rnd() < 0.5 ? 2 : 3][variant % 3] : 0;
+    const ang = (Math.PI / 2) * r(0.9, 1);
+    for (const g of main) {
+      if (dir === 0) turn(g, ang, 0, 0, 0, y0, z1); // forward, face down
+      else if (dir === 1) turn(g, -ang, 0, 0, 0, y0, z0); // backward, face up
+      else if (dir === 2) turn(g, 0, 0, ang, x0, y0, 0); // onto its left side
+      else turn(g, 0, 0, -ang, x1, y0, 0); // onto its right side
+    }
+    restOnFloor(main);
+    const yaw = r(-0.35, 0.35);
+    for (const g of main) turn(g, 0, yaw, 0, 0, 0, 0);
+  } else if (mode === 'crush') {
+    const k = type === 'safe' ? r(0.75, 0.85) : r(0.4, 0.6);
+    const rx = r(-0.08, 0.08);
+    const rz = r(-0.12, 0.12);
+    for (const g of main) {
+      g.scale(1.06, k, 1.06);
+      turn(g, rx, r(-0.05, 0.05), rz, 0, 0, 0);
+    }
+    restOnFloor(main);
+  } else if (mode === 'collapse') {
+    // the top falls; the legs and drawers fall over underneath
+    const top = [];
+    const legs = [];
+    for (const g of main) {
+      g.computeBoundingBox();
+      (g.boundingBox.max.y > DESK_TOP - 9 ? top : legs).push(g);
+    }
+    for (const g of legs) {
+      const c = centreOf(g);
+      const a = (Math.PI / 2) * r(0.85, 1) * (rnd() < 0.5 ? 1 : -1);
+      if (rnd() < 0.5) turn(g, a, 0, 0, c.x, c.y, c.z);
+      else turn(g, 0, 0, a, c.x, c.y, c.z);
+      g.translate(c.x * 0.12, 0, c.z * 0.12);
+      restOnFloor([g]);
+    }
+    // tilted about the middle of the top: flat onto the fallen legs (variant 2), or one end on the floor and the
+    // other still up on a broken leg
+    const a = variant === 2 ? r(-0.04, 0.04) : Math.asin(Math.min(0.5, 22 / t.w)) * (variant === 0 ? 1 : -1);
+    const rx = r(-0.05, 0.05);
+    for (const g of top) turn(g, rx, 0, a, 0, DESK_TOP - 3, 0);
+    restOnFloor(top, variant === 2 ? 5 : 0);
+    // where the board's upper face now is, for the screens and laptops that fall onto it
+    const board = top.reduce((best, g) => {
+      g.computeBoundingBox();
+      const s = g.boundingBox.getSize(new THREE.Vector3());
+      return !best || s.x * s.z > best.area ? { g, area: s.x * s.z } : best;
+    }, null);
+    surface = board ? { y: centreOf(board.g).y + 3, slope: Math.tan(a) } : null;
+    main = [...top, ...legs];
+  } else {
+    // shatter: the base stays, a little askew
+    const rx = r(-0.08, 0.08);
+    const rz = r(-0.08, 0.08);
+    for (const g of main) turn(g, rx, 0, rz, 0, 0, 0);
+    restOnFloor(main);
+  }
+
+  // chips on the floor, more for big things and for porcelain
+  const pal = RUBBLE[type] || ['#888888'];
+  const chips = [];
+  const n = Math.round(Math.min(28, Math.max(8, (t.w * t.h) / 300)) * (mode === 'shatter' ? 1.6 : 1));
+  for (let i = 0; i < n; i++) {
+    const s = r(2, 6.5);
+    const h = r(0.8, 2.2);
+    const a = r(0, Math.PI * 2);
+    const d = Math.sqrt(rnd());
+    chips.push(sbox(s, h, s * r(0.5, 1.2), shade(pal[i % pal.length], r(0.55, 0.95)),
+      Math.cos(a) * t.w * 0.62 * d, h / 2, Math.sin(a) * t.h * 0.62 * d, r(-0.25, 0.25), r(0, Math.PI * 2), r(-0.25, 0.25)));
+  }
+  const geo = bakeAO(merge([...main, ...loose, ...chips]));
+  if (surface) geo.userData.surface = surface;
+  return geo;
+}
+// Height of a collapsed desk or table's top under the point (x, z) in world units, or WRECK_DESK_TOP.
+function wreckSurfaceAt(rig, x, z) {
+  const s = rig && rig.wreck.geometry.userData.surface;
+  if (!s) return WRECK_DESK_TOP;
+  const rot = rig.group.rotation.y + rig.wreck.rotation.y;
+  const dx = x - rig.group.position.x;
+  const dz = z - rig.group.position.z;
+  const lx = dx * Math.cos(rot) - dz * Math.sin(rot); // along the table's long side
+  return Math.max(2, s.y + lx * s.slope);
 }
 
 // ------------------------------------------------------- static scenery ----
@@ -572,6 +858,21 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false });
   const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+  // floor marks under wrecks: lit like the floor, drawn over it without writing depth
+  const markTex = makeCanvasTexture(512, 128, drawMarks);
+  markTex.wrapS = markTex.wrapT = THREE.ClampToEdgeWrapping;
+  const markMat = new THREE.MeshLambertMaterial({
+    map: markTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, // mirrored marks show their back polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+  });
+  const markGeos = {};
+  function markGeometry(kind) {
+    if (markGeos[kind]) return markGeos[kind];
+    const g = new THREE.PlaneGeometry(1, 1);
+    const i = MARK_KINDS.indexOf(kind);
+    const uv = g.attributes.uv;
+    for (let k = 0; k < uv.count; k++) uv.setX(k, (i + uv.getX(k)) / MARK_KINDS.length);
+    return (markGeos[kind] = g);
+  }
 
   const textures = {};
   const staticGroup = new THREE.Group();
@@ -585,7 +886,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   // ---- static world -------------------------------------------------------
   let exitMat = null;
   const stallDoors = [];
-  function buildNow(w, props, zones) {
+  function buildNow(w, props, zones, rooms = []) {
     if (built) return;
     built = true;
     world = w;
@@ -863,6 +1164,141 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const clockMesh = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), new THREE.MeshBasicMaterial({ map: clock, transparent: true }));
     clockMesh.position.set(W / 2 + 640, 200, 3);
     staticGroup.add(clockMesh);
+    buildFloorLight(rooms, props);
+  }
+
+  // ---- uneven light on the floor ------------------------------------------
+  // Real offices are not lit evenly. Without extra lights or a post pass (ADR 0003), three flat layers drawn over
+  // the floor fake it: darker strips along the foot of every wall, soft contact shadows under furniture, and pools
+  // of light under the ceiling panels, tinted per room (warm pantry and lounge, cold server room). Each layer is one
+  // merged mesh (one draw call), with fixed heights and render order so they never fight with each other.
+  const FLOOR_LAYER = { wallFoot: [1.9, 0], contact: [1.95, 0], pools: [2.4, 2] }; // [height, renderOrder]; wreck marks are 2.0-2.24
+  const ROOM_LIGHT = [ // [name prefix, light colour]
+    ['PANTRY', [1.0, 0.8, 0.56]], ['LOUNGE', [1.0, 0.8, 0.56]], ['DIRECTOR', [1.0, 0.84, 0.62]],
+    ['SERVER', [0.5, 0.72, 1.0]], ['WC', [0.88, 0.95, 1.0]],
+    ['MEETING', [1.0, 0.9, 0.76]], ['TOWN HALL', [1.0, 0.9, 0.76]],
+  ];
+  const OFFICE_LIGHT = [1.0, 0.96, 0.88];
+  const POOL_STRENGTH = 0.06;
+  // a flat quad on the floor, rotated by `rot` about its centre, with the given uvs (u0..u1, v0..v1) and colour
+  function floorQuad(list, cx, cz, w, d, rot, y, uv = [0, 1, 0, 1], col = null) {
+    const g = new THREE.PlaneGeometry(w, d);
+    g.rotateX(-Math.PI / 2);
+    g.rotateY(rot);
+    g.translate(cx, y, cz);
+    const a = g.attributes.uv;
+    for (let k = 0; k < a.count; k++) a.setXY(k, uv[0] + a.getX(k) * (uv[1] - uv[0]), uv[2] + a.getY(k) * (uv[3] - uv[2]));
+    if (col) {
+      const c = new Float32Array(a.count * 3);
+      for (let k = 0; k < a.count; k++) c.set(col, k * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    }
+    list.push(g);
+  }
+  function floorLayer(list, mat, [y, order]) {
+    if (!list.length) return null;
+    const mesh = new THREE.Mesh(mergeGeometries(list, false), mat);
+    mesh.renderOrder = order;
+    mesh.frustumCulled = false; // spans the whole office
+    staticGroup.add(mesh);
+    return mesh;
+  }
+  // one soft dark blob (a blurred rounded box) for contact shadows
+  const contactTex = makeCanvasTexture(128, 128, (ctx, w, h) => {
+    ctx.shadowColor = 'rgba(0,0,0,1)';
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetX = 1000; // only the blur is drawn: the box itself is off the canvas
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.roundRect(w * 0.22 - 1000, h * 0.22, w * 0.56, h * 0.56, 18);
+    ctx.fill();
+  });
+  contactTex.wrapS = contactTex.wrapT = THREE.ClampToEdgeWrapping;
+  const contactMat = new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, opacity: 0.5, depthWrite: false });
+
+  function buildFloorLight(rooms, props) {
+    const W = world.w;
+    const H = world.h;
+    // the foot of the walls: dark at the wall, gone 50 units out
+    const footTex = makeCanvasTexture(4, 64, (ctx, w, h) => {
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,1)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    });
+    footTex.wrapS = footTex.wrapT = THREE.ClampToEdgeWrapping;
+    const foot = [];
+    const FOOT = 50;
+    // a strip along a wall: its dark edge (v = 1, the quad's -z side before turning) touches the wall
+    const strip = (cx, cz, len, rot) => floorQuad(foot, cx, cz, len, FOOT, rot, FLOOR_LAYER.wallFoot[0]);
+    for (const p of props) {
+      if (p.k !== 'wall') continue;
+      if (p.w >= p.h) {
+        strip(p.x, p.y + p.h / 2 + FOOT / 2, p.w, 0); // south side
+        strip(p.x, p.y - p.h / 2 - FOOT / 2, p.w, Math.PI); // north side
+      } else {
+        strip(p.x + p.w / 2 + FOOT / 2, p.y, p.h, Math.PI / 2); // east side
+        strip(p.x - p.w / 2 - FOOT / 2, p.y, p.h, -Math.PI / 2); // west side
+      }
+    }
+    strip(W / 2, FOOT / 2, W, 0); // the outer walls, from inside
+    strip(W / 2, H - FOOT / 2, W, Math.PI);
+    strip(FOOT / 2, H / 2, H, Math.PI / 2);
+    strip(W - FOOT / 2, H / 2, H, -Math.PI / 2);
+    floorLayer(foot, new THREE.MeshBasicMaterial({ map: footTex, transparent: true, opacity: 0.32, depthWrite: false }), FLOOR_LAYER.wallFoot);
+
+    // pools of light under the ceiling panels, on a grid per room; the corridors get dimmer ones
+    const poolTex = makeCanvasTexture(128, 128, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.45, 'rgba(255,255,255,.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    });
+    poolTex.wrapS = poolTex.wrapT = THREE.ClampToEdgeWrapping;
+    const pools = [];
+    const SPACING = 440;
+    const SIZE = 480;
+    const pool = (x, z, rgb, k) => floorQuad(pools, x, z, SIZE, SIZE, 0, FLOOR_LAYER.pools[0], undefined, rgb.map((c) => c * k));
+    const inRoom = (x, z) => rooms.find((r) => x > r.x0 && x < r.x1 && z > r.y0 && z < r.y1);
+    for (const r of rooms) {
+      const rgb = (ROOM_LIGHT.find(([pre]) => r.name.startsWith(pre)) || [0, OFFICE_LIGHT])[1];
+      const nx = Math.max(1, Math.round((r.x1 - r.x0) / SPACING));
+      const nz = Math.max(1, Math.round((r.y1 - r.y0) / SPACING));
+      for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < nz; j++) {
+          pool(r.x0 + ((i + 0.5) * (r.x1 - r.x0)) / nx, r.y0 + ((j + 0.5) * (r.y1 - r.y0)) / nz, rgb, POOL_STRENGTH);
+        }
+      }
+    }
+    for (let x = SPACING / 2; x < W; x += SPACING) {
+      for (let z = SPACING / 2; z < H; z += SPACING) {
+        if (!inRoom(x, z)) pool(x, z, OFFICE_LIGHT, POOL_STRENGTH * 0.7);
+      }
+    }
+    floorLayer(pools, new THREE.MeshBasicMaterial({
+      map: poolTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    }), FLOOR_LAYER.pools);
+  }
+
+  // Contact shadows need the objects, which arrive after the static world: built once, the first time they are here.
+  let contactBuilt = false;
+  function buildContactShadows(objects, types) {
+    contactBuilt = true;
+    const list = [];
+    for (const o of objects) {
+      if (lift(o.type)) continue; // screens and laptops stand on desks
+      const t = types[o.type];
+      if (!t) continue;
+      const round = o.type === 'chair' || o.type === 'plant' || o.type === 'trash' || o.type === 'lamp' || o.type === 'coatrack';
+      const w = round ? Math.max(t.w, t.h) : t.w;
+      const d = round ? w : t.h;
+      // the texture's box fills the middle 56%, so the blob is drawn a little larger than the footprint
+      floorQuad(list, o.x, o.y, w * 1.45, d * 1.45, o.rot || 0, FLOOR_LAYER.contact[0]);
+    }
+    floorLayer(list, contactMat, FLOOR_LAYER.contact);
   }
 
   const ready = loadFloorTextures()
@@ -874,9 +1310,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         buildNow(...a);
       }
     });
-  function build(w, props, zones) {
-    if (!loaded) pendingBuild = [w, props, zones];
-    else buildNow(w, props, zones);
+  function build(w, props, zones, rooms) {
+    if (!loaded) pendingBuild = [w, props, zones, rooms];
+    else buildNow(w, props, zones, rooms);
   }
 
   // ---- VKL -----------------------------------------------------------
@@ -1154,11 +1590,30 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       glow = new THREE.Mesh(mod.glow, glowMat);
       group.add(glow);
     }
-    const wreck = new THREE.Mesh(mod.wreck, bodyMat);
+    const wreck = new THREE.Mesh(mod.wrecks[wreckVariant(o.id)], bodyMat);
+    wreck.rotation.y = idNoise(o.id, 7) * (types[o.type].w > 100 ? 0.2 : 0.8);
     wreck.receiveShadow = true;
     wreck.castShadow = true;
     wreck.visible = false;
     group.add(wreck);
+    // a scorch, puddle, soil or dust mark on the floor under the wreck
+    let mark = null;
+    if (!lift(o.type)) {
+      const t = types[o.type];
+      mark = new THREE.Mesh(markGeometry(MARK_KIND[o.type] || (ELECTRONIC.has(o.type) ? 'scorch' : 'dust')), markMat);
+      mark.rotation.set(-Math.PI / 2, 0, idNoise(o.id, 3) * 0.8);
+      mark.scale.set(t.w * 1.3 * (o.id % 2 ? 1 : -1), t.h * 1.3, 1);
+      mark.position.y = 2 + (o.id % 5) * 0.06; // overlapping marks never share a height
+      mark.renderOrder = 1;
+      mark.visible = false;
+      group.add(mark);
+    }
+    // a screen or laptop knows the desk or table it stands on, and drops when that collapses
+    let support = -1;
+    if (lift(o.type)) {
+      const s = all.find((d) => (d.type === 'desk' || d.type === 'table' || d.type === 'conference') && standsOn(o, d, types));
+      if (s) support = s.id;
+    }
     const pk = mod.pick || PICK[o.type] || [40, 40, 40];
     if (!largeScreen) PICK[o.type] = pk;
     const proxy = new THREE.Mesh(new THREE.BoxGeometry(pk[0], pk[1], pk[2]), pickMat);
@@ -1177,7 +1632,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       group.add(halo);
     }
     scene.add(group);
-    rig = { group, body, glow, halo, wreck, mat, proxy, o, barLift: largeScreen ? 158 : null, popPrev: 0, shown: null };
+    rig = { group, body, glow, halo, wreck, mark, support, y: lift(o.type), vy: 0, mat, proxy, o, barLift: largeScreen ? 158 : null, popPrev: 0, shown: null };
     rigs.set(o.id, rig);
     return rig;
   }
@@ -2312,7 +2767,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         }
         continue;
       }
-      const pr = project(o.x, rigs.get(o.id)?.barLift || BAR_LIFT[o.type] || 70, o.y);
+      const rg = rigs.get(o.id);
+      const dropped = rg ? lift(o.type) - rg.group.position.y : 0; // a screen that fell with its desk
+      const pr = project(o.x, (rg?.barLift || BAR_LIFT[o.type] || 70) - dropped, o.y);
       const on = pr.ok && pr.sx > -60 && pr.sx < W + 60 && pr.sy > -30 && pr.sy < H + 30;
       if (!b) {
         const el = document.createElement('div');
@@ -2406,15 +2863,32 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     sun.target.position.set(cam.x, 0, cam.z);
 
     // objects
+    if (!contactBuilt && built && S.objects.length) buildContactShadows(S.objects, S.types);
     for (const o of S.objects) {
       const rig = objectRig(o, S.types, S.objects);
       if (rig.halo) rig.halo.visible = haloOn && !o.broken;
       if (rig.shown !== o.broken) {
+        // IT cleared a wreck: a puff of dust where it lay
+        if (rig.shown === true && !lift(o.type)) fxDust(o.x, o.y, 12);
         rig.shown = o.broken;
         rig.body.visible = !o.broken;
         if (rig.glow) rig.glow.visible = !o.broken;
         rig.wreck.visible = o.broken;
+        if (rig.mark) rig.mark.visible = o.broken;
         rig.proxy.userData.broken = o.broken;
+      }
+      if (rig.support >= 0) {
+        // the desk under this screen collapsed: it falls with it, and stands up again when the desk is replaced
+        const sup = S.objects[rig.support];
+        const target = sup && sup.broken ? wreckSurfaceAt(rigs.get(sup.id), o.x, o.y) : lift(o.type);
+        if (rig.y > target) {
+          rig.vy -= 900 * dt;
+          rig.y = Math.max(target, rig.y + rig.vy * dt);
+        } else {
+          rig.y = target;
+          rig.vy = 0;
+        }
+        rig.group.position.y = rig.y;
       }
       const electric = updateElectricTarget(rig, rig.group, rig.body.geometry, o.electricUntil);
       let sx = 0;
@@ -2433,11 +2907,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const f = o.flash;
       rig.mat.color.setRGB(dark, dark, dark);
       rig.mat.emissive.setRGB(f * 0.7 + electric * 0.18, f * 0.6 + electric * 0.3, f * 0.5 + electric * 0.65);
-      rig.group.rotation.z = dmg * 0.05 * (o.id % 2 ? 1 : -1);
+      rig.group.rotation.z = o.broken ? 0 : dmg * 0.05 * (o.id % 2 ? 1 : -1); // a wreck lies flat on the floor
       if (o.broken && ELECTRONIC.has(o.type)) {
         o.smokeT -= dt;
         if (o.smokeT <= 0) {
-          fxSmoke(o.x, lift(o.type) + 16, o.y);
+          fxSmoke(o.x, rig.group.position.y + 16, o.y);
           o.smokeT = rand(0.25, 0.6);
         }
       }
