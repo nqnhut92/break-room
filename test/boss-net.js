@@ -83,6 +83,7 @@ async function main() {
     // stand still and take the rest of it
     const down = await take(a, (m) => m.t === 'down' && m.id === a.id, 12000);
     assert.strictEqual(down.ms, 1500);
+    assert.strictEqual(down.by, 'VKL', 'the knockout names who did it');
     send(a, { t: 'deaths' });
     const deaths = await take(a, (m) => m.t === 'deaths', 1500);
     assert.deepStrictEqual(deaths.list.filter((e) => e.id === a.id).map((e) => [e.n, e.rank]), [[1, 1]], 'the knock-out is counted in today\'s ranking');

@@ -411,6 +411,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         receiveDuel({ state: m.duel, ...m.duel }, true);
         const meNow = S.players.get(S.me);
         $('downOverlay').hidden = !(meNow && meNow.dead); // refreshing while knocked out keeps the countdown
+        if (meNow && meNow.dead) $('downBy').textContent = 'đã bị hạ gục'; // the cause is not in the snapshot
         S.target = null;
         S.attackId = null;
         if (scene) scene.build(m.world, m.props, m.zones, m.rooms);
@@ -1235,6 +1236,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (navigator.vibrate) navigator.vibrate(60);
     }
   }
+  // Who knocked a player out, from the server's `by` on 'down' (an older server sends none: it was always VKL then).
+  function downCause(by) {
+    if (by === 'TML' || by === 'DMM') return 'bị ' + by + ' hạ gục';
+    if (by === 'snake') return 'bị rắn cắn gục';
+    if (by === 'mole') return 'bị đâm lén hạ gục';
+    if (by === 'shock') return 'bị điện giật gục';
+    return 'bị VKL hạ gục';
+  }
   function playerDown(m) {
     if (S.duel?.target === m.id) { S.duel = null; $('duelBanner').hidden = true; }
     const p = S.players.get(m.id);
@@ -1257,7 +1266,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       hurtEl.classList.add('on');
       sfxHurt();
       $('downOverlay').hidden = false;
-    } else toast('💀 ' + p.name + ' bị VKL hạ gục');
+      $('downBy').textContent = downCause(m.by);
+    } else toast('💀 ' + p.name + ' ' + downCause(m.by));
   }
   function playerUp(m) {
     const p = S.players.get(m.id);
