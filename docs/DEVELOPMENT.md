@@ -10,7 +10,7 @@ Local runs need no Redis: all state lives in the RAM of the `npm start` process.
 
 ```
 api/ws.js            Vercel function that accepts WebSockets (exports an http server with a WebSocketServer)
-api/health.js        reports whether Redis is configured; ?deep=KEY pings Redis for real
+api/health.js        reports whether Redis is configured; ?deep=KEY pings Redis for real and reports its connection count
 api/rooms.js         server list with online counts for the join screen (CDN cached 10 s)
 lib/room-list.js     counts players per server with one store command, short in-process cache
 scripts/check-store.js  checks whether a given Redis can run the game

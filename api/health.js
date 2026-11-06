@@ -10,7 +10,19 @@ const Redis = require('ioredis');
 const { caFromEnv } = require('../lib/config');
 const { ROOMS } = require('../lib/world');
 
-module.exports = async (req, res) => {
+// How many connections the Redis server holds right now (this check's own one included) and its limit, from INFO.
+// Each game instance holds up to two (commands + pub/sub), so this shows how close the plan's connection cap is.
+// Best effort: some providers restrict INFO, and then the field is left out rather than failing the check.
+async function redisClients(r) {
+  try {
+    const info = await r.info('clients');
+    const num = key => { const m = new RegExp('^' + key + ':(\\d+)', 'm').exec(info); return m ? Number(m[1]) : undefined; };
+    const connected = num('connected_clients');
+    return connected === undefined ? undefined : { connected, max: num('maxclients') };
+  } catch (e) { return undefined; }
+}
+
+const handler = async (req, res) => {
   const url = process.env.REDIS_URL || process.env.KV_URL;
   const send = (code, body) => {
     res.statusCode = code;
@@ -47,10 +59,12 @@ module.exports = async (req, res) => {
       const [len, qs] = await Promise.all([r.llen('br:{' + room.id + '}:evq'), r.hgetall('br:{' + room.id + '}:qs')]);
       queue[room.id] = { len, dropped: Number(qs.dropped || 0), syncAt: Number(qs.syncAt || 0), err: qs.err || undefined };
     }
-    send(200, { ok: true, store: 'redis', pingMs: Date.now() - t0, queue });
+    send(200, { ok: true, store: 'redis', pingMs: Date.now() - t0, queue, clients: await redisClients(r) });
   } catch (e) {
     send(503, { ok: false, store: 'redis unreachable', error: String(e && e.message).slice(0, 120) });
   } finally {
     r.disconnect();
   }
 };
+module.exports = handler;
+module.exports.redisClients = redisClients;

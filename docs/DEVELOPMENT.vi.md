@@ -10,7 +10,7 @@ Chạy local không cần Redis: toàn bộ state nằm trong RAM của tiến t
 
 ```
 api/ws.js            hàm Vercel nhận WebSocket (export http server có gắn WebSocketServer)
-api/health.js        báo đã cấu hình Redis chưa; ?deep=KEY ping Redis thật
+api/health.js        báo đã cấu hình Redis chưa; ?deep=KEY ping Redis thật và báo số kết nối
 api/rooms.js         danh sách phòng + số người online cho màn hình vào (CDN cache 10 giây)
 lib/room-list.js     đếm người mỗi phòng bằng 1 lệnh store, cache ngắn trong tiến trình
 scripts/check-store.js  kiểm tra một Redis có chạy được game không

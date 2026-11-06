@@ -66,7 +66,7 @@ Mỗi lần build trên Vercel ghi ra `lib/build-info.json` (`scripts/stamp-asse
 
 `server.js` chạy được trên mọi host Node thường trực (Render, Railway, Fly.io, VPS): `npm install && npm start`. Một tiến trình duy nhất thì không cần Redis (state nằm trong RAM, mất khi khởi động lại). Muốn chạy nhiều instance thì đặt `REDIS_URL` như trên. Repo hiện không có Dockerfile.
 
-Health check: `GET /healthz` khi chạy `server.js`, `GET /api/health` trên Vercel (chỉ kiểm tra đã có biến Redis). `GET /api/health?deep=<HEALTH_KEY>` kết nối thật tới Redis, ghi một khoá `br:keepalive` có hạn 3 ngày và trả `pingMs`. Nếu provider xoá database khi không hoạt động, dùng uptime monitor gọi URL này với chu kỳ phù hợp chính sách gói; monitor cũng báo khi game lỗi.
+Health check: `GET /healthz` khi chạy `server.js`, `GET /api/health` trên Vercel (chỉ kiểm tra đã có biến Redis). `GET /api/health?deep=<HEALTH_KEY>` kết nối thật tới Redis, ghi một khoá `br:keepalive` có hạn 3 ngày và trả `pingMs`, hàng đợi điểm và `clients`: `{ connected, max }` lấy từ lệnh Redis `INFO clients` (tính cả kết nối của chính lần kiểm tra; bỏ trống nếu provider chặn `INFO`). Số kết nối tính theo instance Vercel, không theo người chơi: mỗi instance `api/ws` giữ tối đa hai (lệnh và pub/sub, phần đăng nhập dùng chung), còn các route HTTP chỉ mở một kết nối trong lúc xử lý request. Gọi URL này lúc đang có người chơi để biết còn cách giới hạn kết nối của gói bao xa. Nếu provider xoá database khi không hoạt động, dùng uptime monitor gọi URL này với chu kỳ phù hợp chính sách gói; monitor cũng báo khi game lỗi.
 
 ## Chọn và kiểm tra nhà cung cấp Redis
 

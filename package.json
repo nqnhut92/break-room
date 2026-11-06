@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "build": "node scripts/stamp-assets.js",
-    "test": "node test/viewport.js && node test/world.js && node test/object-respawn.js && node test/actor-collision.js && node test/boss.js && node test/snakes.js && node test/miniboss.js && node test/duel.js && node test/duel-realtime.js && node test/smoke.js && node test/boss-net.js && node test/moles.js && node test/office-patrol.js && node test/profk.js && node test/shared.js",
+    "test": "node test/viewport.js && node test/world.js && node test/object-respawn.js && node test/actor-collision.js && node test/boss.js && node test/snakes.js && node test/miniboss.js && node test/duel.js && node test/duel-realtime.js && node test/smoke.js && node test/boss-net.js && node test/moles.js && node test/office-patrol.js && node test/profk.js && node test/health.js && node test/shared.js",
     "check:store": "node scripts/check-store.js",
     "test:redis": "bash scripts/test-with-redis.sh",
     "test:audio": "node test/audio.cjs",

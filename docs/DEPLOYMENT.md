@@ -68,7 +68,7 @@ Every Vercel build writes `lib/build-info.json` (`scripts/stamp-assets.js`): the
 
 `server.js` runs on any always-on Node host (Render, Railway, Fly.io, a VPS): `npm install && npm start`. A single process needs no Redis (state lives in RAM and is lost on restart). To run several instances set `REDIS_URL` as above. The repo has no Dockerfile.
 
-Health checks: `GET /healthz` with `server.js`, `GET /api/health` on Vercel (only checks that the Redis variable is set). `GET /api/health?deep=<HEALTH_KEY>` really connects to Redis, writes a `br:keepalive` key with a 3-day expiry and returns `pingMs`. If the provider deletes idle databases, use this endpoint with an uptime monitor at an interval compatible with the actual plan; it also alerts you to failures.
+Health checks: `GET /healthz` with `server.js`, `GET /api/health` on Vercel (only checks that the Redis variable is set). `GET /api/health?deep=<HEALTH_KEY>` really connects to Redis, writes a `br:keepalive` key with a 3-day expiry and returns `pingMs`, the score queues and `clients`: `{ connected, max }` from Redis `INFO clients` (the check's own connection included; left out when the provider restricts `INFO`). Connections count per Vercel instance, not per player: each `api/ws` instance holds up to two (commands and pub/sub, which the login code shares), and the HTTP routes open one only while a request runs. Call it while people are playing to see how close the plan's connection limit is. If the provider deletes idle databases, use this endpoint with an uptime monitor at an interval compatible with the actual plan; it also alerts you to failures.
 
 ## Choosing and testing a Redis provider
 
