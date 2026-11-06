@@ -332,11 +332,11 @@ async function contract(label, makeStore) {
 
   await step(label + ': boss: one runner at a time holds the lease and keeps it by renewing', async () => {
     const r8 = room + '-bosslock';
-    assert.strictEqual(await store.bossLock(r8, 'inst-a', { now: NOW, ttlMs: 3000 }), true);
-    assert.strictEqual(await store.bossLock(r8, 'inst-b', { now: NOW + 100, ttlMs: 3000 }), false);
-    assert.strictEqual(await store.bossLock(r8, 'inst-a', { now: NOW + 1000, ttlMs: 3000 }), true, 'the holder renews');
-    await sleep(3200); // real time passes: the lease of a store that does not see our fake clock must lapse too
-    assert.strictEqual(await store.bossLock(r8, 'inst-b', { now: NOW + 4300, ttlMs: 3000 }), true, 'a dead holder is replaced after the lease runs out');
+    assert.strictEqual(await store.bossLock(r8, 'inst-a', { now: NOW, ttlMs: 250 }), true);
+    assert.strictEqual(await store.bossLock(r8, 'inst-b', { now: NOW + 25, ttlMs: 250 }), false);
+    assert.strictEqual(await store.bossLock(r8, 'inst-a', { now: NOW + 50, ttlMs: 250 }), true, 'the holder renews');
+    await sleep(350); // real time passes: the lease of a store that does not see our fake clock must lapse too
+    assert.strictEqual(await store.bossLock(r8, 'inst-b', { now: NOW + 500, ttlMs: 250 }), true, 'a dead holder is replaced after the lease runs out');
   });
 
   await step(label + ': compaction forgets offline players who never scored, keeps scorers and online players', async () => {

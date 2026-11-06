@@ -17,10 +17,12 @@ function client(port, name, room, token = newToken()) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
     const c = { ws, name, token, msgs: [], welcome: null, id: null, closeCode: null };
+    const timer = setTimeout(() => reject(new Error('join timeout for ' + name)), waitMs(4000));
     ws.on('message', (d) => {
       const m = JSON.parse(d.toString());
       c.msgs.push(m);
       if (m.t === 'welcome') {
+        clearTimeout(timer);
         c.welcome = m;
         c.id = m.you;
         const me = m.players.find((p) => p.id === m.you);
@@ -33,8 +35,7 @@ function client(port, name, room, token = newToken()) {
       c.closeCode = code;
     });
     ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, room, token })));
-    ws.on('error', reject);
-    setTimeout(() => reject(new Error('join timeout for ' + name)), waitMs(4000));
+    ws.on('error', err => { clearTimeout(timer); reject(err); });
   });
 }
 

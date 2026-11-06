@@ -37,6 +37,7 @@ Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn vào chơi
 ## Kiểm tra
 
 ```bash
+npm run test:unit   # kiểm tra nhanh layout/luật
 npm test
 npm run test:redis
 npm run test:scores   # BXH ngày + lịch sử chat, Postgres/Redis dùng-một-lần

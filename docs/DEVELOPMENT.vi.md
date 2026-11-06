@@ -36,6 +36,20 @@ npm test
 
 `test/world.js` kiểm tra bố cục và đường đi. `test/smoke.js` chạy server thật bằng WebSocket thật với store trong RAM (gồm AFK, giới hạn kết nối/phòng và công tắc tắt khẩn cấp). `test/shared.js` chạy cùng một bộ kiểm tra hợp đồng cho store RAM và Redis, rồi bật hai server dùng chung một Redis để chơi xuyên instance (đập chung một món từ hai instance, reconnect sang instance khác, giới hạn IP xuyên instance, instance chết đột ngột). Nó tự bật `redis-server` tạm trên cổng trống; nếu máy không có `redis-server` thì phần Redis được bỏ qua và in dòng `SKIP`. Có thể trỏ tới Redis có sẵn bằng `TEST_REDIS_URL`. Máy không có `redis-server`? Chạy `npm run test:redis`: lệnh này bật một container Redis tạm bằng podman hoặc docker (`scripts/test-with-redis.sh`), chạy đủ bộ test rồi xóa container; lần đầu sẽ kéo image `redis:7-alpine`.
 
+### Kiểm tra nhanh và xác minh đầy đủ
+
+`npm test` chạy cùng các bộ gameplay/store trong các tiến trình Node riêng, tối đa bốn bộ đồng thời và báo thời gian từng bộ. Nhóm RAM và Redis chạy chồng nhau (mặc định mỗi nhóm hai slot). Nhóm RAM xóa các biến URL Redis khỏi môi trường tiến trình con. Trong nhóm Redis, `office-patrol`, `profk` và `health` phải xong trước khi chạy `shared.js`: sự kiện deploy toàn cục và phép đo PUBLISH toàn Redis của nó không được ảnh hưởng fixture Redis khác. Nhóm RAM vẫn có thể chạy cùng `shared.js`. `TEST_JOBS=1 npm test` chạy tuần tự để debug; giảm `TEST_JOBS` trên máy yếu nếu chờ mạng bị timeout. Không rút ngắn cooldown game hay khoảng quan sát assertion phủ định. Contract lease của store dùng TTL fixture 250 ms và chờ hết hạn 350 ms thay vì kiểm tra lease 3 giây bằng thời gian thật.
+
+| Thay đổi / mục đích | Lệnh |
+| --- | --- |
+| Phản hồi nhanh cho layout và luật thuần | `npm run test:unit` (viewport, world, boss, snakes, duel; không có integration Redis/mạng) |
+| Một tính năng trong lúc sửa | `node test/moles.js`, hoặc lệnh browser `test:*` liên quan |
+| Xác minh cuối cho gameplay/server/store, hoặc sửa helper/runner test dùng chung | `npm run test:redis` (đã bao gồm `npm test`; không chạy lại cả hai khi code chưa đổi) |
+| Renderer, điều khiển, CSS hoặc UI khác | Các bộ browser liên quan; thêm gameplay/store nếu đổi hành vi server |
+| Chỉ sửa tài liệu | Kiểm tra nội dung và liên kết local |
+
+Repo không có pre-commit hook hay CI workflow tự chạy mọi thứ. `AGENTS.md` yêu cầu chạy Redis đầy đủ khi sửa `lib/`. Trong lúc sửa, chạy test tập trung; khi hoàn tất mới chạy xác minh đầy đủ cần thiết một lần. `test:unit` dùng để phản hồi nhanh, không thay thế integration. Test identity và điểm Postgres vẫn là lệnh riêng bên dưới; `npm test` không chạy toàn bộ browser/database suite.
+
 ## Dựng hình và nâng cấp thư viện
 
 Hình 3D dùng texture có giấy phép và hình học dựng bằng code:

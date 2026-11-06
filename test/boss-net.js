@@ -35,18 +35,19 @@ async function main() {
       world.WORLD.spawn = { ...at, rx: 0, ry: 0 };
       const ws = new WebSocket('ws://127.0.0.1:' + port + '/api/ws');
       const c = { ws, name, token, msgs: [], welcome: null, id: null };
+      const timer = setTimeout(() => reject(new Error('join timeout')), h.waitMs(4000));
       ws.on('message', (d) => {
         const m = JSON.parse(d.toString());
         c.msgs.push(m);
         if (m.t === 'welcome') {
+          clearTimeout(timer);
           c.welcome = m;
           c.id = m.you;
           resolve(c);
         }
       });
       ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name, room, token })));
-      ws.on('error', reject);
-      setTimeout(() => reject(new Error('join timeout')), h.waitMs(4000));
+      ws.on('error', err => { clearTimeout(timer); reject(err); });
     });
 
   await step('welcome carries the boss and health settings, and everyone starts at full health', async () => {

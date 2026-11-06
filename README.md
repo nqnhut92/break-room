@@ -37,6 +37,7 @@ Optional Google login saves a separate character per room; guests remain availab
 ## Tests
 
 ```bash
+npm run test:unit   # quick layout/rules checks
 npm test
 npm run test:redis
 npm run test:scores   # daily scoreboard + chat history, disposable Postgres/Redis

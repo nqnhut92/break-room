@@ -36,6 +36,20 @@ npm test
 
 `test/world.js` checks the layout and paths. `test/smoke.js` runs a real server with real WebSockets and the RAM store (including AFK, connection/room limits, name rules and the kill switch). `test/shared.js` runs one store contract against both the RAM and Redis stores, then starts two servers sharing one Redis to play across instances (smash one object from two instances, reconnect to another instance, cross-instance IP limit, sudden instance death). It starts a temporary `redis-server` on a free port by itself; if the machine has no `redis-server`, the Redis part is skipped with a `SKIP` line. Point it at an existing Redis with `TEST_REDIS_URL`. No `redis-server` installed? `npm run test:redis` starts a throwaway Redis container with podman or docker (`scripts/test-with-redis.sh`), runs the full suite and removes the container; the first run pulls `redis:7-alpine`.
 
+### Fast feedback and full validation
+
+`npm test` runs the same gameplay/store suites in separate Node processes, up to four at once, and reports suite durations. RAM and Redis suites use separate concurrent lanes (two slots each by default). The RAM lane removes Redis URL variables from its child environment. In the Redis lane, `office-patrol`, `profk` and `health` finish before `shared.js` starts: its global deploy announcements and Redis-wide PUBLISH measurements must not affect other Redis fixtures. RAM suites can continue alongside `shared.js`. `TEST_JOBS=1 npm test` restores serial execution for debugging; lower `TEST_JOBS` on a small machine if network waits time out. No game cooldown or negative-assertion observation window is shortened. The store lease contract uses a 250 ms fixture TTL and waits 350 ms for expiry instead of testing a 3 s lease in real time.
+
+| Change / purpose | Command |
+| --- | --- |
+| Quick layout and pure rules feedback | `npm run test:unit` (viewport, world, boss, snakes, duel; no Redis/network integration) |
+| One feature while editing | `node test/moles.js`, or the relevant `test:*` browser command |
+| Final gameplay/server/store validation, or changes to shared test helpers/runner | `npm run test:redis` (includes `npm test`; do not run both again on unchanged code) |
+| Renderer, controls, CSS or other UI | Relevant browser suites; add gameplay/store validation if server behavior changes |
+| Documentation only | Content and local link checks |
+
+There is no repository pre-commit hook or CI workflow that automatically runs everything. `AGENTS.md` requires the full Redis run for changes under `lib/`. Run focused checks during editing, then the required full validation once on the final changes. `test:unit` is fast feedback, not a replacement for integration coverage. Identity and Postgres score tests remain separate commands below; `npm test` does not run all browser/database suites.
+
 ## Rendering and library updates
 
 The 3D art uses licensed textures and code-built geometry:
