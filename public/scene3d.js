@@ -536,8 +536,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const ZOOM_MIN = 560;
   const ZOOM_MAX = 2300;
   // roughly the middle of the range on a computer (a whole meeting room fits, characters stay readable); closer on a phone,
-  // where the narrow screen already pulls the camera back (see `wide` below)
-  const ZOOM_START = coarse ? 900 : 1300;
+  // where the narrow screen already pulls the camera back (see `wide` below). Touch tablets (short side >= 600px, so every
+  // iPad, never a landscape phone) have room for the wider view and start close to the computer distance.
+  const tablet = coarse && Math.min(window.innerWidth || 0, window.innerHeight || 0) >= 600;
+  const ZOOM_START = coarse && !tablet ? 900 : tablet ? 1200 : 1300;
   const cam = { x: 0, z: 0, dist: ZOOM_START, pitch: 0.97, ready: false };
   try {
     const saved = Number(localStorage.getItem('br-zoom'));

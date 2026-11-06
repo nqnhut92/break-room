@@ -23,11 +23,12 @@
 }
 /* Only game gestures zoom the camera. Dialogs can still scroll normally. */
 @media (pointer: coarse) {
-  /* --status-gap is set by viewport.js only for iPad Home Screen apps whose status bar overlays the web view. */
-  :root { --play-top: max(calc(var(--safe-top) + min(var(--safe-top), 16px)), var(--status-gap, 0px)); }
-  /* Opaque band under the status bar. WebKit tints the iPad scroll-edge effect from a fixed
-     full-width element taller than 10px, so the bar reads as solid instead of blurred game. */
-  #statusBand { display: block; position: fixed; top: 0; left: 0; right: 0; height: var(--play-top); background: var(--bg); pointer-events: none; z-index: 2147483647; }
+  :root { --play-top: calc(var(--safe-top) + min(var(--safe-top), 16px)); }
+  /* iPadOS draws a scroll-edge blur in the status bar, sampled from the top of the page, so the
+     game showed through it as a washed strip. WebKit tints that effect from a fixed element at the
+     top that spans at least 90% of the width and is taller than 10px. This 12px band has a
+     background colour for that check but clips it to (absent) text, so it paints nothing. */
+  #statusBand { display: block; position: fixed; top: 0; left: 0; right: 0; height: 12px; background: var(--bg); -webkit-background-clip: text; background-clip: text; color: transparent; pointer-events: none; z-index: 2147483647; }
   /* The system band is outside the play surface; HUD coordinates start below it. */
   #app { --safe-top: 0px; --safe-height: calc(100 * var(--game-vh) - var(--safe-bottom)); }
   #app :is(button, input, select, textarea) { touch-action: pan-y; }
@@ -1097,7 +1098,7 @@ canvas {
 }
 
 /* Match usable tablet space, rather than guessing physical inches or a model name. */
-@media (pointer: coarse) and (orientation: landscape) and (min-width: 1100px) and (min-height: 800px) {
+@media (pointer: coarse) and (orientation: landscape) and (min-width: 1000px) and (min-height: 600px) {
   .plabel .boss-motto { display: block; }
 }
 

@@ -130,7 +130,7 @@ async function main() {
       check([...document.querySelectorAll('.boss-motto')].every(el=>getComputedStyle(el).whiteSpace==='nowrap' && el.getBoundingClientRect().height<16), 'desktop boss mottos stay on a single line');
       return {checks,metrics};
     });
-    if(touch)for(const [width,height,show] of [[1210,834,true],[1133,744,false],[1024,768,false],[1366,1024,true],[844,390,false]]) {
+    if(touch)for(const [width,height,show] of [[1210,834,true],[1133,744,true],[1133,680,true],[1024,768,true],[1366,1024,true],[956,440,false],[844,390,false]]) {
       await page.setViewportSize({width,height});
       const labels=await page.evaluate(()=>[...document.querySelectorAll('.boss-motto')].map(el=>({visible:getComputedStyle(el).display!=='none',below:el.getBoundingClientRect().top>=el.previousElementSibling.getBoundingClientRect().bottom})));
       assert.equal(labels.length,3,'all boss tagline elements survive viewport changes');

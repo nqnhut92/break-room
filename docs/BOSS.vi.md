@@ -160,6 +160,6 @@ Bot giả người cũng là mục tiêu đi tuần và bỏ chạy thay vì đ�
 
 Lịch/version và vị trí đi tuần nằm trong hash boss hiện có, dùng lease boss hiện có. Chỉ broadcast chuyển trạng thái; lúc đi tuần/đi về lưu vị trí mỗi giây để chuyển runner. Join/reconnect nhận sự kiện hiện tại cùng deadline gốc. Lịch rảnh không ghi mỗi tick; phòng trống không chạy vòng lặp đi tuần hay mở thêm connection Redis. `lib/office-patrol.js` giữ thời gian; test có thể override `patrolOpts`, không thêm biến môi trường production.
 
-Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” trên một dòng ngay dưới tên. Nhãn trên cảm ứng/mobile không có đề từ.
+Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” trên một dòng ngay dưới tên. Máy tính bảng (cảm ứng nằm ngang từ 1000×600, gồm mọi iPad kể cả mini) cũng hiện; nhãn trên điện thoại không có đề từ.
 
 Phòng server nằm ở hàng phía bắc, cạnh trục sảnh, cửa ở tường nam mở ra hành lang bắc. Chỗ đứng/đường tuần tra/rack, điểm kéo vào, khoảng sân trước cửa và điểm đẩy người ra đều lấy từ cửa này (`WORLD.duelDoor`, `axis` là `'x'` với cửa phía nam và `'y'` với cửa phía tây): khoảng sân là phần sàn ngay ngoài cửa, người bị đẩy ra được đặt bên ngoài cửa. Lúc bắt đấu, rào đỏ/vàng đặc chắn đúng cửa, nền phòng đổi màu/có viền và bảng “PHÒNG KHÓA” tại cửa đếm ngược. Các dấu hiệu cùng biến mất khi mở cửa/hết giờ/có người chết và phục hồi theo thời gian đấu còn lại khi reconnect. Đấu đang lưu mà điểm kéo thuộc phòng cũ được giải phóng sau lần chuyển phòng.
