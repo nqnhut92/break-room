@@ -60,11 +60,14 @@ step('boss layout: home, patrol loop and the room are open floor, inside the ser
     assert.ok(W.inBossZone(x, y), 'in zone ' + x + ',' + y);
     assert.ok(free(x, y, B.BOSS.radius + 4), 'free for the boss at ' + x + ',' + y);
   }
-  // the door gap is wide enough for the boss to stand in the doorway
-  assert.ok(free(W.SERVER_ROOM.x0, Y(1700), B.BOSS.radius));
-  // the glass walls outside the door gap are not in the zone, the racks' room is
-  assert.ok(!W.inBossZone(W.SERVER_ROOM.x0 - 200, Y(1700)));
-  assert.ok(!W.inBossZone(W.SERVER_ROOM.x0 - 60, Y(1400)));
+  // the door gap (south wall) is wide enough for the boss to stand in the doorway
+  const door = W.WORLD.duelDoor;
+  assert.strictEqual(door.axis, 'x');
+  assert.ok(free(door.x, door.y, B.BOSS.radius));
+  // only a little floor in front of the door belongs to the zone, not the corridor beside it or beyond
+  assert.ok(W.inBossZone(door.x, door.y + 60));
+  assert.ok(!W.inBossZone(door.x, door.y + 200));
+  assert.ok(!W.inBossZone(door.x - 200, door.y + 60));
   assert.ok(W.inBossZone(X(3300), Y(1700)));
 });
 
@@ -72,7 +75,9 @@ step('line of sight: furniture and glass walls stop a hammer swing, open floor d
   assert.ok(W.clearLine(X(3200), Y(1700), X(3300), Y(1700)));
   assert.ok(!W.clearLine(X(2700), Y(1400), X(3000), Y(1400)), 'through the west wall');
   assert.ok(!W.clearLine(X(3080), Y(1380), X(3080), Y(1500)), 'through a rack');
-  assert.ok(W.clearLine(X(2820), Y(1700), X(2940), Y(1700)), 'through the door gap');
+  const door = W.WORLD.duelDoor;
+  assert.ok(W.clearLine(door.x, door.y + 60, door.x, door.y - 60), 'through the door gap');
+  assert.ok(!W.clearLine(door.x - 200, door.y + 60, door.x - 200, door.y - 60), 'through the south wall beside it');
 });
 
 step('patrol: for two minutes the boss stays in its room, off the furniture, and visits every waypoint', () => {

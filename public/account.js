@@ -28,7 +28,7 @@ export function accountUI({ room, read, fill }) {
     logout.hidden = !state?.authenticated && !state?.expired;
     save.textContent = 'Sửa nhân vật';
     restore.textContent = profileError ? 'Thử tải lại' : 'Hủy chỉnh sửa';
-    join.textContent = !state?.authenticated ? 'Vào chơi ngay' : busy ? 'Đang tải…' : !character ? 'Tạo nhân vật & vào phòng' : editing ? 'Lưu & vào phòng' : 'Vào văn phòng';
+    join.textContent = !state?.authenticated ? 'Vào chơi ngay' : busy ? 'Đang tải…' : !character ? 'Tạo nhân vật & vào văn phòng' : editing ? 'Lưu & vào văn phòng' : 'Vào văn phòng';
     join.dataset.accountBusy = String(busy || profileError);
     const readOnly = !!state?.authenticated && !!character && !editing;
     editor.hidden = readOnly; summary.hidden = !readOnly;
@@ -45,10 +45,10 @@ export function accountUI({ room, read, fill }) {
     if (busy || profileError) join.disabled = true;
     else document.getElementById('nameInput').dispatchEvent(new Event('input'));
     if (profileError) return;
-    note.textContent = !state?.authenticated ? guestNote : busy ? 'Đang tải nhân vật của phòng…' : !character
-      ? 'Bạn chưa có nhân vật ở phòng này. Điền thông tin rồi bấm “Tạo nhân vật & vào phòng”.'
-      : editing ? 'Chỉnh thông tin rồi bấm “Lưu & vào phòng”.'
-      : 'Nhân vật đã sẵn sàng. Chọn phòng rồi bấm “Vào văn phòng”.';
+    note.textContent = !state?.authenticated ? guestNote : busy ? 'Đang tải nhân vật của server…' : !character
+      ? 'Bạn chưa có nhân vật ở server này. Điền thông tin rồi bấm “Tạo nhân vật & vào văn phòng”.'
+      : editing ? 'Chỉnh thông tin rồi bấm “Lưu & vào văn phòng”.'
+      : 'Nhân vật đã sẵn sàng. Bấm “Vào văn phòng” để vào.';
   }
   async function loadProfile() {
     if (!state?.authenticated) return;
@@ -74,7 +74,7 @@ export function accountUI({ room, read, fill }) {
     const { csrfToken } = await api('/api/auth/csrf');
     const form = document.createElement('form');
     form.method = 'POST'; form.action = '/api/auth/' + action;
-    for (const [name, value] of Object.entries({ csrfToken, callbackUrl: location.origin + '/?room=' + encodeURIComponent(room()) })) {
+    for (const [name, value] of Object.entries({ csrfToken, callbackUrl: location.origin + '/?server=' + encodeURIComponent(room()) })) {
       const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; form.append(input);
     }
     sessionStorage.removeItem('br-auto');
@@ -107,7 +107,7 @@ export function accountUI({ room, read, fill }) {
           const data = await api('/api/profile?room=' + encodeURIComponent(selected), {
             method: character ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
           });
-          if (selected !== room()) throw Error('Phòng đã thay đổi. Kiểm tra nhân vật trước khi vào nhé.');
+          if (selected !== room()) throw Error('Server đã thay đổi. Kiểm tra nhân vật trước khi vào nhé.');
           character = data.character; editing = false; fill(character);
         } finally { busy = false; render(); }
       }

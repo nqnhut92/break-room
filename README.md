@@ -19,7 +19,7 @@ Open http://localhost:3000. One local process needs no Redis; RAM state resets o
 
 ## Play together
 
-Pick the same **BR-1** or **BR-2** server (20 players each), then share its link. Enter a name and choose a role and appearance. On phones, use the joystick and rotate to landscape.
+Everyone joins server **BR-1** (20 players) unless a `?server=br-2` link names the other one; the copy-link button shares your server. Enter a name and choose a role and appearance. On phones, use the joystick and rotate to landscape.
 
 Optional Google login saves a separate character per room; guests remain available. With a database the board is a per-room daily ranking (resets 00:00 Vietnam time, no all-time board) and room chat keeps 24 hours; there is no long-term score history. [Identity setup](docs/IDENTITY.md) · [Scores](docs/SCORES.md).
 
@@ -29,6 +29,7 @@ Optional Google login saves a separate character per room; guests remain availab
 | Smash | Hold Space; hold SMASH! on touch screens |
 | Skill / ultimate | 1, 2, 3 / R; Skill / ULTI buttons |
 | Call IT | I |
+| Duel apology / accept drink | E / Q |
 | Chat / emoji | Enter or `/` / Shift + 1…8 |
 | Camera / mini map | Scroll, pinch, +/− / M |
 | Full-room map | Hold Tab on desktop; click/tap mini map to toggle; × closes |

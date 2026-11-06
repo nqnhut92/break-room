@@ -27,7 +27,8 @@ const INSIDE = world.serverPoint(420,380); // in the server room, near where the
 const LOBBY = world.layoutPoint(1900,1950);
 
 async function main() {
-  const app = server.createApp({ bossMaxHp: 60, bossRespawnMs: 1500, playerRespawnMs: 1500, maxConnPerIp: 100 });
+  // Spawn protection is off here: these fixtures join straight into the server room. Its own step is below.
+  const app = server.createApp({ bossMaxHp: 60, bossRespawnMs: 1500, playerRespawnMs: 1500, maxConnPerIp: 100, spawnProtectionMs: 0 });
   let port = await app.start(0);
   const join = (name, room, token = h.newToken(), at = INSIDE) =>
     new Promise((resolve, reject) => {
@@ -135,7 +136,7 @@ async function main() {
   });
 
   await step('a hammer swing does not pass through a glass wall', async () => {
-    const a = await join('Outside', 'bn-wall', undefined, world.layoutPoint(2830,1500)); // outside the west wall, abreast of the boss
+    const a = await join('Outside', 'bn-wall', undefined, { x: world.SERVER_ROOM.x0 - 50, y: world.BOSS_HOME.y }); // outside the west glass wall, abreast of the boss
     await sleep(800);
     for (let i = 0; i < 6; i++) {
       send(a, { t: 'bhit' });
@@ -148,7 +149,7 @@ async function main() {
   await app.stop();
 
   await step('ultimate: only hits on the boss fill the bar; a full bar buys one blow of 20% of its health, then it is empty again', async () => {
-    const ult = server.createApp({ bossMaxHp: 600, bossRespawnMs: 1500, maxConnPerIp: 100, rageOpts: { perBossHit: 50, cooldownMs: 100 } });
+    const ult = server.createApp({ bossMaxHp: 600, bossRespawnMs: 1500, maxConnPerIp: 100, spawnProtectionMs: 0, rageOpts: { perBossHit: 50, cooldownMs: 100 } });
     const port2 = await ult.start(0);
     const old = port;
     const c = await (async () => { port = port2; try { return await join('Rager', 'bn-ult'); } finally { port = old; } })();
@@ -166,6 +167,22 @@ async function main() {
     assert.ok((await take(c, (m) => m.t === 'rage' && m.v === 0, 1000)));
     c.ws.close();
     await ult.stop();
+  });
+
+  await step('spawn protection: blows land on a fresh player without damage until they walk, then they hurt', async () => {
+    const shielded = server.createApp({ bossMaxHp: 600, maxConnPerIp: 100, spawnProtectionMs: 10000 });
+    const port3 = await shielded.start(0);
+    const old = port;
+    const c = await (async () => { port = port3; try { return await join('Fresh', 'bn-shield'); } finally { port = old; } })();
+    assert.ok(c.welcome.shieldMs > 9000, 'the welcome carries the shield: ' + c.welcome.shieldMs);
+    await take(c, (m) => m.t === 'bstrike', 4000); // the boss still goes for them
+    await take(c, (m) => m.t === 'blocked' && m.id === c.id, 1000);
+    assert.ok(!c.msgs.some((m) => (m.t === 'hp' || m.t === 'down') && m.id === c.id), 'no damage while shielded');
+    send(c, { t: 'move', x: c.welcome.players.find((p) => p.id === c.id).x + 20, y: c.welcome.players.find((p) => p.id === c.id).y, d: 1 });
+    await take(c, (m) => m.t === 'shield' && m.id === c.id && m.ms === 0, 1000);
+    await take(c, (m) => (m.t === 'hp' || m.t === 'down') && m.id === c.id, 4000);
+    c.ws.close();
+    await shielded.stop();
   });
 
   console.log('\nAll ' + passed + ' checks passed');

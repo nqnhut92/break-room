@@ -47,7 +47,7 @@ async function main() {
   console.log('ok - moles: cap, names and the stab');
   passed++;
 
-  const opts = { moleSpawnMs: [300, 300], moleOpts: { mingleMs: [60000, 60000] }, maxConnPerIp: 100 };
+  const opts = { moleSpawnMs: [300, 300], moleOpts: { mingleMs: [60000, 60000] }, maxConnPerIp: 100, spawnProtectionMs: 0 };
   let app = server.createApp(opts);
   let port = await app.start(0);
   world.WORLD.spawn = { ...LOBBY, rx: 20, ry: 20 };
@@ -70,7 +70,7 @@ async function main() {
   await app.stop();
 
   // the next ones: it goes for somebody at once
-  app = server.createApp({ moleSpawnMs: [200, 200], moleOpts: { mingleMs: [100, 100], rageMs: 60000, rageDmg: 1, rageCooldownMs: 100 }, maxConnPerIp: 100 });
+  app = server.createApp({ moleSpawnMs: [200, 200], moleOpts: { mingleMs: [100, 100], rageMs: 60000, rageDmg: 1, rageCooldownMs: 100 }, maxConnPerIp: 100, spawnProtectionMs: 0 });
   port = await app.start(0);
   world.WORLD.spawn = { ...LOBBY, rx: 0, ry: 0 };
 

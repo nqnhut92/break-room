@@ -4,7 +4,7 @@
 
 ## Chơi chung với đồng nghiệp
 
-Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối đa 20 người. Màn hình vào hiển thị "x online" của từng server, màu xanh lá (dưới 50% sức chứa), cam (từ 50%), đỏ (từ 80%), và tự chọn sẵn server đang đông nhất còn chỗ. Muốn chơi cùng đồng nghiệp thì cùng chọn một server; nút "Copy link server" tạo link `/?room=br-1` hoặc `/?room=br-2` để chọn sẵn. Không có tạo phòng riêng: tên phòng lạ trong link cũ rơi về phòng đầu tiên. Đổi tên hoặc thêm phòng ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
+Game có **hai server cố định**: **BR-1** và **BR-2**, mỗi server tối đa 20 người. Phần chọn server ở màn vào hiện đang ẩn (`SHOW_SERVER_PICKER = false` trong `public/game.js`; code vẫn giữ), nên mọi người vào BR-1 trừ khi link chỉ định server khác. Nút "Copy link server" tạo link `/?server=br-1` hoặc `/?server=br-2`; link cũ dạng `?room=` vẫn dùng được. Khi bật lại, phần chọn server hiển thị "x online" của từng server, màu xanh lá (dưới 50% sức chứa), cam (từ 50%), đỏ (từ 80%), và tự chọn sẵn server đang đông nhất còn chỗ. Không có server riêng: tên lạ trong link rơi về server đầu tiên. Chữ hiện cho người chơi gọi một instance game là "server". Đổi tên hoặc thêm server ở danh sách `ROOMS` trong `lib/world.js` (`id` viết thường không dấu, `name` là tên hiển thị).
 
 Rời phòng bằng cửa thoát thì lần vào sau xuất hiện ở sảnh; tải lại trang hoặc mất kết nối thì quay lại đúng chỗ đang đứng.
 
@@ -18,11 +18,17 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | Đập | Space (giữ để đập liên tục; không có gì trong tầm vẫn vung búa, miễn phí), hoặc giữ nút ĐẬP! trên màn hình cảm ứng |
 | Skill | Phím 1, 2, 3 chọn búa, trà sữa hoặc điện (hoặc nút Skill); skill đang chọn nằm trên tay (cây búa, ly trà sữa, đồ chích điện) và người khác cũng thấy. Ném ly trà sữa tầm xa gấp đôi nhưng **chỉ bằng một nửa sát thương** của một cú búa, cả với đồ vật lẫn sếp |
 | Gọi IT | Phím I, hoặc nút Gọi IT: thay hết đồ mới (chung thời gian chờ) |
+| Xin lỗi khi đấu 1:1 | Phím E, hoặc nút "Em xin lỗi" khi nút hiện ra |
+| Nhận nước | Phím Q, hoặc nút "Đồng nghiệp mời nước" khi đang mời |
 | Thả emoji | Shift + phím 1 đến 8 hoặc bấm các nút emoji |
 | Chat | Enter hoặc `/`, hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game, Esc để huỷ. Khung chat luôn hiện trên máy tính; trên màn hình cảm ứng nằm ngang, lịch sử ở giữa cạnh dưới thu về một hàng sau tám giây không hoạt động; chạm bản thu gọn để mở lại |
 | Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |
 | Bản đồ nhỏ | Phím M hoặc tiện ích bản đồ để ẩn/hiện bản đồ quanh bạn; chạm/click mini map để mở/đóng bản đồ toàn room |
 | Bản đồ toàn room | Desktop: giữ Tab để xem, thả để đóng; Esc hoặc × đóng bản mở bằng click. Mobile: chạm lại mini map hoặc × để đóng. Vẫn di chuyển được; lúc nhập chat giữ thao tác bàn phím bình thường |
+
+Trên thiết bị không cảm ứng, nút xin lỗi và nút nhận nước ghi kèm phím "(E)" / "(Q)"; dòng gợi ý và danh sách hướng dẫn đều nhắc hai phím này.
+
+**Bảo vệ khi xuất hiện.** Sau khi hồi sinh, hoặc khi mới vào ở sảnh, bạn được bảo vệ 10 giây: không nguồn nào gây sát thương (VKL, TML/DMM, rắn, New Process). Boss vẫn nhắm và vung đòn vào bạn; đòn bị chặn hiện "🛡️ CHẶN!". Đi lại hoặc đánh bất cứ thứ gì (đồ vật, người chơi, boss, rắn, ulti) sẽ mất bảo vệ sớm. Mọi người thấy 🛡️ trước tên người đang được bảo vệ. Reconnect ở xa sảnh không được bảo vệ. Thời lượng là tùy chọn server `spawnProtectionMs`.
 
 Trên màn hình cảm ứng nằm ngang, nút icon skill có kích thước bằng nút ra đòn và nằm bên trái, cách 24px. Đường kính radar tự đổi theo diện tích màn hình còn trống. Tagline boss hiện trên desktop và khung cảm ứng ngang lớn; khung cảm ứng nhỏ ẩn chúng.
 
@@ -62,13 +68,13 @@ Max HP VKL tăng theo nhóm bốn người thật online: 6.000 cho 1–4 ngư�
 
 ## Văn phòng
 
-Working space thông nhau và mở ra sảnh. Cánh đông mới có phòng họp C/D/E; server kính nằm ở góc đông bắc, lùi sau một khoảng đệm. Chỗ server cũ trở thành lối đi mở. Đồ cũ giữ ID và vị trí, trừ sáu rack chuyển cùng VKL. Đòn đánh boss, luật bắt đấu và đợt săn toàn văn phòng không đổi.
+Hàng phía bắc, từ tây sang đông: **West Workspace** mở, phòng **Server** (phòng của VKL; cửa ở tường nam, mở ra hành lang bắc gần trục sảnh), **Town Hall** (màn hình lớn trên tường bắc, ghế quay về màn hình, cửa ở giữa tường nam), **Meeting C**, rồi **WC NAM / WC NU** ở góc đông bắc. Dải giữa là sảnh mở (chỗ spawn) cùng **East Workspace** mở, trải thảm, với hai phòng họp nhỏ **Meeting D** và **Meeting E** sát tường đông. Hàng phía nam: **Meeting A**, **Meeting B**, **Director**, **Pantry** và **Lounge** ở góc đông nam. Mọi chỗ ngồi ở workspace là bàn đảo sáu chỗ với hai màn hình gắn tay đỡ; chỉ bàn giám đốc giữ một màn hình. Đồ đã lưu giữ ID và loại; đồ mới được nối vào cuối.
 
-Có hàng trăm món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map hình tròn giữ bạn ở tâm, phóng gần vùng sàn trong bán kính cố định 2.000 đơn vị. Giữa bản đồ rõ, vùng ngoài mờ dần về mép; zoom camera không đổi tỉ lệ radar. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
+Có hàng trăm món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map hình tròn giữ bạn ở tâm, phóng gần vùng sàn trong bán kính cố định 1.500 đơn vị. Giữa bản đồ rõ, vùng ngoài mờ dần về mép; zoom camera không đổi tỉ lệ radar. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
 
 [Xem map hiện tại](../artifacts/map-overview.png).
 
-Tên phòng trong ảnh là chú thích bố cục; game không còn biển tên phòng lơ lửng.
+Bản đồ toàn văn phòng ghi tên từng phòng, cùng nhãn LOBBY, để người chơi hẹn chỗ gặp. Cảnh 3D không có biển tên phòng lơ lửng.
 
 ## Khách và nhân vật đã lưu
 

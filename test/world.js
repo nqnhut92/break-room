@@ -7,7 +7,7 @@ const assert = require('assert');
 const W = require('../lib/world.js');
 
 const K = W.LAYOUT_SCALE;
-const G = 20;
+const G = 10; // fine enough to find the gap beside a chair at the island desks
 const nx = Math.ceil(W.WORLD.w / G);
 const ny = Math.ceil(W.WORLD.h / G);
 const free = (x, y) => {
@@ -31,15 +31,22 @@ step('rooms: unique url-safe ids, readable names, at least one', () => {
   }
 });
 
-step('east wing expands the office without enlarging furniture', () => {
-  assert.deepStrictEqual([W.WORLD.w,W.WORLD.h],[8910,4050]);
-  const it=W.FLOOR_ROOMS.find(r=>r.name==='IT WORKSPACE');
-  const server=W.FLOOR_ROOMS.find(r=>r.name==='SERVER / VKL');
-  assert.ok(server.x0-it.x1>=243,'service corridor widens from 180 to 243');
-  assert.deepStrictEqual([server.x1-server.x0,server.y1-server.y0],[1296,1215]);
-  assert.deepStrictEqual([W.TYPES.desk.w,W.TYPES.desk.h],[150,115],'furniture does not grow with the room');
-  assert.equal(W.FLOOR_ROOMS.filter(r=>r.name.startsWith('MEETING ')).length,5);
-  assert.ok(server.x0>=W.WORLD.w-1296&&server.y0===0,'server moves to the northeast edge behind a forecourt');
+step('floor plan: north row, open workspaces, the server room at the head of the lobby spine', () => {
+  assert.strictEqual(K, 1, 'the floor plan is authored at full scale');
+  assert.deepStrictEqual([W.WORLD.w, W.WORLD.h], [6600, 3000]);
+  const room = name => W.FLOOR_ROOMS.find(r => r.name === name);
+  const server = room('SERVER'), hall = room('TOWN HALL'), west = room('WEST WORKSPACE'), east = room('EAST WORKSPACE');
+  assert.ok(server && hall && west && east && room('LOUNGE') && room('WC NAM') && room('WC NU'));
+  assert.ok(!W.FLOOR_ROOMS.some(r => /VKL/.test(r.name)), 'room labels are plain names');
+  assert.strictEqual(server.x0, west.x1, 'server room starts where the west workspace ends');
+  assert.strictEqual(server.x1, hall.x0, 'town hall is its east neighbour');
+  assert.ok(server.y0 === 0 && server.door.side === 's', 'north row, door onto the corridor');
+  assert.ok(Math.hypot(server.door.at - W.WORLD.spawn.x, server.y1 - W.WORLD.spawn.y) < 1600, 'VKL door is close to the spawn');
+  assert.ok(room('WC NU').x1 === W.WORLD.w && room('WC NAM').y0 === 0, 'the WCs take the far north-east corner');
+  assert.ok(room('LOUNGE').y1 === W.WORLD.h && room('LOUNGE').x1 === W.WORLD.w, 'the lounge joins the south row');
+  assert.deepStrictEqual([W.TYPES.desk.w, W.TYPES.desk.h], [150, 115], 'furniture keeps its size');
+  assert.equal(W.FLOOR_ROOMS.filter(r => r.name.startsWith('MEETING ')).length, 5);
+  assert.strictEqual(W.WORLD.bannerX, (hall.x0 + hall.x1) / 2, 'the wall banner hangs in the town hall');
 });
 
 step('object ids are dense and every type is known', () => {
@@ -51,36 +58,44 @@ step('object ids are dense and every type is known', () => {
   assert.ok(W.OBJECTS.length > 100);
 });
 
-step('saved object ids retain their identity and placement outside the relocated server racks',()=>{
-  const crypto=require('crypto');
-  const original=W.OBJECTS.slice(0,359).map(o=>[o.id,o.type,...(o.type==='server'?[]:[o.x,o.y]),o.rot||0]);
-  assert.equal(crypto.createHash('sha256').update(JSON.stringify(original)).digest('hex'),'b32ddedce61f90b13fe3fcc4afbeb3b8c698ad87fb9da313c880dca1ad16cc6b');
-  assert.equal(W.OBJECTS.filter(o=>o.type==='server').length,6);
+step('saved object ids keep their type; new furniture is only appended', () => {
+  // Hash of [id, type] for the 410 objects that existed before this layout; positions may move, identities may not.
+  const crypto = require('crypto');
+  const original = W.OBJECTS.slice(0, 410).map(o => [o.id, o.type]);
+  assert.equal(crypto.createHash('sha256').update(JSON.stringify(original)).digest('hex'), 'c9d976503cfed4f6a7a90b6945b3f0afadbf42ef1cb3ec0083f37dd8440cc5d4');
+  assert.equal(W.OBJECTS.filter(o => o.type === 'server').length, 6);
 });
 
-step('IT wing has four six-seat islands with facing rows and paired arm monitors', () => {
-  const desks = W.OBJECTS.filter(o => o.itDesk);
-  assert.strictEqual(desks.length, 24);
-  for (const cy of [380, 1020]) for (const cx of [1700, 2360]) {
-    const cluster = desks.filter(d => Math.abs(d.x - cx*K) <= 160*K+.001 && Math.abs(Math.abs(d.y-cy*K)-58*K)<.001);
-    assert.strictEqual(cluster.length, 6);
-    assert.strictEqual(cluster.filter(d => d.y < cy*K).length, 3);
-    assert.strictEqual(cluster.filter(d => d.y > cy*K).length, 3);
-    for (const d of cluster) {
-      const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30*K+.001 && Math.abs(o.y - d.y) <= 5*K+.001);
-      assert.strictEqual(monitors.length, 2);
-      assert.ok(monitors.every(o => (o.rot || 0) === (d.rot || 0)));
-      const chair = W.OBJECTS[d.id + 3];
-      assert.strictEqual(chair.type, 'chair');
-      assert.ok(d.y < cy*K ? chair.y < d.y : chair.y > d.y);
-      assert.strictEqual(d.rot || 0, d.y < cy*K ? Math.PI : 0);
-    }
+step('every workspace seat is a six-seat island desk with paired arm monitors; only the director keeps one screen', () => {
+  const desks = W.OBJECTS.filter(o => o.type === 'desk');
+  const single = desks.filter(o => !o.itDesk);
+  assert.strictEqual(single.length, 1, 'the director desk');
+  assert.ok(W.FLOOR_ROOMS.find(r => r.name === 'DIRECTOR'), 'director room exists');
+  const islands = desks.filter(o => o.itDesk);
+  assert.strictEqual(islands.length, 96);
+  for (const d of islands) {
+    const monitors = W.OBJECTS.filter(o => o.arm && Math.abs(o.x - d.x) <= 30.001 && Math.abs(o.y - d.y) <= 5.001);
+    assert.strictEqual(monitors.length, 2, 'two arm monitors on desk ' + d.id);
+    assert.ok(monitors.every(o => (o.rot || 0) === (d.rot || 0)));
+    const chair = W.OBJECTS.find(o => o.type === 'chair' && o.x === d.x && Math.abs(o.y - d.y) === 88);
+    assert.ok(chair, 'a chair at desk ' + d.id);
+    assert.ok(d.rot === Math.PI ? chair.y < d.y : chair.y > d.y, 'the chair is on the seat side');
   }
+  // The west workspace: 16 converted seats plus 8 new ones, in four islands.
+  const west = W.FLOOR_ROOMS.find(r => r.name === 'WEST WORKSPACE');
+  assert.strictEqual(islands.filter(d => d.x < 1400 && d.y < west.y1).length, 24);
 });
 step('hall screen is enlarged with a matching server collision footprint', () => {
   const tv = W.OBJECTS.find(o => o.type === 'tv' && o.screenScale);
   assert.ok(tv && tv.screenScale === 3.5);
-  assert.ok(W.COLLIDERS.some(([x,y,hw,hh]) => x === tv.x && y === tv.y && hw === W.TYPES.tv.h / 2 && hh === 92 * tv.screenScale / 2));
+  // On the town hall's north wall, facing the camera: the footprint lies along the wall.
+  const hall = W.FLOOR_ROOMS.find(r => r.name === 'TOWN HALL');
+  assert.ok(!tv.rot && tv.x === (hall.x0 + hall.x1) / 2 && tv.y < hall.y0 + 60);
+  assert.ok(W.COLLIDERS.some(([x,y,hw,hh]) => x === tv.x && y === tv.y && hw === 92 * tv.screenScale / 2 && hh === W.TYPES.tv.h / 2));
+  // The audience faces the screen (north).
+  const chairs = W.OBJECTS.filter(o => o.type === 'chair' && o.x > hall.x0 && o.x < hall.x1 && o.y < hall.y1);
+  assert.strictEqual(chairs.length, 12);
+  assert.ok(chairs.every(c => c.rot === Math.PI));
 });
 
 step('floor overlays never overlap at the shared render height', () => {
@@ -96,10 +111,11 @@ step('floor overlays never overlap at the shared render height', () => {
 step('working areas are open and the duel door matches the relocated room',()=>{
   const walls=W.PROPS.filter(p=>p.k==='wall');
   assert.ok(W.FLOOR_ROOMS.filter(r=>r.name.includes('WORKSPACE')).every(r=>r.open));
-  assert.ok(!walls.some(p=>Math.abs(p.x-1400*K)<1&&p.y<1260*K),'no divider between workspaces');
-  assert.ok(!walls.some(p=>Math.abs(p.y-1260*K)<1&&p.x<2700*K),'workspace opens onto circulation');
-  const room=W.FLOOR_ROOMS.find(r=>r.name==='SERVER / VKL');
-  assert.deepStrictEqual(W.WORLD.duelDoor,{x:room.x0,y:room.door.at,width:room.door.w,axis:'y'});
+  assert.ok(!walls.some(p=>Math.abs(p.y-1260)<1&&p.x<2700),'west workspace opens onto circulation');
+  const east=W.FLOOR_ROOMS.find(r=>r.name==='EAST WORKSPACE');
+  assert.ok(!walls.some(p=>p.x>east.x0+20&&p.x<east.x1-20&&p.y>east.y0+20&&p.y<east.y1-20),'no walls inside the east workspace');
+  const room=W.FLOOR_ROOMS.find(r=>r.name==='SERVER');
+  assert.deepStrictEqual(W.WORLD.duelDoor,{x:room.door.at,y:room.y1,width:room.door.w,axis:'x'});
 });
 
 step('spawn area is open floor', () => {

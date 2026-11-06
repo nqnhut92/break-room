@@ -19,7 +19,7 @@ Mở http://localhost:3000. Chạy một tiến trình không cần Redis; state
 
 ## Chơi chung
 
-Chọn cùng **BR-1** hoặc **BR-2**, tối đa 20 người mỗi server, rồi dùng nút copy link để mời đồng nghiệp. Nhập tên, chọn vai trò và diện mạo; trên điện thoại dùng joystick và xoay máy sang ngang.
+Mọi người vào server **BR-1** (tối đa 20 người) trừ khi link `?server=br-2` chỉ định server kia; nút copy link chia sẻ server của bạn. Nhập tên, chọn vai trò và diện mạo; trên điện thoại dùng joystick và xoay máy sang ngang.
 
 Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn vào chơi được không cần đăng nhập. Khi có database, BXH là bảng xếp hạng ngày theo từng phòng (về 0 lúc 00:00 giờ Việt Nam, không có BXH all-time) và chat phòng được giữ 24 giờ; không có lịch sử điểm dài hạn. [Cấu hình identity](docs/IDENTITY.vi.md) · [BXH ngày](docs/SCORES.vi.md).
 
@@ -29,6 +29,7 @@ Google login tùy chọn lưu nhân vật riêng từng phòng; vẫn vào chơi
 | Đập | Giữ Space; giữ nút ĐẬP! trên màn hình cảm ứng |
 | Skill / ulti | 1, 2, 3 / R; nút Skill / ULTI |
 | Gọi IT | I |
+| Xin lỗi khi đấu / nhận nước | E / Q |
 | Chat / emoji | Enter hoặc `/` / Shift + 1…8 |
 | Camera / bản đồ | Lăn chuột, chụm hai ngón, +/− / M |
 | Bản đồ toàn room | Desktop giữ Tab; chạm/click mini map để mở/đóng; × để đóng |

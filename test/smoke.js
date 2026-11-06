@@ -49,7 +49,7 @@ async function main() {
   // Spawn in the print alcove so walk-and-hit checks stay short.
   // Real players still spawn in reception.
   const lobbySpawn = world.WORLD.spawn;
-  world.WORLD.spawn = { x: 150, y: 300, rx: 0, ry: 0 };
+  world.WORLD.spawn = { x: 60, y: 400, rx: 0, ry: 0 }; // the aisle west of the first west-workspace island, a walk from the printers
   port = await server.start(0);
   // a second app with a high per-IP cap, for the full-room check
   const bigIp = server.createApp({ maxConnPerIp: 100 });
@@ -506,10 +506,11 @@ async function main() {
   });
 
   await step('furniture is solid: the server stops a player walking through a desk', async () => {
-    const deskObj = world.OBJECTS.find((o) => o.type === 'desk');
+    // A south-row island desk: open floor in front of it (a north-row desk backs onto the next desk).
+    const deskObj = world.OBJECTS.find((o) => o.type === 'desk' && !o.rot);
     const desk = { x: deskObj.x, y: deskObj.y, h: world.TYPES.desk.h };
     const edge = desk.y + desk.h / 2 + world.PLAYER_RADIUS; // lowest y a player's centre can reach
-    world.WORLD.spawn = { x: desk.x, y: edge + 40, rx: 0, ry: 0 }; // just in front of the first desk
+    world.WORLD.spawn = { x: desk.x + 40, y: edge + 40, rx: 0, ry: 0 }; // just in front of the desk, beside its chair
     const O = await client('Obs', 'solidroom');
     const X = await client('Walker', 'solidroom');
     let y = X.y;
@@ -607,7 +608,7 @@ async function main() {
         if (m.t === 'err') resolve(m);
       });
     });
-    assert.ok(/đầy phòng/.test(other.m), 'a second room is refused when maxRooms is 1');
+    assert.ok(/quá tải/.test(other.m), 'a second room is refused when maxRooms is 1');
     a.ws.close();
     await capped.stop();
 

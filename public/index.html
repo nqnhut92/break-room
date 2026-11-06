@@ -77,10 +77,10 @@
     <div id="bottombar">
       <div id="emotes"></div>
       <form id="chatForm" autocomplete="off">
-        <input id="chatInput" maxlength="120" placeholder="Nhắn cả phòng… (Enter hoặc /)" aria-label="Tin nhắn cho cả phòng" enterkeyhint="send">
+        <input id="chatInput" maxlength="120" placeholder="Nhắn cả server… (Enter hoặc /)" aria-label="Tin nhắn cho cả server" enterkeyhint="send">
         <button id="chatSend" class="btn" type="submit" aria-label="Gửi"><span data-icon="send"></span></button>
       </form>
-      <button id="drinkBtn" class="btn drink" type="button" hidden><span data-icon="cup-soda"></span> Đồng nghiệp mời nước</button>
+      <button id="drinkBtn" class="btn drink" type="button" aria-keyshortcuts="Q" hidden><span data-icon="cup-soda"></span> Đồng nghiệp mời nước<span class="key-hint"> (Q)</span></button>
       <button id="resetBtn" class="btn it" type="button" title="Phím I"><span data-icon="refresh-cw"></span> Gọi IT thay đồ mới</button>
       <button id="skillBtn" class="btn it" type="button" aria-label="Đổi skill" title="Bấm để đổi skill"><span data-icon="hammer"></span> Skill: Đập búa</button>
       <button id="ultBtn" class="btn ult" type="button" title="Phím R" hidden><span data-icon="zap"></span> ULTI! (R)</button>
@@ -97,7 +97,7 @@
       <button id="settingsBtn" class="btn" type="button" aria-label="Cài đặt và tiện ích" aria-haspopup="dialog" aria-controls="settingsDlg" aria-expanded="false"><span data-icon="settings"></span></button>
       <div id="sideTools">
         <button id="helpBtn" class="btn" type="button" aria-label="Hướng dẫn chơi" aria-haspopup="dialog"><span data-icon="circle-help"></span></button>
-        <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả phòng"><span data-icon="message-circle"></span></button>
+        <button id="chatBtn" class="btn" type="button" aria-label="Nhắn tin cho cả server"><span data-icon="message-circle"></span></button>
         <button id="mapBtn" class="btn" type="button" aria-label="Ẩn hoặc hiện bản đồ" aria-pressed="true"><span data-icon="map"></span></button>
         <button id="gfxBtn" class="btn" type="button" aria-label="Đồ họa cao" aria-pressed="true" title="Đồ họa cao (bật) / an toàn (tắt)"><span data-icon="sparkles"></span></button>
         <div id="zoomBtns" role="group" aria-label="Thu phóng">
@@ -164,9 +164,9 @@
     <div id="duelBanner" role="status" hidden>
       <span id="duelText"></span>
       <small id="duelApologyHint" hidden>Xin lỗi để được thả ra sớm</small>
-      <button id="duelApologyBtn" class="btn" type="button" aria-describedby="duelApologyHint" hidden>Em xin lỗi</button>
+      <button id="duelApologyBtn" class="btn" type="button" aria-describedby="duelApologyHint" aria-keyshortcuts="E" hidden>Em xin lỗi<span class="key-hint"> (E)</span></button>
     </div>
-    <div id="hint">WASD / mũi tên để di chuyển · Space để đập · 1-3 đổi skill · I gọi IT · Enter hoặc / để chat (Esc thoát) · Shift+1-8 thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
+    <div id="hint">WASD / mũi tên để di chuyển · Space để đập · 1-3 đổi skill · I gọi IT · E xin lỗi VKL · Q nhận nước · Enter hoặc / để chat (Esc thoát) · Shift+1-8 thả emoji · M để ẩn/hiện bản đồ · lăn chuột để zoom</div>
   </div>
 
   <div id="overlay">
@@ -221,12 +221,12 @@
       </div>
       </div>
       <div class="joinRooms">
-      <div class="roompick">
+      <div class="roompick" id="roomPick">
         <span class="lbl">Chọn server</span>
         <div id="roomList" class="roomlist" role="group" aria-label="Chọn server" aria-busy="true"><div class="roomskel" aria-hidden="true"></div><div class="roomskel" aria-hidden="true"></div></div>
       </div>
       <button id="joinBtn" class="btn smash" type="submit" disabled>Vào văn phòng</button>
-      <p id="scoreNote" class="join-disclaimer">BXH tính theo ngày (giờ Việt Nam) của từng phòng, khách cũng có tên trên bảng. Điểm và tin nhắn khách chỉ được nhận lại khi còn đúng phiên trình duyệt này; đăng nhập Google để giữ nhân vật, và điểm hôm nay của tab này sẽ được chuyển sang nhân vật một lần.</p>
+      <p id="scoreNote" class="join-disclaimer">BXH tính theo ngày (giờ Việt Nam) của từng server, khách cũng có tên trên bảng. Điểm và tin nhắn khách chỉ được nhận lại khi còn đúng phiên trình duyệt này; đăng nhập Google để giữ nhân vật, và điểm hôm nay của tab này sẽ được chuyển sang nhân vật một lần.</p>
       <p id="joinErr" class="err" role="alert"></p>
       </div>
     </form>
@@ -244,7 +244,7 @@
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
   <div id="leftCol">
     <div id="toasts" aria-live="polite"></div>
-    <div id="chatDock"><ol id="chatLog" aria-label="Tin nhắn trong phòng" hidden></ol><button id="chatPreview" type="button" aria-label="Mở lịch sử chat" aria-controls="chatLog">💬 Nhắn cả phòng…</button></div>
+    <div id="chatDock"><ol id="chatLog" aria-label="Tin nhắn trên server" hidden></ol><button id="chatPreview" type="button" aria-label="Mở lịch sử chat" aria-controls="chatLog">💬 Nhắn cả server…</button></div>
   </div>
 
   </div>

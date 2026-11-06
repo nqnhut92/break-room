@@ -659,7 +659,8 @@ async function contract(label, makeStore) {
 // are disconnected with code 4003 after the grace, and anyone who joins the older instance afterwards is told it is outdated.
 async function newDeploy(url) {
   const quiet = () => {};
-  const mk = (build, extra = {}) => server.createApp({ store: createRedisStore(url, { log: quiet }), log: quiet, build, ...extra });
+  // Spawn protection is off: the boss steps join straight into the server room (boss-net covers the shield).
+  const mk = (build, extra = {}) => server.createApp({ store: createRedisStore(url, { log: quiet }), log: quiet, build, spawnProtectionMs: 0, ...extra });
   const old = mk({ version: 'old1', builtAt: 1000 }, { updateGraceMs: 500 });
   const po = await old.start(0);
   const room = 'deploy-' + Date.now();
@@ -708,11 +709,12 @@ async function twoInstances(url) {
       // covered by the contract and smoke suites, not cold-start latency.
       respawnMs: 60000,
       bossMaxHp: 60, bossRespawnMs: 1500, playerRespawnMs: 1500, // a tiny boss for the boss step below
+      spawnProtectionMs: 0, // the boss step joins straight into the server room
     });
   const app1 = mk();
   const app2 = mk();
-  // Spawn by the print alcove so walk-and-hit steps are short.
-  world.WORLD.spawn = { x: 150, y: 330, rx: 0, ry: 0 };
+  // Spawn near the printers and chairs so walk-and-hit steps are short.
+  world.WORLD.spawn = { x: 60, y: 400, rx: 0, ry: 0 }; // the aisle west of the first west-workspace island
   const p1 = await app1.start(0);
   const p2 = await app2.start(0);
   const room = 'shared-' + Date.now();

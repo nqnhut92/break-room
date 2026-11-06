@@ -13,7 +13,7 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong p
 - Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 1 phút sau sếp quay lại chỗ cũ với đầy máu.
 - Ngoài sự kiện đi tuần toàn văn phòng, sếp ở phòng server; ra khỏi khu vực sẽ thoát truy đuổi, nhưng sếp không hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
 
-VKL lấy đà đấm thường chỉ dùng vòng báo dưới sàn, không phát tiếng lấy đà. Lúc ra đòn và ngã có âm va chạm riêng; New Process giữ tín hiệu chiêu đặc biệt ngắn. Thời gian và sát thương không đổi.
+VKL lấy đà đấm thường chỉ dùng vòng báo dưới sàn, không phát tiếng lấy đà. Lúc ra đòn và ngã có âm va chạm riêng (đòn đánh là một cú đấm nặng trên nền tiếng thịch nhẹ, không còn tiếng kim loại); New Process giữ tín hiệu chiêu đặc biệt ngắn. Thời gian và sát thương không đổi.
 
 ## Các con số
 
@@ -59,7 +59,7 @@ Bỏ giảm sát thương theo số mục tiêu cũ. Ulti tính 20% max HP trong
 
 Client chỉ nhận HP hiện tại/tối đa và phiên bản máu. Không gửi số người thật, bộ đếm ngưỡng hay phân loại bot. Chia nhóm và trì hoãn giảm dấu hiệu đổi HP ngay khi có người vào, nhưng số máu và số online công khai vẫn có thể giúp suy luận; không bảo đảm giấu tuyệt đối. Xem [ADR 0010](adr/0010-population-boss-health.md).
 
-**Vì sao sếp chỉ ở trong phòng server.** Bạn yêu cầu thế, và nó cũng giữ phần còn lại của game an toàn: người mới vào spawn ở sảnh, văn phòng mở không bao giờ nguy hiểm. Giống "phòng boss" trong RPG cũ: bạn chọn bước vào. Vì sếp chỉ để ý người trong phòng (hoặc trên khoảng sân trước cửa) nên đứng ở cửa chọc sếp cũng không thành đánh miễn phí: khoảng sân được tính, sếp sẽ bước ra gặp bạn.
+**Vì sao bình thường sếp ở trong phòng server.** Ngoài đợt đi tuần đã báo trước, phòng server vẫn là trận boss bạn tự chọn bước vào. Đợt đi tuần về sau cố ý làm văn phòng mở nguy hiểm trong một khoảng ngắn có báo trước. Vì sếp chỉ để ý người trong phòng (hoặc trên khoảng sân trước cửa) nên đứng ở cửa chọc sếp cũng không thành đánh miễn phí: khoảng sân được tính, sếp sẽ bước ra gặp bạn.
 
 **Vì sao có vòng đỏ.** "Làm cho đau" và "làm cho công bằng" kéo ngược nhau. Sát thương lớn (bốn cú là gục) để nó có ý nghĩa; 0,7 giây báo trước làm mỗi cú đều né được, nhờ vậy sát thương chấp nhận được thay vì ngẫu nhiên. Trên điện thoại, chạm để đi chậm hơn bàn phím nên khoảng báo trước được cho rộng rãi.
 
@@ -96,7 +96,9 @@ Game chạy trên nhiều instance Vercel cùng lúc, nên phải có **đúng m
 | `bup` | sếp quay lại, kèm max HP của mạng mới và phiên bản máu |
 | `hp` | người chơi bị thương: máu mới và sát thương |
 | `down` | người chơi bị hạ gục: bao nhiêu mili giây nữa hồi sinh |
-| `up` | người chơi hồi sinh: ở đâu, máu mới |
+| `up` | người chơi hồi sinh: ở đâu, và `shieldMs` thời gian được bảo vệ |
+| `blocked` | bảo vệ khi xuất hiện đã chặn một đòn vào người này |
+| `shield` | bảo vệ của người này kết thúc sớm (`ms: 0`) |
 
 Từ client: `bhit` (một cú búa vào sếp; server kiểm tra tầm, đường thẳng, mana và cooldown như với mọi đồ vật).
 
@@ -127,9 +129,9 @@ Mỗi 5 phút, nút “Đồng nghiệp mời nước” hiện trong 5 giây. M
 
 ## Bắt đấu 1:1
 
-Cứ 40–60 giây (ngẫu nhiên), VKL chọn một người sống trong phòng hoặc cách mép phòng tối đa 320 đơn vị. Nếu không có ai đủ gần thì bỏ lượt và hẹn lại sau 40–60 giây. Boss tung dây kéo người đó vào phòng, thổi những người sống còn lại ra hành lang phía tây.
+Cứ 40–60 giây (ngẫu nhiên), VKL chọn một người sống trong phòng hoặc cách mép phòng tối đa 320 đơn vị. Nếu không có ai đủ gần thì bỏ lượt và hẹn lại sau 40–60 giây. Boss tung dây kéo người đó vào phòng, thổi những người sống còn lại qua cửa ra hành lang bên ngoài.
 
-Trong 20 giây, người bị bắt được di chuyển và chiến đấu trong phòng nhưng không ra được; người khác không vào phòng, gây sát thương lên boss hoặc nhận đòn boss. Sau 10 giây đầu, chỉ người bị bắt thấy nút “Em xin lỗi”; bấm để mở phòng sớm. Server kiểm tra người bấm, phiên bản lượt đấu và thời gian, kể cả giữa các instance. Hết giờ, hoặc một bên bị hạ, phòng mở lại. Ngắt kết nối không xóa thời gian bị bắt; tải lại trang khôi phục thời gian còn lại. Người giữ lease boss ghi lịch, mục tiêu và vị trí kéo/thổi nguyên tử trong store, có kiểm tra phiên bản.
+Trong 20 giây, người bị bắt được di chuyển và chiến đấu trong phòng nhưng không ra được; người khác không vào phòng, gây sát thương lên boss hoặc nhận đòn boss. Sau 10 giây đầu, chỉ người bị bắt thấy nút “Em xin lỗi”; bấm để mở phòng sớm. Server kiểm tra người bấm, phiên bản lượt đấu và thời gian, kể cả giữa các instance. Hết giờ, hoặc một bên bị hạ, phòng mở lại. Ngắt kết nối không xóa thời gian bị bắt; tải lại trang khôi phục thời gian còn lại. Bot giả người (nội gián) bị kéo vào đấu cũng nhận đòn VKL như người chơi. Người giữ lease boss ghi lịch, mục tiêu và vị trí kéo/thổi nguyên tử trong store, có kiểm tra phiên bản.
 
 Rắn có thân liền uốn chữ S, đuôi thuôn và lưỡi chẻ. Khi triệu hồi, boss giơ tay cùng vòng phép xanh. Hiệu ứng dùng hình học tái sử dụng, không thêm post-processing.
 
@@ -146,9 +148,13 @@ Phá một tủ trừ 2% max HP VKL trong store tại thời điểm đó, một
 
 ## Sếp đi tuần
 
-Sau 3–5 phút có người chơi trong phòng, banner ngay dưới header báo trước 5 giây: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL ra khỏi phòng server, cùng TML/DMM chủ động săn người còn sống ở gần trong 30 giây. Damage, tốc độ và dấu báo đòn giữ nguyên; không biết vị trí mục tiêu trên toàn map. Mini-boss ưu tiên mục tiêu chưa bị boss khác chọn khi có lựa chọn gần đó. VKL chỉ đấm thường, không dùng New Process hay bắt đấu 1:1 trong sự kiện. Đấu đang diễn ra làm hoãn thông báo. Boss đã chết không được hồi sinh để tham gia; VKL chết giữa đợt không hủy phần đi tuần còn lại của hai mini-boss.
+Sau 2–3 phút có người chơi trong phòng, banner ngay dưới header báo trước 5 giây: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL ra khỏi phòng server, cùng TML/DMM chủ động săn người còn sống ở gần trong 30 giây. Damage, tốc độ và dấu báo đòn giữ nguyên; không biết vị trí mục tiêu trên toàn map. Mini-boss ưu tiên mục tiêu chưa bị boss khác chọn khi có lựa chọn gần đó. VKL chỉ đấm thường, không dùng New Process hay bắt đấu 1:1 trong sự kiện. Đấu đang diễn ra làm hoãn thông báo. Boss đã chết không được hồi sinh để tham gia; VKL chết giữa đợt không hủy phần đi tuần còn lại của hai mini-boss.
 
-Hết đợt, VKL tự đi về theo sàn đi được và không đánh trên đường về; mini-boss hủy windup đi tuần và trở lại luật bị khiêu khích cũ. Khoảng nghỉ 3–5 phút tiếp theo tính từ lúc VKL về tới nơi (hoặc đã chết). Nếu phòng ngừng hoạt động qua cả thời gian báo và sự kiện thì không phát lại đợt cũ. Người mới vào sảnh và người hồi sinh được bảo vệ khỏi đòn đi tuần 3 giây; ra đòn sẽ mất bảo vệ. Reconnect ở xa sảnh không cấp bảo vệ.
+Hết đợt, VKL tự đi về theo sàn đi được và không đánh trên đường về; mini-boss hủy windup đi tuần và trở lại luật bị khiêu khích cũ. Khoảng nghỉ 2–3 phút tiếp theo tính từ lúc VKL về tới nơi (hoặc đã chết). Nếu phòng ngừng hoạt động qua cả thời gian báo và sự kiện thì không phát lại đợt cũ. Vòng báo đòn bị server hủy (ví dụ khi hết đợt đi tuần) cũng biến mất trên client.
+
+Trong lúc báo trước và lúc săn, client phát một vòng nhạc căng thẳng tổng hợp bằng Web Audio (không tải bản nhạc nào): tiếng bass như nhịp tim lúc báo trước, cả vòng nhạc lúc săn, rồi nhỏ dần khi hết. Tắt tiếng thì nhạc cũng im.
+
+**Bảo vệ khi xuất hiện.** Người hồi sinh và người mới vào ở sảnh được bảo vệ 10 giây (tùy chọn server `spawnProtectionMs`; test đặt 0). Trong lúc đó không nguồn nào gây sát thương: VKL, TML/DMM, rắn hay New Process. Boss vẫn nhắm và vung đòn, nên sự kiện không bị khựng quanh người được bảo vệ; đòn bị chặn hiện "🛡️ CHẶN!". Đi lại hoặc đánh bất cứ thứ gì (đồ vật, người chơi, VKL, mini-boss, rắn, ulti) sẽ mất bảo vệ. Mọi người thấy 🛡️ trong nhãn tên. Reconnect ở xa sảnh không cấp bảo vệ.
 
 Bot giả người cũng là mục tiêu đi tuần và bỏ chạy thay vì đâm lén trong sự kiện. Đòn boss trừ theo cùng tỷ lệ máu người thật (30/100 tương đương 2,4 trên 8 HP nội bộ), không làm lộ bot và không phát bounty hạ bot. Bot chưa lộ hồi sau 4 giây với tốc độ tương đương 5 HP người/giây. Bot bị hạ hiện animation gục thông thường, ghi số lần ngỏm rồi rời phòng sau thời gian nằm 15 giây. Người chơi đánh vẫn làm lộ; bot đã lộ giữ nguyên danh tính.
 
@@ -156,4 +162,4 @@ Lịch/version và vị trí đi tuần nằm trong hash boss hiện có, dùng 
 
 Trên desktop, VKL hiện “Mọi người nghĩ dì dẫy?” trên một dòng ngay dưới tên. Nhãn trên cảm ứng/mobile không có đề từ.
 
-Server nằm ở góc đông bắc cánh đông, mặt kính hướng ra khoảng đệm. Chỗ đứng/đường tuần tra/rack, điểm kéo vào và điểm đẩy người ra đều lấy từ bố cục phòng. Lúc bắt đấu, rào đỏ/vàng đặc chắn đúng cửa chung, nền phòng đổi màu/có viền và bảng “PHÒNG KHÓA” tại cửa đếm ngược. Các dấu hiệu cùng biến mất khi mở cửa/hết giờ/có người chết và phục hồi theo thời gian đấu còn lại khi reconnect. Đấu đang lưu mà điểm kéo thuộc phòng cũ được giải phóng sau lần chuyển phòng.
+Phòng server nằm ở hàng phía bắc, cạnh trục sảnh, cửa ở tường nam mở ra hành lang bắc. Chỗ đứng/đường tuần tra/rack, điểm kéo vào, khoảng sân trước cửa và điểm đẩy người ra đều lấy từ cửa này (`WORLD.duelDoor`, `axis` là `'x'` với cửa phía nam và `'y'` với cửa phía tây): khoảng sân là phần sàn ngay ngoài cửa, người bị đẩy ra được đặt bên ngoài cửa. Lúc bắt đấu, rào đỏ/vàng đặc chắn đúng cửa, nền phòng đổi màu/có viền và bảng “PHÒNG KHÓA” tại cửa đếm ngược. Các dấu hiệu cùng biến mất khi mở cửa/hết giờ/có người chết và phục hồi theo thời gian đấu còn lại khi reconnect. Đấu đang lưu mà điểm kéo thuộc phòng cũ được giải phóng sau lần chuyển phòng.

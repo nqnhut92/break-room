@@ -23,7 +23,11 @@ const { createMemoryStore } = require('../lib/store-memory');
 const world = require('../lib/world');
 const K=world.LAYOUT_SCALE;
 const X=x=>world.serverPoint(x-2880,0).x;
-const fixturePoint=(x,y)=>x>=2700&&y===1700?world.serverPoint(x-2880,y-1260):world.layoutPoint(x,y);
+// Fixtures are written against a room whose door faces the corridor: x < 2880 on the y=1700 line is that much
+// outside the door (south of it now), x >= 2880 is inside the room, relative to its corner.
+const door=world.WORLD.duelDoor;
+const fixturePoint=(x,y)=>x>=2700&&y===1700?(x<2880?{x:door.x,y:door.y+(2880-x)}:world.serverPoint(x-2880,y-1260)):world.layoutPoint(x,y);
+const outside=p=>p.y>world.BOSS_ROOM.y1, inside=p=>p.y<=world.BOSS_ROOM.y1-world.PLAYER_RADIUS;
 const { DUEL } = require('../lib/duel');
 const clock = Date.now, random = Math.random, interval = global.setInterval, clear = global.clearInterval;
 let now = 1000000;
@@ -65,6 +69,12 @@ async function join(host, name, at, token = name.padEnd(20, 'x'), room = 'duel')
   ws.id = welcome.you; ws.token = token; ws.welcome = welcome;
   return ws;
 }
+// Walk out through the south door in a few legal steps (one move message is speed-limited).
+async function walkOut(ws) {
+  for (const y of [world.BOSS_ROOM.y0 + 500, world.BOSS_ROOM.y1 - 40, door.y + 130]) for (let i = 0; i < 4; i++) {
+    now += 300; ws.emit('message', Buffer.from(JSON.stringify({t:'move',x:door.x,y,d:1}))); await flush();
+  }
+}
 async function move(ws, x, y) { ws.emit('message', Buffer.from(JSON.stringify({t:'move',...fixturePoint(x,y),d:1}))); await flush(); }
 async function main() {
   const a = instance(), b = instance();
@@ -82,20 +92,20 @@ async function main() {
   const cast = near.msgs.find(m=>m.t==='bduel' && m.state.target);
   assert.ok(cast,'boss cast 1:1'); assert.equal(cast.state.target, near.id);
   assert.equal(cast.ms,20000); assert.ok(spectator.msgs.some(m=>m.t==='bduel' && m.state.version===cast.state.version));
-  assert.equal(near.player.x,X(3100)); assert.ok(spectator.player.x < world.BOSS_ROOM.x0);
+  assert.equal(near.player.x,X(3100)); assert.ok(outside(spectator.player));
   assert.equal(distant.player.x,1900*K); assert.equal(distant.player.y,1950*K);
   console.log('ok - one leader casts after 40s, pulls a nearby user and blows a remote occupant out');
   await move(near,2750,1700); assert.equal(near.player.x,X(3100),'in-flight pre-pull input is ignored');
   await advance(DUEL.pullMs + 100);
-  await move(near,2750,1700); assert.ok(near.player.x >= world.BOSS_ROOM.x0 + world.PLAYER_RADIUS);
-  await move(spectator,3100,1700); assert.ok(spectator.player.x < world.BOSS_ROOM.x0);
+  await move(near,2750,1700); assert.ok(inside(near.player));
+  await move(spectator,3100,1700); assert.ok(outside(spectator.player));
   console.log('ok - capture and spectator entry are constrained by authoritative movement on both instances');
   // A new socket takes over the same player on the other instance (as with refresh/renewal).
   const again = await join(b,'Near',{x:1900,y:1950},near.token);
   assert.equal(again.id,near.id); assert.equal(near.readyState,3);
   assert.ok(again.welcome.duel.ms > 0 && again.welcome.duel.ms < 20000);
-  assert.ok(again.player.x >= world.BOSS_ROOM.x0 + world.PLAYER_RADIUS);
-  await move(again,2750,1700); assert.ok(again.player.x >= world.BOSS_ROOM.x0 + world.PLAYER_RADIUS);
+  assert.ok(inside(again.player));
+  await move(again,2750,1700); assert.ok(inside(again.player));
   console.log('ok - refresh on a different instance preserves capture and remaining time');
   // Disconnect the leader's last local socket: its lease expires, the other runner takes over.
   const targetUntil = (await base.duelGet('duel',{now})).until;
@@ -104,7 +114,7 @@ async function main() {
     await advance(Math.min(100,targetUntil-now));
   }
   assert.ok(again.msgs.some(m=>m.t==='bduel' && m.state.target===0 && m.state.version>cast.state.version));
-  await move(again,2750,1700); assert.ok(again.player.x < world.BOSS_ROOM.x0,'released at 20s');
+  await walkOut(again); assert.ok(outside(again.player),'released at 20s');
   assert.equal((await base.duelGet('duel',{now})).target,0);
   assert.equal(again.msgs.filter(m=>m.t==='bduel' && m.state.target).length,0,'no replay on handover/reconnect');
   console.log('ok - leader handover preserves the 20s timer, then unlocks without replaying the cast');
@@ -146,7 +156,7 @@ async function main() {
   assert.ok(now < active.until,'released before 20s timeout');
   assert.ok(keeper.msgs.some(m=>m.t==='bduel' && m.state.version===released.version));
   assert.ok(rejoined.msgs.some(m=>m.t==='bduel' && m.state.version===released.version));
-  await move(rejoined,2750,1700); assert.ok(rejoined.player.x < world.BOSS_ROOM.x0);
+  await walkOut(rejoined); assert.ok(outside(rejoined.player));
   await apologize(rejoined);
   assert.equal((await base.duelGet('apology',{now})).version,released.version,'duplicate apology has no effect');
   console.log('ok - apology after 10s releases across instances; early, spectator, stale and duplicate requests cannot release');

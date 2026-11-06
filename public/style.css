@@ -116,6 +116,8 @@ canvas {
   text-shadow: 0 1px 2px #000;
 }
 .plabel.me .nm { color: #ffd34d; }
+/* spawn protection: a shield before the name until the player moves or attacks */
+.plabel.shielded .nm::before { content: '🛡️ '; }
 .plabel .rl { font-size: 10.5px; font-weight: 600; color: #c9d1de; text-shadow: 0 1px 2px #000; line-height: 1.1; }
 #joinForm .opt { color: var(--muted); opacity: .7; font-size: 12px; }
 .plabel .rl:empty { display: none; }
@@ -249,6 +251,10 @@ canvas {
   font-size: 13px;
   padding: 8px 12px;
 }
+/* keyboard shortcut labels only make sense with a keyboard */
+@media (pointer: coarse) { .key-hint { display: none; } }
+/* the row's buttons are flex boxes, which drop the space between the icon and its label */
+#bottombar > .btn { gap: 6px; }
 
 /* The top bar is one full-width strip. The game view starts below it (see
    S.top in game.js), so it never covers the plants or the clock. */
@@ -566,6 +572,7 @@ canvas {
 .card .sub { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .roompick { display: flex; flex-direction: column; gap: 6px; }
+.roompick[hidden] { display: none !important; }
 .roompick .lbl { font-size: 13px; color: var(--muted); }
 .gender { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .gender label { position: relative; display: block; }
@@ -944,6 +951,19 @@ canvas {
   #joinBtn { grid-column: 2; grid-row: 4; }
   #scoreNote { grid-column: 1; grid-row: 4 / 6; align-self: start; padding-right: 24px; }
   #joinErr { grid-column: 2; grid-row: 5; }
+}
+/* Server picker hidden: the character fields take the full width (no empty right column),
+   and the join button sits beside the score note. */
+@media (min-width: 760px), (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
+  #joinForm.no-server-pick .joinFields { grid-column: 1 / -1; padding-right: 0; border-right: 0; }
+  #joinForm.no-server-pick #scoreNote { grid-row: 4; align-self: center; }
+  #joinForm.no-server-pick #joinBtn { grid-row: 4; align-self: center; }
+  #joinForm.no-server-pick #joinErr { grid-column: 1 / -1; }
+}
+/* Wide screens, and short landscape phones where a second row of fields would push the join button off screen. */
+@media (min-width: 1000px), (max-height: 420px) and (min-width: 600px) {
+  #joinForm.no-server-pick .joinFields, #joinForm.no-server-pick .character-details { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #joinForm.no-server-pick .joinFields { align-items: end; } /* a label that wraps must not push its input out of line */
 }
 @media (max-height: 559px) and (min-width: 600px) {
   #accountBox { padding: 8px 0; max-height: 88px; overflow-y: auto; }

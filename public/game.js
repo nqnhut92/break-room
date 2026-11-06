@@ -231,6 +231,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       swing: 0, emote: null, emoteT: 0, chat: '', chatT: 0, skill: 'hammer',
       hp: typeof p.hp === 'number' ? p.hp : 100, hpT: performance.now() - (p.hpAgo || 0), hpFrac: 1,
       dead: (p.deadMs || 0) > 0, deadAt: performance.now() + (p.deadMs || 0), moving: false, heading: 0,
+      shieldUntil: performance.now() + (p.shieldMs || 0), // spawn protection: no damage until it ends, you move or you attack
     });
   }
 
@@ -372,7 +373,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     switch (m.t) {
       case 'welcome': {
         S.officePatrol = m.officePatrol || null;
-        if (m.guestTemporary) toast('Chưa kiểm tra được tên đã giữ. Bạn đang dùng tên khách tạm trong phòng này.');
+        if (m.guestTemporary) toast('Chưa kiểm tra được tên đã giữ. Bạn đang dùng tên khách tạm trên server này.');
         if (m.newer || (m.build && m.build !== 'dev' && MY_BUILD && m.build !== MY_BUILD)) showUpdate(false);
         $('drinkBtn').hidden = true;
         clearTimeout(drinkTimer);
@@ -395,6 +396,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.mana = { v: m.mana.v, t: performance.now() - m.mana.ago };
         S.players = new Map();
         m.players.forEach(addPlayer);
+        { const self = S.players.get(S.me); if (self && m.shieldMs) { self.shieldUntil = performance.now() + m.shieldMs; toast('🛡️ Được bảo vệ ' + Math.round(m.shieldMs / 1000) + ' giây. Di chuyển hoặc đánh là hết.'); } }
         for (const f of m.moles || []) revealMole(f.id, f.hp);
         S.rageMax = (m.rage && m.rage.max) || 100;
         setRage((m.rage && m.rage.v) || 0);
@@ -409,6 +411,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         S.target = null;
         S.attackId = null;
         if (scene) scene.build(m.world, m.props, m.zones);
+        mm.rooms = m.rooms || [];
         mmBuild(m.world, m.props, m.zones);
         S.joined = true;
         syncOrientation();
@@ -427,7 +430,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         $('conn').hidden = true;
         $('roomName').textContent = m.roomLabel || S.room;
         try {
-          history.replaceState(null, '', '?room=' + encodeURIComponent(S.room));
+          history.replaceState(null, '', '?server=' + encodeURIComponent(S.room));
         } catch (e) { /* ignore */ }
         if (!S.welcomed) {
           S.welcomed = true;
@@ -519,6 +522,16 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'up':
         playerUp(m);
         break;
+      case 'blocked': {
+        const p = S.players.get(m.id);
+        if (p && scene) scene.fx.floatText(p.x, 150, p.y, '🛡️ CHẶN!', '#8fd3ff', 18);
+        break;
+      }
+      case 'shield': {
+        const p = S.players.get(m.id);
+        if (p) p.shieldUntil = performance.now() + (m.ms || 0);
+        break;
+      }
       case 'mana':
         if (S.manaCfg) S.mana = { v: m.v, t: performance.now() - m.ago };
         break;
@@ -596,7 +609,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         drinkClaimed = Math.max(drinkClaimed, m.id);
         clearTimeout(drinkTimer);
         $('drinkBtn').hidden = true;
-        toast('🧃 ' + m.name + ' mời nước! Cả phòng được hồi đầy máu và mana.');
+        toast('🧃 ' + m.name + ' mời nước! Cả server được hồi đầy máu và mana.');
         break;
       case 'heal': {
         const p = S.players.get(m.id);
@@ -662,6 +675,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       case 'officePatrol':
         if (!S.officePatrol || m.state.version >= S.officePatrol.version) S.officePatrol = m.state;
+        // The patrol's end cancels any wind-up on the server without a strike: clear the warning circles now.
+        if (m.state.phase !== 'active') { if (S.boss) S.boss.wind = null; for (const b of S.minis.values()) b.wind = null; }
         positionOfficeNotice();
         break;
       case 'serverShock': {
@@ -1206,11 +1221,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     p.hpT = performance.now();
     p.x = p.tx = m.x;
     p.y = p.ty = m.y;
+    p.shieldUntil = performance.now() + (m.shieldMs || 0);
     if (m.id === S.me) {
       $('downOverlay').hidden = true;
       S.target = null;
       if (scene) scene.cameraTo(m.x, m.y);
-      toast('Bạn đã hồi sinh ở sảnh, nhớ né đòn nhé');
+      toast(m.shieldMs ? '🛡️ Hồi sinh ở sảnh, được bảo vệ ' + Math.round(m.shieldMs / 1000) + ' giây. Di chuyển hoặc đánh là hết.' : 'Bạn đã hồi sinh ở sảnh, nhớ né đòn nhé');
     }
   }
 
@@ -1327,7 +1343,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   let chatIdleTimer = 0, chatTouching = false, chatReading = false;
   function chatWake(force = false) {
     const dock = $('chatDock'), preview = $('chatPreview');
-    preview.textContent = chatLog.lastElementChild?.textContent || '💬 Nhắn cả phòng…';
+    preview.textContent = chatLog.lastElementChild?.textContent || '💬 Nhắn cả server…';
     chatLog.classList.remove('idle');
     dock.classList.toggle('expanded', !!(force || chatLog.children.length));
     clearTimeout(chatIdleTimer);
@@ -1494,7 +1510,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   // -------------------------------------------------------------- minimap ----
   const MM_ZONE = { tile: '#6d7f94', metal: '#505a6b', wood: '#6e5538' };
-  const mm = { cv: $('minimap'), base: null, k: 1, dpr: 1, on: true, w: 0, h: 0 };
+  const mm = { cv: $('minimap'), base: null, k: 1, dpr: 1, on: true, w: 0, h: 0, rooms: [] };
   try {
     mm.on = localStorage.getItem('br-minimap') !== '0';
   } catch (e) { /* ignore */ }
@@ -1597,7 +1613,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!me) return;
     const c = canvas.getContext('2d'), aspect = canvas.width / canvas.height;
     // A steady local scale prevents camera zoom from shrinking the whole office into the radar.
-    const range = 2000;
+    const range = 1500;
     const width = full ? world.w : range * 2;
     const height = full ? world.h : width / aspect;
     const x0 = full ? 0 : me.x - width / 2, y0 = full ? 0 : me.y - height / 2;
@@ -1618,6 +1634,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.fillStyle = o.broken ? '#ff5d4a' : solid ? '#8b6f4e' : '#7a869a';
       const sz = Math.max(1.6, (solid ? t.w * 0.7 : 24) * k);
       c.fillRect(x(o.x) - sz / 2, y(o.y) - sz / 2, sz, sz);
+    }
+    if (full) {
+      // Room names, so players can say where to meet. The lobby is open floor around the spawn.
+      const labels = [...mm.rooms, { name: 'LOBBY', x0: world.spawn.x, x1: world.spawn.x, y0: world.spawn.y - 260, y1: 0 }];
+      c.font = '700 ' + Math.round(11 * mm.dpr) + 'px system-ui, sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'top';
+      c.lineJoin = 'round'; c.lineWidth = 3 * mm.dpr; c.strokeStyle = 'rgba(10,14,22,.85)'; c.fillStyle = '#ffffff';
+      for (const r of labels) {
+        const lx = x((r.x0 + r.x1) / 2), ly = y(r.y0) + 6 * mm.dpr;
+        c.strokeText(r.name, lx, ly); c.fillText(r.name, lx, ly);
+      }
     }
     for (const p of S.players.values()) {
       if (p.id === S.me || !inside(p)) continue;
@@ -1722,13 +1749,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       ? [
           '<b>Kéo núm bên trái</b> để di chuyển. Đến gần mục tiêu rồi dùng nút ra đòn bên phải.',
           '<b>Giữ nút ĐẬP!</b> để đập liên tục khi đã đứng cạnh đồ.',
-          '<b>Bấm 💬</b> để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
+          '<b>Bấm 💬</b> để nhắn cho cả server, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Chụm hai ngón</b> hoặc bấm <b>+ / −</b> để zoom trong game, nút <b>🗺</b> ẩn hiện bản đồ nhỏ; chạm bản đồ nhỏ để xem toàn văn phòng.',
           'Tắt khóa xoay và cầm máy ngang để chơi. Trong Safari, chọn <b>Chia sẻ → Thêm vào Màn hình chính</b> (bật <b>Mở dưới dạng ứng dụng web</b> nếu có) để chơi không có thanh trình duyệt.',
         ]
       : [
           '<b>WASD</b> hoặc <b>mũi tên</b> để đi, <b>Space</b> để đập (giữ để đập liên tục).',
-          '<b>Enter</b> hoặc bấm vào ô chat để nhắn cho cả phòng, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
+          '<b>Enter</b> hoặc bấm vào ô chat để nhắn cho cả server, tin hiện dưới thông báo và thành bong bóng trên đầu bạn vài giây.',
           '<b>Lăn chuột</b> để zoom, <b>M</b> để ẩn hiện bản đồ nhỏ, giữ <b>Tab</b> xem toàn văn phòng, <b>Shift + 1 đến 8</b> để thả emoji.',
         ];
     const itPolicy = S.respawnPolicy || { minMs: 25000, maxMs: 60000 };
@@ -1740,13 +1767,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       '<b>Thanh xanh dưới tên bạn là mana.</b> Mỗi cú đập tốn một ít, hết thì phải nghỉ vài giây mới hồi.',
       'Đồ đã bị đập hiện <b>thanh máu</b>: xanh khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối.',
       '<b>VKL</b> canh phòng server (kho tủ server 120 triệu). Bước vào là bị đấm: <b>vòng đỏ dưới đất</b> báo chỗ nắm đấm sắp rơi, chạy ra khỏi vòng là né được. Mỗi đấm mất 30 máu, hết 100 máu thì nằm 15 giây rồi hồi sinh ở sảnh.',
-      'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, máu tối đa tăng theo từng nhóm 4 người online trong phòng. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
+      'Sếp không hồi máu nên cứ đánh bớt rồi chạy cũng được, máu tối đa tăng theo từng nhóm 4 người online trên server. Sếp ngã thì <b>500 triệu tiền thưởng</b> chia theo sát thương. Sếp bị hạ sẽ quay lại sau 1 phút.',
       'Máu của bạn tự hồi chậm sau vài giây không bị đánh. Ngoài sự kiện đi tuần, ra khỏi khu phòng server là sếp không đuổi theo.',
       touch ? 'Bấm <b>Skill</b> để đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b>. Giữ nút ra đòn bên phải để dùng skill.' : 'Đổi giữa <b>Đập búa</b>, <b>Ném ly trà sữa</b> và <b>Chích điện</b> bằng phím <b>1, 2, 3</b> hoặc nút <b>Skill</b>. Giữ <b>Space</b> để dùng.',
-      'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b> để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
+      'Mỗi 40–60 giây, VKL kéo ngẫu nhiên một người ở gần phòng server vào đấu 1:1 trong 20 giây. Sau 10 giây đầu, bấm <b>Em xin lỗi</b>' + (touch ? '' : ' (phím <b>E</b>)') + ' để được thả sớm. Những người khác bị thổi ra; phòng khóa đến khi hết giờ hoặc một bên bị hạ.',
       'VKL triệu hồi rắn ở 70%, 40% và 10% máu. Đợt 70% và 40% có số rắn nguyên ngẫu nhiên từ 1,3 đến 2 lần số người online (làm tròn lên ở mức tối thiểu); đợt cuối ở 10% thả rắn đỏ, tăng lên 2–3 lần. Rắn xanh cắn 5 máu, rắn đỏ cắn 7 máu mỗi 1,2 giây; cả hai chịu 4 cú búa và đuổi khắp bản đồ. Rắn còn lại biến mất khi boss hồi sinh.',
       '<b>TML và DMM</b> đi khắp bản đồ, chỉ trả đũa người đánh mình. TML có 900 máu, đánh 20; DMM có 600 máu, đánh 15. Né vòng báo đòn, hạ được thưởng 40/30 triệu chia theo damage. Chết sau 30 giây sẽ xuất hiện ở nơi khác. Đánh mỗi cú tăng 1 nộ; ulti gây 20% máu tối đa.',
-      'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút trong 5 giây để hồi đầy máu và mana cho cả phòng.',
+      'Mỗi 5 phút có <b>Đồng nghiệp mời nước</b>: bấm nút' + (touch ? '' : ' (phím <b>Q</b>)') + ' trong 5 giây để hồi đầy máu và mana cho cả server.',
       'Boss dùng <b>New Process (Quy trình mới)</b>: chạy khỏi vòng tím trước khi giấy rơi xuống để né đòn.',
       'Có thể đánh người chơi khác để tạo hiệu ứng vui, không mất máu.',
       'Đập đồ để cộng vào <b>tổng thiệt hại</b> của cả server. ' + (touch ? 'Mở cài đặt và bấm <b>Gọi IT</b>' : 'Bấm <b>Gọi IT</b> (phím <b>I</b>)') + ' để thay hết đồ mới ngay.',
@@ -2022,6 +2049,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } else if ((k === 'enter' || k === '/') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault(); // so the / is not typed into the box that is about to get focus
       chatOpen();
+    } else if (e.code === 'KeyE' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (!$('duelApologyBtn').hidden) $('duelApologyBtn').click(); // "Em xin lỗi" while you are locked in a duel
+    } else if (e.code === 'KeyQ' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (!$('drinkBtn').hidden && !$('drinkBtn').disabled) $('drinkBtn').click(); // accept "Đồng nghiệp mời nước"
     } else if (k === 'i' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       $('resetBtn').click(); // call IT (replace everything with new stuff): the same as the button, with the same cooldown
     } else if (k === 'r' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -2247,7 +2278,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   });
 
   $('copyLink').addEventListener('click', () => {
-    const url = location.origin + location.pathname + '?room=' + encodeURIComponent(S.room);
+    const url = location.origin + location.pathname + '?server=' + encodeURIComponent(S.room);
     const done = () => toast('Đã copy link server, gửi cho đồng nghiệp nhé');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(done, () => toast(url));
@@ -2282,6 +2313,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // ----------------------------------------------------------------- join ----
   // The two rooms that exist (keep in sync with ROOMS in lib/world.js; the server sends
   // the live list with player counts, this is only the fallback if that request fails).
+  // The server picker is hidden while one server is enough; set true to show it again.
+  const SHOW_SERVER_PICKER = false;
   const FALLBACK_ROOMS = [
     { id: 'br-1', name: 'BR-1' },
     { id: 'br-2', name: 'BR-2' },
@@ -2289,7 +2322,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
   (function setupJoin() {
     const params = new URLSearchParams(location.search);
-    const roomParam = (params.get('room') || '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 24);
+    // ?server= is the public name; ?room= keeps old shared links working.
+    const roomParam = (params.get('server') || params.get('room') || '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 24);
     let savedName = '';
     try {
       savedName = localStorage.getItem('br-name') || '';
@@ -2338,6 +2372,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
     let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 20 }));
     let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
+    // With the picker hidden everyone lands in the first server unless a ?server= link names another.
+    if (!SHOW_SERVER_PICKER) {
+      picked = picked || rooms[0].id;
+      $('roomPick').hidden = true;
+      $('joinForm').classList.add('no-server-pick');
+    }
     let chosenByUser = picked !== null;
     const account = accountUI({
       room: () => picked || rooms[0].id,
@@ -2665,6 +2705,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       : s.phase === 'active' && seconds > 0
         ? 'VKL, TML và DMM đang đi tuần — gặp ai cũng hỏi thăm! · ' + seconds + 's'
         : 'Ban lãnh đạo đang về phòng. Tạm thời được thở.';
+    // Tense music while the bosses are out: a heartbeat for the warning, the full loop for the hunt.
+    audio.music(!active ? 0 : s.phase === 'warning' ? 1 : s.phase === 'active' && seconds > 0 ? 2 : 0);
     if (text === officeNoticeText) return;
     officeNoticeText = text;
     $('officeNotice').textContent = text;

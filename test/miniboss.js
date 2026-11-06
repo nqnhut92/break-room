@@ -75,9 +75,11 @@ async function main() {
     }
   });
   await check('a wall blocks starting retaliation even when the target is close', () => {
-    const s = state(), b = s.list[0]; Object.assign(b, { x: SERVER_ROOM.x0+40, y: 1500*K });
+    // Either side of the server room's west glass wall (its door is in the south wall).
+    const midY = (SERVER_ROOM.y0 + SERVER_ROOM.y1) / 2;
+    const s = state(), b = s.list[0]; Object.assign(b, { x: SERVER_ROOM.x0+40, y: midY });
     M.hitMini(b, 1, 10, 1000);
-    M.stepMini(s, [player(1, { x: SERVER_ROOM.x0-40, y: 1500*K })], 1000, 0.1);
+    M.stepMini(s, [player(1, { x: SERVER_ROOM.x0-40, y: midY })], 1000, 0.1);
     assert.strictEqual(b.wind, null);
   });
   await check('both minis travel diagonally at their configured speed on clear floor and cannot cut wall corners', () => {

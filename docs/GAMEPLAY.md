@@ -4,7 +4,7 @@ English · [Tiếng Việt](GAMEPLAY.vi.md) · [Documentation](README.md)
 
 ## Playing together
 
-The game has **two fixed servers**, **BR-1** and **BR-2**, with at most 20 players each. The join screen shows "x online" per server, coloured green (under 50% full), orange (from 50%) and red (from 80%), and preselects the busiest server that still has room. To play with colleagues, pick the same server; the "Copy server link" button produces `/?room=br-1` or `/?room=br-2`. There are no private rooms: an unknown room name in an old link falls back to the first server. Rename or add servers in the `ROOMS` list in `lib/world.js` (`id` lowercase ASCII, `name` is the display name).
+The game has **two fixed servers**, **BR-1** and **BR-2**, with at most 20 players each. The server picker on the join screen is currently hidden (`SHOW_SERVER_PICKER = false` in `public/game.js`; its code is kept), so everyone joins BR-1 unless a link names another server. The "Copy server link" button produces `/?server=br-1` or `/?server=br-2`; old `?room=` links still work. With the picker shown, it lists "x online" per server, coloured green (under 50% full), orange (from 50%) and red (from 80%), and preselects the busiest server that still has room. There are no private servers: an unknown name in a link falls back to the first server. Player-facing text calls the game instance a "server". Rename or add servers in the `ROOMS` list in `lib/world.js` (`id` lowercase ASCII, `name` is the display name).
 
 Leaving through the exit door puts you back in the lobby on your next visit; a reload or a dropped connection returns you exactly where you stood.
 
@@ -18,11 +18,17 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | Smash | Space (hold to keep smashing; with nothing in reach it still swings the hammer, for free), or the SMASH! button |
 | Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (or use the Skill button); the chosen one is in your hand (a hammer, a bubble tea cup, a stun gun) and the others see it. The milk tea throw reaches twice as far but does **half the damage** of a hammer hit, on objects and on the boss |
 | Call IT | I, or the Call IT button: replaces everything with new stuff (shared cooldown) |
+| Apologize in a duel | E, or the "Em xin lỗi" button once it appears |
+| Accept a drink | Q, or the "Đồng nghiệp mời nước" button while it is offered |
 | Emoji | Shift + keys 1 to 8 or the emoji buttons |
 | Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a touch landscape screen its bottom-center history collapses to a one-line preview after eight idle seconds; tap the preview to reopen |
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
 | Mini map | M or the map utility hides/shows the local map; click/tap the mini map to toggle the full-room overview |
 | Full-room map | Desktop: hold Tab to view, release to close; Esc or × closes a clicked-open overview. Mobile: tap the mini map again or × to close. Movement continues; chat fields retain normal keyboard behavior |
+
+On non-touch devices the duel and drink buttons show their key as "(E)" / "(Q)"; the hint line and the help list mention both keys.
+
+**Spawn protection.** After a respawn, or a fresh join at the lobby, you are shielded for 10 seconds: nothing damages you (VKL, TML/DMM, snakes, New Process). Bosses still target and swing at you; a blocked hit shows "🛡️ CHẶN!". Walking or attacking anything (objects, players, bosses, snakes, the ultimate) ends the shield early. Everyone sees 🛡️ before a shielded player's name. Reconnects away from the lobby do not grant it. The duration is the server option `spawnProtectionMs`.
 
 On touch landscape screens, the skill icon matches the attack button size and sits 24px to its left. Radar diameter adapts to available screen space. Boss taglines appear on desktop and larger landscape touch layouts; compact touch layouts hide them.
 
@@ -66,13 +72,13 @@ VKL maximum HP grows by groups of four real online players: 6,000 for 1–4, the
 
 ## The office
 
-The workspaces are open to one another and the circulation area. An added east wing contains Meeting C/D/E; the glass server room sits at its northeast edge, behind a forecourt. The former server footprint is open circulation. Existing furniture keeps its IDs and placement, except the six server racks, which move with VKL. Boss attacks, capture rules and office-patrol hunts are unchanged.
+North row, west to east: the open **West Workspace**, the **Server** room (VKL's room; its door is in the south wall, onto the north corridor near the lobby spine), the **Town Hall** (big screen on the north wall, chairs facing it, door centred in the south wall), **Meeting C**, then **WC NAM / WC NU** in the far north-east corner. The middle band is the open lobby (spawn) plus the open, carpeted **East Workspace**, with small **Meeting D** and **Meeting E** against the east wall. South row: **Meeting A**, **Meeting B**, **Director**, **Pantry** and the **Lounge** in the south-east corner. Every workspace seat is a six-seat island desk with two arm monitors; only the director keeps a single-monitor desk. Saved objects keep their IDs and types; new furniture is appended.
 
-There are hundreds of breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The circular mini map keeps you at its center and magnifies the nearby floor within a fixed 2,000-unit radius. The center is clear and the outer area fades toward the rim; camera zoom does not change the radar scale. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that circle. The full-room overview shows the whole layout. Neither view pauses the game.
+There are hundreds of breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The circular mini map keeps you at its center and magnifies the nearby floor within a fixed 1,500-unit radius. The center is clear and the outer area fades toward the rim; camera zoom does not change the radar scale. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that circle. The full-room overview shows the whole layout. Neither view pauses the game.
 
 [View the current layout](../artifacts/map-overview.png).
 
-Room names in the overview are layout annotations; the game no longer renders floating room-name signs.
+The full-office overview labels every room, plus the LOBBY, so players can say where to meet. The 3D scene has no floating room-name signs.
 
 ## Guest and saved characters
 

@@ -32,9 +32,11 @@ async function main() {
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const origin='http://127.0.0.1:'+server.address().port;
   let browser;
-  async function setup(page) {
+  // The game ships with the server picker hidden (SHOW_SERVER_PICKER in game.js); `picker` shows it to test switching.
+  async function setup(page, picker = false) {
     await page.goto(origin);
-    await page.evaluate(async()=>{
+    await page.evaluate(async(picker)=>{
+      if(!picker){document.getElementById('roomPick').hidden=true;document.getElementById('joinForm').classList.add('no-server-pick');}
       const {accountUI}=await import('/account.js');
       const $=id=>document.getElementById(id);
       const role=$('roleSelect');role.add(new Option('Dev','dev'));role.value='dev';
@@ -53,7 +55,7 @@ async function main() {
       window.account=accountUI({room:()=>window.testRoom,read:()=>({name:$('nameInput').value,gender:document.querySelector('input[name="gender"]:checked').value,role:$('roleSelect').value,company:$('companyInput').value}),fill:p=>{$('nameInput').value=p.name;$('companyInput').value=p.company;$('roleSelect').value=p.role;for(const radio of document.querySelectorAll('input[name="gender"]'))radio.checked=radio.value===p.gender;}});
       $('joinForm').addEventListener('submit',async e=>{e.preventDefault();try{await account.beforeJoin();window.entered++;}catch(err){$('joinErr').textContent=err.message;}});
       await account.ready;sync();
-    });
+    },picker);
   }
   try {
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true});
@@ -62,9 +64,11 @@ async function main() {
       await setup(page);
       const form=await page.locator('#joinForm').boundingBox(),button=await page.locator('#joinBtn').boundingBox();
       assert.ok(form.x>=0&&form.x+form.width<=viewport.width);
-      assert.ok(button.y>=0&&button.y+button.height<=viewport.height,'primary action stays within viewport');
-      const fields=await page.locator('.joinFields').boundingBox(),rooms=await page.locator('.joinRooms').boundingBox();
-      assert.ok(fields.x+fields.width<=rooms.x,'profile and rooms use horizontal columns');
+      assert.ok(button.y>=0&&button.y+button.height<=viewport.height,'primary action stays within viewport '+JSON.stringify([viewport,button]));
+      // Picker hidden: the fields take the full width and the join button sits beside the score note.
+      const fields=await page.locator('.joinFields').boundingBox(),note=await page.locator('#scoreNote').boundingBox();
+      assert.ok(fields.width>form.width*0.8,'profile fields use the full width');
+      assert.ok(note.x+note.width<=button.x,'score note and join button share a row');
       assert.ok(await page.locator('#googleLogin .google-mark').isVisible());
       assert.equal(await page.locator('#googleLogin').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
       assert.match(await page.locator('#accountNote').textContent(),/Chơi không đăng nhập không bảo đảm/);
@@ -75,7 +79,7 @@ async function main() {
         const actual=await page.locator('#roomList .rc').first().evaluate((e,level)=>{e.className='rc '+level;const c=getComputedStyle(e).color;e.className='rc cool';return c;},level);assert.equal(actual,color);
       }
       await page.screenshot({path:'/tmp/br-join-'+viewport.width+'.png'});
-      console.log('ok - '+viewport.width+'x'+viewport.height+': horizontal form, recognizable Google button and visible primary action');
+      console.log('ok - '+viewport.width+'x'+viewport.height+': full-width fields without the server picker, recognizable Google button and visible primary action');
       if(viewport.width===1366){
         const navigation=page.waitForRequest(r=>r.url().endsWith('/api/auth/signin/google'));
         await page.locator('#googleLogin').click();const request=await navigation;
@@ -84,9 +88,9 @@ async function main() {
       await page.close();
     }
     authenticated=true;
-    const page=await browser.newPage({viewport:{width:1280,height:720}});await setup(page);
+    const page=await browser.newPage({viewport:{width:1280,height:720}});await setup(page,true);
     assert.equal(saves,0,'login does not create or join automatically');
-    assert.equal(await page.locator('#joinBtn').textContent(),'Tạo nhân vật & vào phòng');
+    assert.equal(await page.locator('#joinBtn').textContent(),'Tạo nhân vật & vào văn phòng');
     assert.equal(await page.locator('#characterSave').isVisible(),false);
     assert.equal(await page.locator('#characterRestore').isVisible(),false);
     await page.screenshot({path:'/tmp/br-join-account-new.png'});
@@ -116,7 +120,7 @@ async function main() {
     assert.equal(await page.locator('#nameInput').inputValue(),'UI Player');assert.equal(saves,1);
     assert.equal(await page.evaluate(()=>document.activeElement.id),'characterSave');
     await page.locator('#characterSave').click();await page.locator('#nameInput').fill('UI Renamed');
-    assert.equal(await page.locator('#joinBtn').textContent(),'Lưu & vào phòng');
+    assert.equal(await page.locator('#joinBtn').textContent(),'Lưu & vào văn phòng');
     let releaseMutation;holdMutation=new Promise(resolve=>{releaseMutation=resolve;});
     await page.locator('#joinBtn').click();
     await page.waitForFunction(()=>document.querySelector('.joinFields').getAttribute('aria-busy')==='true');
@@ -133,7 +137,7 @@ async function main() {
     await page.screenshot({path:'/tmp/br-join-account-ready.png'});
     await page.getByRole('button',{name:'BR-2 · 0 online',exact:true}).click();
     await page.waitForFunction(()=>document.getElementById('joinBtn').dataset.accountBusy==='false');
-    assert.equal(await page.locator('#joinBtn').textContent(),'Tạo nhân vật & vào phòng');assert.equal(saves,2);
+    assert.equal(await page.locator('#joinBtn').textContent(),'Tạo nhân vật & vào văn phòng');assert.equal(saves,2);
     await page.locator('#nameInput').fill('Room Two');await page.locator('#joinBtn').click();await page.waitForFunction(()=>window.entered===3);
     assert.equal(characters.get('br-1').name,'UI Renamed');assert.equal(characters.get('br-2').name,'Room Two');
     assert.match(await page.locator('#scoreNote').textContent(),/BXH tính theo ngày.*khách cũng có tên trên bảng.*đăng nhập Google/);

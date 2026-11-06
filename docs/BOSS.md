@@ -15,7 +15,7 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. Th
 - When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back one minute later, at its starting spot, with full health.
 - Outside the office patrol event it stays in the server room: leave and it goes back to patrolling without healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
 
-Regular VKL windups use the visible floor circle without a wind-up sound. Strikes and defeat have distinct impact sounds; New Process retains a short special-ability cue. Timing and damage are unchanged.
+Regular VKL windups use the visible floor circle without a wind-up sound. Strikes and defeat have distinct impact sounds (a strike is a heavy punch over a soft thud, with no metal ring); New Process retains a short special-ability cue. Timing and damage are unchanged.
 
 ## The numbers
 
@@ -98,7 +98,9 @@ The game runs on several Vercel instances at once, so there must be **exactly on
 | `bup` | it is back, with the new life’s maximum HP and health revision |
 | `hp` | a player was hurt: new health and the damage |
 | `down` | a player was knocked out: milliseconds until they return |
-| `up` | a player came back: where, and the new health |
+| `up` | a player came back: where, and `shieldMs` of spawn protection |
+| `blocked` | spawn protection absorbed a hit on this player |
+| `shield` | this player's spawn protection ended early (`ms: 0`) |
 
 From the client: `bhit` (a hammer swing at the boss; the server checks reach, line of sight, mana and cooldown, like for any object).
 
@@ -123,9 +125,9 @@ Every five minutes the room offers “Đồng nghiệp mời nước” for five
 
 ## Captured 1:1 duel
 
-Every random 40–60 seconds, VKL selects one living player inside the server room or within 320 units of its boundary. With no eligible player, that attempt is skipped and another is scheduled 40–60 seconds later. A rope pulls the captive inside; a gust blows other living occupants into the west corridor.
+Every random 40–60 seconds, VKL selects one living player inside the server room or within 320 units of its boundary. With no eligible player, that attempt is skipped and another is scheduled 40–60 seconds later. A rope pulls the captive inside; a gust blows other living occupants out through the door into the corridor outside it.
 
-For 20 seconds the captive can move and fight inside but cannot leave. Spectators cannot enter, damage the boss or receive its strikes. After the first 10 seconds, only the captive sees an “Em xin lỗi” button; clicking it opens the room early. The server validates the captive, duel version and elapsed time, including across instances. Expiry, boss death or captive death opens the room. Disconnecting does not clear capture; reconnecting restores the remaining timer. The boss lease holder commits the versioned schedule and forced positions atomically in the shared store.
+For 20 seconds the captive can move and fight inside but cannot leave. Spectators cannot enter, damage the boss or receive its strikes. After the first 10 seconds, only the captive sees an “Em xin lỗi” button; clicking it opens the room early. The server validates the captive, duel version and elapsed time, including across instances. Expiry, boss death or captive death opens the room. Disconnecting does not clear capture; reconnecting restores the remaining timer. A disguised bot (mole) dragged into a duel takes VKL's blows like a player. The boss lease holder commits the versioned schedule and forced positions atomically in the shared store.
 
 Snakes have a continuous S-shaped body, a tapered tail and a forked tongue. Summoning raises the boss's hands and displays green spell rings, using reused geometry without post-processing.
 
@@ -142,9 +144,13 @@ Breaking a rack removes 2% of VKL’s stored maximum HP at that moment, once per
 
 ## Office patrol
 
-After 3–5 minutes with players in the room, a banner directly below the header warns for 5 seconds: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL then leaves the server room and joins TML/DMM in hunting nearby living players for 30 seconds. Boss damage, speed and attack telegraphs stay unchanged; distant targets are not tracked globally. Minis prefer targets not already selected by another boss when alternatives are nearby. VKL uses ordinary punches during the event, not New Process or captured duels. A pending duel postpones the warning. Dead bosses are not revived for the event, and VKL dying mid-event does not end the minis' remaining patrol.
+After 2–3 minutes with players in the room, a banner directly below the header warns for 5 seconds: “Ban lãnh đạo xuống lắng nghe. Bằng nắm đấm.” VKL then leaves the server room and joins TML/DMM in hunting nearby living players for 30 seconds. Boss damage, speed and attack telegraphs stay unchanged; distant targets are not tracked globally. Minis prefer targets not already selected by another boss when alternatives are nearby. VKL uses ordinary punches during the event, not New Process or captured duels. A pending duel postpones the warning. Dead bosses are not revived for the event, and VKL dying mid-event does not end the minis' remaining patrol.
 
-At the end, VKL walks home along navigable floor without attacking; minis cancel patrol windups and resume their existing provocation rules. The next 3–5-minute interval starts when VKL returns (or is dead). Missing a whole warning/event while a room is inactive does not replay it. Fresh lobby arrivals and respawns have 3 seconds of patrol-strike protection; attacking ends this protection. Reconnects away from the lobby do not grant it.
+At the end, VKL walks home along navigable floor without attacking; minis cancel patrol windups and resume their existing provocation rules. The next 2–3-minute interval starts when VKL returns (or is dead). Missing a whole warning/event while a room is inactive does not replay it. Wind-up circles that the server cancels (for example when the patrol ends) disappear on clients too.
+
+During the warning and the hunt, the client plays a tense music loop synthesised with Web Audio (no downloaded track): a heartbeat bass line during the warning, the full loop during the hunt, fading out afterwards. Mute silences it.
+
+**Spawn protection.** Respawns and fresh lobby arrivals are shielded for 10 seconds (server option `spawnProtectionMs`; tests set 0). While shielded, no source damages the player: VKL, TML/DMM, snakes or New Process. Bosses still target and swing at them, so the event does not stall around a shielded player; a blocked hit shows "🛡️ CHẶN!". Walking or attacking anything (objects, players, VKL, a mini-boss, a snake, the ultimate) ends it. Everyone sees 🛡️ in the player's name label. Reconnects away from the lobby do not grant it.
 
 Concealed moles are valid patrol targets and flee instead of stabbing during the event. Boss damage uses the same health fraction as a human (30/100 costs 2.4 of the mole's internal 8 HP), without revealing the mole or paying a kill bounty. Unrevealed moles recover health after the same 4-second delay at the equivalent of 5 human HP/s. A knocked-out mole shows the ordinary down animation, records its knock-out and leaves after the 15-second down timer. A human attack still reveals it; already exposed moles keep their identity.
 
@@ -152,4 +158,4 @@ The office schedule/version and roaming pose live in the existing boss hash and 
 
 On desktop, VKL displays “Mọi người nghĩ dì dẫy?” on one line directly under its name. Touch/mobile labels omit the motto.
 
-The server room is at the northeast edge of the east wing, with a glass frontage toward its forecourt. Home/patrol/racks, the capture landing and expelled-player positions derive from its layout. During capture an opaque red/amber gate spans the shared doorway, the room floor is tinted/bordered, and a world-anchored “PHÒNG KHÓA” sign counts down. These indicators clear together at release/expiry/death and restore from remaining duel time on reconnect. A saved active capture whose landing belongs to the old room is released after relocation.
+The server room sits in the north row, beside the lobby spine, with its door in the south wall onto the north corridor. Home/patrol/racks, the capture landing, the doorway apron and expelled-player positions all derive from that door (`WORLD.duelDoor`, whose `axis` is `'x'` for a south door and `'y'` for a west door): the apron is the floor just outside the door, and expelled players are placed outside it. During capture an opaque red/amber gate spans the doorway, the room floor is tinted/bordered, and a world-anchored “PHÒNG KHÓA” sign counts down. These indicators clear together at release/expiry/death and restore from remaining duel time on reconnect. A saved active capture whose landing belongs to the old room is released after relocation.

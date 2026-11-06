@@ -18,6 +18,70 @@ export function createGameAudio(isMuted) {
   const buffers = new Map(), previous = new Map(), voices = new Set();
   function stop() {
     for (const voice of voices) { try { voice.source.stop(); } catch (_) { /* already ended */ } }
+    if (musicBus) { musicBus.gain.cancelScheduledValues(ctx.currentTime); musicBus.gain.setValueAtTime(0, ctx.currentTime); }
+    clearInterval(musicTimer); musicTimer = 0; musicLevel = 0;
+  }
+  // Patrol music: a tense loop synthesised on the spot (no downloaded track, nothing to license).
+  // 152 bpm in A minor: a pulsing bass and ticking hats while the warning runs, then kick and a staccato lead for the hunt.
+  const MUSIC = { bpm: 152, vol: .22 };
+  const BASS = [45, 45, 41, 43]; // root per bar (MIDI): A1 A1 F1 G1
+  const LEAD = [69, 72, 76, 72, 69, 72, 77, 72, 69, 72, 76, 72, 71, 74, 79, 74]; // one bar of sixteenths
+  const hz = n => 440 * 2 ** ((n - 69) / 12);
+  let musicBus, musicTimer = 0, musicStep = 0, musicNext = 0, musicLevel = 0; // level: 0 off, 1 warning, 2 hunt
+  function musicNote(type, freq, t, dur, vol, cutoff) {
+    const osc = ctx.createOscillator(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t);
+    filter.type = 'lowpass'; filter.frequency.value = cutoff; filter.Q.value = 3;
+    gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(vol, t + .005); gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    osc.connect(filter); filter.connect(gain); gain.connect(musicBus);
+    osc.onended = () => { osc.disconnect(); filter.disconnect(); gain.disconnect(); };
+    osc.start(t); osc.stop(t + dur + .02);
+  }
+  function musicKick(t, vol) {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.setValueAtTime(130, t); osc.frequency.exponentialRampToValueAtTime(42, t + .12);
+    gain.gain.setValueAtTime(vol, t); gain.gain.exponentialRampToValueAtTime(.0001, t + .18);
+    osc.connect(gain); gain.connect(musicBus);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+    osc.start(t); osc.stop(t + .2);
+  }
+  function musicHat(t, vol) {
+    const src = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+    src.buffer = noiseBuffer; filter.type = 'highpass'; filter.frequency.value = 7000;
+    gain.gain.setValueAtTime(vol, t); gain.gain.exponentialRampToValueAtTime(.0001, t + .035);
+    src.connect(filter); filter.connect(gain); gain.connect(musicBus);
+    src.onended = () => { src.disconnect(); filter.disconnect(); gain.disconnect(); };
+    src.start(t, Math.random() * .5); src.stop(t + .05);
+  }
+  function musicTick() {
+    if (!ctx || ctx.state !== 'running') return;
+    const sixteenth = 60 / MUSIC.bpm / 4;
+    if (musicNext < ctx.currentTime) musicNext = ctx.currentTime + .05;
+    while (musicNext < ctx.currentTime + .12) { // schedule a little ahead so timer jitter never shows
+      const s = musicStep % 64, beat = s % 16, bar = s >> 4, t = musicNext, hunt = musicLevel > 1;
+      if (s % 2 === 0) musicNote('sawtooth', hz(BASS[bar]), t, sixteenth * 1.6, hunt ? .5 : .35, 380);
+      if (hunt ? beat % 4 === 0 : beat % 8 === 0) musicKick(t, hunt ? .9 : .5); // a heartbeat during the warning
+      musicHat(t, beat % 4 === 2 ? .22 : .1);
+      if (hunt) musicNote('square', hz(LEAD[beat] + (bar === 2 ? -4 : bar === 3 ? -2 : 0)), t, sixteenth * .8, .09, 2600);
+      musicStep++; musicNext += sixteenth;
+    }
+  }
+  function music(level) {
+    if (!ctx) return; // sound is not enabled yet
+    const want = isMuted() ? 0 : level;
+    if (want === musicLevel) return;
+    if (!musicBus) { musicBus = ctx.createGain(); musicBus.gain.value = 0; musicBus.connect(master); }
+    const t = ctx.currentTime, g = musicBus.gain;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    if (want) {
+      if (!musicLevel && !musicTimer) { musicStep = 0; musicNext = 0; }
+      g.linearRampToValueAtTime(MUSIC.vol, t + .6);
+      if (!musicTimer) musicTimer = setInterval(musicTick, 25);
+    } else {
+      g.linearRampToValueAtTime(0, t + 1.5);
+      setTimeout(() => { if (!musicLevel) { clearInterval(musicTimer); musicTimer = 0; } }, 1700);
+    }
+    musicLevel = want;
   }
   function init() {
     if (!ctx) {
@@ -121,7 +185,7 @@ export function createGameAudio(isMuted) {
     if (skill==='milkTea') for(let i=0;i<3;i++)tone(600+Math.random()*600,.035,v*.12,-220,i*.018);
   }
   return {
-    init, stop,
+    init, stop, music,
     hit(v,type='body',skill='hammer') {
       sample(materialFor(type),'medium',v*.75);
       // Keep the contact bright; a generic bass thump made all materials sound alike.
@@ -140,17 +204,17 @@ export function createGameAudio(isMuted) {
     strike(v,kind='boss') {
       const mini=kind==='mini';
       if (!bossFocus(v*(mini?.6:1))) return;
-      recording('slam-metal',v*(mini?.38:.75),mini?1.1:.82,0,{boss:true});
-      sample('Punch','heavy',v*.48,.95,0,{boss:true});
-      recording('splinter-wood',v*.23,1.1,.025,{boss:true});
-      noise(.035,2300,v*.2,0,{boss:true});
+      // A blow on a body: a heavy punch over a soft thud, with no metal ring.
+      sample('Punch','heavy',v*(mini?.55:.9),mini?1.1:.9,0,{boss:true});
+      sample('Soft','heavy',v*(mini?.3:.55),mini?1.05:.8,.012,{boss:true});
+      noise(.05,900,v*.16,0,{boss:true});
     },
     hurt() { sample('Punch','medium',.48,1,0,{boss:true}); },
     down(v) {
       if (!bossFocus(v)) return;
       recording('splinter-wood',v*.7,.85,0,{boss:true});
       sample('Punch','heavy',v*.55,.85,0,{boss:true});
-      recording('slam-metal',v*.35,.75,.09,{boss:true});
+      sample('Soft','heavy',v*.4,.75,.09,{boss:true});
     },
     cue(v,kind='cast') {
       // Rare abilities only: a short two-note cue, never the old sawtooth wind-up.

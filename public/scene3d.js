@@ -835,7 +835,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       ctx.fillText(text, 44, h / 2 + 2);
     });
     const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(1000, 125), new THREE.MeshBasicMaterial({ map: sign, transparent: true }));
-    signMesh.position.set(W / 2, 215, 7); // in front of the window frames (they reach z = 4)
+    signMesh.position.set(world.bannerX || W / 2, 215, 7); // in front of the window frames (they reach z = 4)
     staticGroup.add(signMesh);
     const clock = makeCanvasTexture(128, 128, (ctx, w, h) => {
       ctx.fillStyle = '#e9edf3';
@@ -900,6 +900,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     updateElectricTarget(bossRig, bossRig.torsoM, bossRig.torsoM.geometry, b.electricUntil);
     // the punch circle: an outline plus a disc that fills up until the fist lands
+    // A wind-up the server cancelled (patrol over, duel) sends no strike: drop the circle once its time is up.
+    if (b.wind && performance.now() - b.wind.t0 > b.wind.ms + 400) b.wind = null;
     const w = b.wind;
     if (!w || b.dead) {
       if (windMesh) windMesh.visible = false;
@@ -955,6 +957,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         // mini-boss pose only takes over for the wind-up and the slam, which that code has no telegraph for.
         if (b.wind || (b.pl.swing || 0) > 0 || (rig.miniWindPose || 0) > 0.01) animateMini(rig, b, dt);
       }
+      if (b.wind && performance.now() - b.wind.t0 > b.wind.ms + 400) b.wind = null; // cancelled wind-up: no strike follows
       rig.miniWind.visible = !!b.wind && b.hp > 0;
       if (b.wind) {
         rig.miniWind.position.set(b.wind.x, 2, b.wind.y); rig.miniWind.scale.setScalar(b.wind.r);
@@ -1777,6 +1780,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     rig.hpb.style.display = p.alwaysHp || (!p.dead && hf < 0.999) ? '' : 'none';
     rig.label.classList.toggle('down', !!p.dead);
+    rig.label.classList.toggle('shielded', !p.dead && performance.now() < (p.shieldUntil || 0));
 
     rig.ring.visible = isMe;
     if (rig.lastName !== p.name) {
