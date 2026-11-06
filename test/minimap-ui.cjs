@@ -22,23 +22,34 @@ async function main() {
     await page.goto(`http://127.0.0.1:${port}/?room=br-1`);
     await page.fill('#nameInput', 'Map layout'); await page.click('#joinBtn');
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
-    for (const [width, height] of [[844,390],[740,320],[956,440],[844,390]]) {
+    for (const [width, height] of [[844,390],[740,320],[956,440],[1210,834],[1366,1024],[1133,744],[844,390]]) {
       await page.setViewportSize({ width, height });
       await page.waitForFunction(({width,height}) => GameViewport.width===width && GameViewport.height===height, {width,height});
       await page.waitForFunction(() => {
-        const m = document.getElementById('minimap').getBoundingClientRect(), c = document.getElementById('chatLog').getBoundingClientRect(), j = document.getElementById('joystick').getBoundingClientRect();
-        return Math.abs(m.width / m.height - 1) < .03 && c.top >= m.bottom + 6 && c.bottom <= j.top - 6;
+        const m=document.getElementById('minimap').getBoundingClientRect(), h=document.getElementById('topLeft').getBoundingClientRect();
+        return Math.abs(m.width/m.height-1)<.03 && m.top>=h.bottom+7 && m.top<=h.bottom+9;
       });
-      console.log(`ok - ${width}x${height}: radar stays circular; chat clears map and joystick after join/resize`);
+      const map=await page.locator('#minimap').boundingBox(), joystick=await page.locator('#joystick').boundingBox();
+      assert.ok(map.y+map.height+8<=joystick.y,'radar clears the joystick');
+      if(width===1210)assert.ok(map.width>=180,'large iPad gets a readable radar');
+      if(width===1366)assert.ok(map.width>=200&&map.width<=208,'larger tablets grow within the radar cap');
+      if(height<=440)assert.ok(map.width<=110,'phone radar stays compact');
+      await page.waitForFunction(()=>{const c=document.getElementById('mobileBottomControls').getBoundingClientRect(),j=document.getElementById('joystick').getBoundingClientRect(),s=document.getElementById('skillBtn').getBoundingClientRect();return c.left>=j.right+15&&c.right<=s.left-15;});
+      const skill=await page.locator('#skillBtn').boundingBox(),attack=await page.locator('#smashBtn').boundingBox();
+      assert.deepEqual([skill.width,skill.height],[attack.width,attack.height]);
+      assert.equal(attack.x-skill.x-skill.width,24);
+      await page.evaluate(()=>{document.getElementById('ultBtn').hidden=false;document.getElementById('drinkBtn').hidden=false;});
+      assert.deepEqual(await page.locator('#skillBtn').boundingBox(),skill,'ULTI/drink offers do not move skill');
+      assert.deepEqual(await page.locator('#smashBtn').boundingBox(),attack,'ULTI/drink offers do not move attack');
+      await page.evaluate(()=>{document.getElementById('ultBtn').hidden=true;document.getElementById('drinkBtn').hidden=true;});
+      console.log(`ok - ${width}x${height}: responsive radar clears header/joystick; skill matches attack with a 24px gap and chat stays clear`);
     }
+    const dock=await page.locator('#chatDock').boundingBox();
     await page.keyboard.press('m');
-    await page.waitForFunction(() => {
-      const c = document.getElementById('chatLog').getBoundingClientRect();
-      return document.getElementById('minimap').classList.contains('off') && c.height >= 100 && c.bottom <= document.getElementById('joystick').getBoundingClientRect().top - 6;
-    });
+    assert.equal(await page.locator('#minimap').evaluate(e=>e.classList.contains('off')),true);
+    assert.deepEqual(await page.locator('#chatDock').boundingBox(),dock);
     await page.keyboard.press('m');
-    await page.waitForFunction(() => document.getElementById('chatLog').getBoundingClientRect().top >= document.getElementById('minimap').getBoundingClientRect().bottom + 6);
-    console.log('ok - hiding/showing the map reclaims/restores space without covering chat');
+    console.log('ok - hiding/showing the map never moves the bottom chat dock');
     await page.tap('#minimap');
     assert.equal(await page.locator('#fullMap').isVisible(),true);
     await page.tap('#fullMapClose');
@@ -49,8 +60,8 @@ async function main() {
     await page.reload();
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
     await page.waitForFunction(() => {
-      const m = document.getElementById('minimap').getBoundingClientRect(), c = document.getElementById('chatLog').getBoundingClientRect();
-      return Math.abs(m.width / m.height - 1) < .03 && c.top > m.bottom;
+      const m = document.getElementById('minimap').getBoundingClientRect(), h = document.getElementById('topLeft').getBoundingClientRect();
+      return Math.abs(m.width / m.height - 1) < .03 && m.top >= h.bottom+7;
     });
     await page.close();
     page = await browser.newPage({viewport:{width:1280,height:800}});
@@ -76,16 +87,17 @@ async function main() {
       S.boss={x:me.x+1500,y:me.y,dead:false};
       const proto=CanvasRenderingContext2D.prototype, original=proto.arc, seen=[];
       proto.arc=function(...args){if(this.fillStyle==='#ff3b2a')seen.push(this.canvas.id); return original.apply(this,args);};
-      try { mmDraw(); mmFull(true); return seen; }
+      try { mmDraw(); const nearby=seen.includes('minimap'); seen.length=0; S.boss.x=me.x+2500; mmDraw(); mmFull(true); return {nearby,distant:seen}; }
       finally {proto.arc=original; S.boss=old; mmFull(false);}
     });
-    assert.ok(!markers.includes('minimap') && markers.includes('fullMapCanvas'),'distant boss only appears on full map');
+    assert.ok(markers.nearby,'the wider radar shows a boss 1,500 units away');
+    assert.ok(!markers.distant.includes('minimap') && markers.distant.includes('fullMapCanvas'),'distant boss only appears on full map');
     const radar=await page.evaluate(()=>{
       const {mm,mmDraw,S}=mapProbe;
       mmDraw(); const cv=mm.cv, c=cv.getContext('2d'), r=cv.width/2;
       const alpha=(x,y)=>c.getImageData(Math.round(x),Math.round(y),1,1).data[3];
       const me=S.players.get(S.me), original=me.x;
-      const center=alpha(r,r), middle=alpha(r*.5,r), edge=alpha(r*.05,r), corner=alpha(0,0);
+      const center=alpha(r,r), middle=alpha(r*.5,r), edge=alpha(r*.02,r), corner=alpha(0,0);
       me.x+=200;mmDraw();const followed=alpha(r,r);me.x=original;
       return {center,middle,edge,corner,followed};
     });

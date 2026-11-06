@@ -1557,7 +1557,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       hpb.appendChild(hpt);
     }
     label.append(bub, emo, nm);
-    if (!coarse && (p.gender === 'boss' || p.mini)) {
+    if (p.gender === 'boss' || p.mini) {
       const motto = document.createElement('span');
       motto.className = 'boss-motto';
       motto.textContent = p.mini === 'TML' ? 'Tranh công, chối tội, đổ lỗi, thanh minh'
@@ -2464,7 +2464,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const hitPt = new THREE.Vector3();
   function pick(clientX, clientY) {
-    ndc.set((clientX / W) * 2 - 1, -(clientY / H) * 2 + 1);
+    const bounds = canvas.getBoundingClientRect();
+    ndc.set(((clientX - bounds.left) / bounds.width) * 2 - 1, -((clientY - bounds.top) / bounds.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const live = proxies.filter((p) => !p.userData.broken);
     for (const rig of snakeRigs.values()) { rig.proxy.updateWorldMatrix(true, false); live.push(rig.proxy); }

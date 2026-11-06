@@ -15,6 +15,8 @@ Every server (BR-1, BR-2) has one boss, **VKL**, who patrols the server room. Th
 - When it falls, a **500 million bounty** is added to the damage board and split by damage dealt. It is back one minute later, at its starting spot, with full health.
 - Outside the office patrol event it stays in the server room: leave and it goes back to patrolling without healing. The room holds six server racks worth 120 million each, so going in is a risk worth taking.
 
+Regular VKL windups use the visible floor circle without a wind-up sound. Strikes and defeat have distinct impact sounds; New Process retains a short special-ability cue. Timing and damage are unchanged.
+
 ## The numbers
 
 Combat settings live in `BOSS` and `PLAYER` in [`lib/boss.js`](../lib/boss.js); population tiers live in [`lib/boss-population.js`](../lib/boss-population.js). Clients receive current/max HP, not private population counters.

@@ -96,4 +96,15 @@ assert.ok(timers.length >= 3 && timers.some(t => t.ms >= 1000), 'startup schedul
 for (const t of timers) t.fn();
 assert.equal(lateWindow.GameViewport.height, 390);
 console.log('ok - a stale first-paint height is corrected without a resize event');
-console.log('All 10 viewport checks passed');
+// Reserving the status bar changes the app origin, not keyboard screen coordinates.
+const shiftedVisual=Object.assign(surface(),{height:200,offsetTop:0,scale:1});
+const shiftedWindow=Object.assign(surface(),{innerWidth:844,innerHeight:390,visualViewport:shiftedVisual,matchMedia:()=>({matches:true})});
+const shiftedDoc=Object.assign(surface(),{documentElement:root,activeElement:{tagName:'INPUT'},
+  getElementById:id=>id==='app'?{getBoundingClientRect:()=>({width:844,height:350,top:40})}:null});
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../public/viewport.js'),'utf8'),{
+  window:shiftedWindow,document:shiftedDoc,Event:class{constructor(type){this.type=type;}},setTimeout:fn=>fn(),
+});
+assert.equal(shiftedWindow.GameViewport.height,350);
+assert.equal(styles['--keyboard-bottom'],'190px');
+console.log('ok - keyboard inset uses the bottom of the shifted play surface without shrinking game dimensions');
+console.log('All 11 viewport checks passed');

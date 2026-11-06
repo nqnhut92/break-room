@@ -19,10 +19,12 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | Skill | Phím 1, 2, 3 chọn búa, trà sữa hoặc điện (hoặc nút Skill); skill đang chọn nằm trên tay (cây búa, ly trà sữa, đồ chích điện) và người khác cũng thấy. Ném ly trà sữa tầm xa gấp đôi nhưng **chỉ bằng một nửa sát thương** của một cú búa, cả với đồ vật lẫn sếp |
 | Gọi IT | Phím I, hoặc nút Gọi IT: thay hết đồ mới (chung thời gian chờ) |
 | Thả emoji | Shift + phím 1 đến 8 hoặc bấm các nút emoji |
-| Chat | Enter hoặc `/`, hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game, Esc để huỷ. Khung chat luôn hiện trên máy tính; trên điện thoại nó mờ đi sau 3 giây |
+| Chat | Enter hoặc `/`, hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game, Esc để huỷ. Khung chat luôn hiện trên máy tính; trên màn hình cảm ứng nằm ngang, lịch sử ở giữa cạnh dưới thu về một hàng sau tám giây không hoạt động; chạm bản thu gọn để mở lại |
 | Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |
 | Bản đồ nhỏ | Phím M hoặc tiện ích bản đồ để ẩn/hiện bản đồ quanh bạn; chạm/click mini map để mở/đóng bản đồ toàn room |
 | Bản đồ toàn room | Desktop: giữ Tab để xem, thả để đóng; Esc hoặc × đóng bản mở bằng click. Mobile: chạm lại mini map hoặc × để đóng. Vẫn di chuyển được; lúc nhập chat giữ thao tác bàn phím bình thường |
+
+Trên màn hình cảm ứng nằm ngang, nút icon skill có kích thước bằng nút ra đòn và nằm bên trái, cách 24px. Đường kính radar tự đổi theo diện tích màn hình còn trống. Tagline boss hiện trên desktop và khung cảm ứng ngang lớn; khung cảm ứng nhỏ ẩn chúng.
 
 **Mana.** Mỗi cú đập tốn 5 trên 100 mana (thanh xanh dương dưới tên bạn). Mana hồi 3/giây lúc đầu và 12/giây khi đã quá 2 giây không đập (nên đi bộ giữa hai món xa nhau chỉ hồi được chút ít), nên bạn đập dồn được khoảng 20 cú rồi cần khoảng 10 giây mới đầy lại. Hết mana thì cú đập bị từ chối và thanh nháy đỏ. Đồ đã bị đập hiện thanh máu: xanh lá khi còn khoẻ, cam từ nửa trở xuống, đỏ ở cú cuối. Các con số nằm ở `MANA` trong `lib/realtime.js`; server áp dụng (giữ theo từng kết nối, nên reconnect sẽ đầy lại) còn client dùng cùng công thức để hiển thị.
 
@@ -62,7 +64,7 @@ Max HP VKL tăng theo nhóm bốn người thật online: 6.000 cho 1–4 ngư�
 
 Map rộng 4800×3000. Phía bắc có khu làm việc chung, bốn cụm bàn IT sáu chỗ, hội trường và WC. Sảnh/breakout ở giữa; phòng server ở phía đông sảnh, lounge nằm cạnh server. Dãy phía nam gồm hai phòng họp, phòng giám đốc và pantry. Các phòng giữ tường, một cửa ra vào riêng và hành lang theo bố cục gốc. Không có lỗ mở thêm nối khu làm việc, IT, hội trường hay hai phòng họp. Kích thước map, vị trí nội thất và ID đồ vật đã lưu giữ nguyên.
 
-Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map hình tròn giữ bạn ở tâm, phóng gần vùng sàn trong bán kính cố định 600 đơn vị. Giữa bản đồ rõ, vùng ngoài mờ dần về mép; zoom camera không đổi tỉ lệ radar. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
+Có 359 món đập được; tường, kính, thảm và sàn giữ nguyên. Đồ cứng đã vỡ vẫn để lại vật cản. Mini map hình tròn giữ bạn ở tâm, phóng gần vùng sàn trong bán kính cố định 2.000 đơn vị. Giữa bản đồ rõ, vùng ngoài mờ dần về mép; zoom camera không đổi tỉ lệ radar. Trong vùng này, bạn màu vàng, người khác màu trắng, đồ vỡ màu đỏ, VKL đỏ, TML cam và DMM tím; boss ở ngoài vùng không hiện. Bản đồ lớn hiển thị toàn room. Cả hai không dừng game.
 
 [Xem map hiện tại](../artifacts/map-overview.png).
 

@@ -19,10 +19,12 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | Skill | Keys 1, 2, 3 pick hammer, milk tea or electric (or use the Skill button); the chosen one is in your hand (a hammer, a bubble tea cup, a stun gun) and the others see it. The milk tea throw reaches twice as far but does **half the damage** of a hammer hit, on objects and on the boss |
 | Call IT | I, or the Call IT button: replaces everything with new stuff (shared cooldown) |
 | Emoji | Shift + keys 1 to 8 or the emoji buttons |
-| Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a phone it fades after 3 seconds |
+| Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a touch landscape screen its bottom-center history collapses to a one-line preview after eight idle seconds; tap the preview to reopen |
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
 | Mini map | M or the map utility hides/shows the local map; click/tap the mini map to toggle the full-room overview |
 | Full-room map | Desktop: hold Tab to view, release to close; Esc or × closes a clicked-open overview. Mobile: tap the mini map again or × to close. Movement continues; chat fields retain normal keyboard behavior |
+
+On touch landscape screens, the skill icon matches the attack button size and sits 24px to its left. Radar diameter adapts to available screen space. Boss taglines appear on desktop and larger landscape touch layouts; compact touch layouts hide them.
 
 **Mana.** Every smash costs 5 mana out of 100 (the blue bar under your name). Mana comes back at 3/s at first and 12/s once you have gone 2 seconds without smashing (so the walk between two far-apart objects only gives a little back), so you can burst about 20 hits, then you need roughly 10 seconds to refill. Out of mana the hit is refused and the bar flashes. Damaged objects show a health bar: green while healthy, orange from half, red on the last hit. The numbers live in `MANA` in `lib/realtime.js`; the server enforces them (kept per connection, so reconnecting refills it) and the client mirrors the same formula.
 
@@ -66,7 +68,7 @@ VKL maximum HP grows by groups of four real online players: 6,000 for 1–4, the
 
 The 4800×3000 floor has the open workspace, four six-seat IT islands, town hall and toilets in the north. Reception/breakout is in the middle, with the server room to its east and the lounge beside it. Two meeting rooms, the director's office and the pantry occupy the south wing. Rooms retain their original walls, one designated doorway each and connecting corridors. No extra openings connect the workspace, IT, town hall or meeting rooms. The world dimensions, furniture positions and saved object IDs are unchanged.
 
-There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The circular mini map keeps you at its center and magnifies the nearby floor within a fixed 600-unit radius. The center is clear and the outer area fades toward the rim; camera zoom does not change the radar scale. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that circle. The full-room overview shows the whole layout. Neither view pauses the game.
+There are 359 breakable objects. Walls, glazing, rugs and floors remain intact; smashed solid furniture still blocks movement. The circular mini map keeps you at its center and magnifies the nearby floor within a fixed 2,000-unit radius. The center is clear and the outer area fades toward the rim; camera zoom does not change the radar scale. It shows you in yellow, other players in white, broken objects in red, VKL in red, TML in orange and DMM in purple only within that circle. The full-room overview shows the whole layout. Neither view pauses the game.
 
 [View the current layout](../artifacts/map-overview.png).
 

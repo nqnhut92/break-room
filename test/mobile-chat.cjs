@@ -27,21 +27,29 @@ async function main() {
       const messages=text.map((text,i)=>({mid:crypto.randomUUID(),at:Date.now()-60000+i*1000,name:i%2?'tam Co':'Nick2',text}));
       chatTestSocket.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({t:'chatHist',dir:'latest',messages,more:false})}));
     });
-    // mmPlace() sizes the log on a 250 ms timer; measure the settled layout, not the CSS fallback.
-    await page.waitForFunction(()=>document.getElementById('leftCol').style.getPropertyValue('--mobile-chat-height'));
     const buttons=await page.locator('button').count();
-    await page.waitForFunction(()=>document.getElementById('chatLog').clientHeight>=100);
+    await page.waitForFunction(()=>document.getElementById('chatDock').classList.contains('expanded'));
     const initial=await page.locator('#chatLog').boundingBox();
-    assert.ok(initial.width>=300&&initial.height>=100,JSON.stringify(initial));
-    await page.click('#chatLog');
-    assert.deepEqual(await page.locator('#chatLog').boundingBox(),initial,'tapping the log does not expand or move it');
-    assert.equal(await page.locator('#minimap').evaluate(e=>getComputedStyle(e).visibility),'visible');
+    const anchors=async()=>Promise.all(['skillBtn','chatBtn','emoteBtn','chatDock'].map(id=>page.locator('#'+id).boundingBox()));
+    const anchored=await anchors();
+    assert.ok(initial.width>=200&&initial.height===104,JSON.stringify(initial));
+    const dock=await page.locator('#chatDock').boundingBox();
+    assert.equal(initial.y+initial.height,dock.y+dock.height,'history grows upward from the compact dock');
     await page.evaluate(()=>document.getElementById('chatLog').scrollTop=0);
-    await page.waitForTimeout(400);
-    assert.equal(await page.locator('#chatLog').evaluate(e=>e.scrollTop),0,'upkeep preserves native history scrolling');
+    await page.locator('#chatLog').dispatchEvent('wheel');
+    await page.waitForTimeout(8200);
+    assert.equal(await page.locator('#chatLog').evaluate(e=>e.scrollTop),0,'history reading preserves scroll');
+    assert.equal(await page.locator('#chatLog').isVisible(),true,'history stays expanded while reading older lines');
+    await page.evaluate(()=>{const log=document.getElementById('chatLog');log.scrollTop=log.scrollHeight;});
+    await page.locator('#chatLog').dispatchEvent('wheel');
+    await page.waitForTimeout(8200);
+    assert.equal(await page.locator('#chatLog').isVisible(),false,'eight seconds idle collapses history');
+    assert.equal(await page.locator('#chatPreview').isVisible(),true,'compact preview stays visible');
+    assert.deepEqual(await anchors(),anchored,'collapsing does not move any tap target');
+    await page.click('#chatPreview');
+    assert.equal(await page.locator('#chatLog').isVisible(),true);
     await page.click('#chatBtn');
     assert.equal(await page.evaluate(()=>document.activeElement.id),'chatInput');
-    assert.deepEqual(await page.locator('#chatLog').boundingBox(),initial,'chat button only opens the input');
     const longText='Tui đang dụ sếp ở ngoài hành lang, ông tranh thủ phá nốt tủ server rồi chạy ra nha, nhớ coi máu kẻo bị giật =))';
     await page.fill('#chatInput',longText);await page.press('#chatInput','Enter');
     await page.waitForFunction(text=>document.getElementById('chatLog').lastElementChild.textContent.includes(text),longText);
@@ -52,13 +60,14 @@ async function main() {
     assert.deepEqual(await page.locator('#chatLog').boundingBox(),initial);
     assert.equal(await page.locator('button').count(),buttons);
     if(real)await page.screenshot({path:'work/chat-iphone-wrapped.png'});
-    console.log('ok - fixed wide chat: long server-delivered message wraps fully, native scroll works, taps/input do not expand it or hide the map');
+    console.log('ok - bottom chat expands to four lines, collapses after eight seconds, keeps history/anchors and wraps server-delivered text');
     if(!real)for(const[width,height]of[[844,390],[740,320]]){
       await page.setViewportSize({width,height});
       await page.waitForFunction(({width,height})=>GameViewport.width===width&&GameViewport.height===height,{width,height});
-      await page.waitForFunction(()=>{const c=document.getElementById('chatLog').getBoundingClientRect(),m=document.getElementById('minimap').getBoundingClientRect(),j=document.getElementById('joystick').getBoundingClientRect();return c.top>=m.bottom+6&&c.bottom<=j.top-6});
-      const r=await page.locator('#chatLog').boundingBox();assert.ok(r.width>=300&&r.height>=38);
-      console.log(`ok - ${width}x${height}: chat remains readable without map/joystick overlap`);
+      const c=await page.locator('#chatLog').boundingBox(), j=await page.locator('#joystick').boundingBox(), attack=await page.locator('#smashBtn').boundingBox();
+      assert.ok(c.x>=j.x+j.width && c.x+c.width<=attack.x,'chat clears both thumbs');
+      assert.equal(c.height,104);
+      console.log(`ok - ${width}x${height}: bottom chat remains between joystick and attack`);
     }
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();await app.stop()}

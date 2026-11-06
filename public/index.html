@@ -87,7 +87,7 @@
       <button id="ultBtn" class="btn ult" type="button" title="Phím R" hidden><span data-icon="zap"></span> ULTI! (R)</button>
       <button id="smashBtn" class="btn smash" type="button">ĐẬP!</button>
     </div>
-    <div id="mobileBottomControls" role="group" aria-label="Đổi skill, nhắn tin và biểu cảm"><button id="emoteBtn" class="btn" type="button" aria-label="Thả biểu cảm" aria-expanded="false" aria-controls="emoteTray">😤</button></div>
+    <div id="mobileBottomControls" role="group" aria-label="Nhắn tin và biểu cảm"><button id="emoteBtn" class="btn" type="button" aria-label="Thả biểu cảm" aria-expanded="false" aria-controls="emoteTray">😤</button></div>
     <div id="emoteTray" hidden role="group" aria-label="Chọn biểu cảm"></div>
     <canvas id="minimap" width="200" height="200" role="button" tabindex="0" aria-controls="fullMap" aria-expanded="false" aria-label="Bản đồ quanh bạn; chạm để xem toàn văn phòng" title="M: ẩn/hiện · Giữ Tab: toàn văn phòng"></canvas>
     <div id="fullMap" hidden role="region" aria-label="Bản đồ toàn văn phòng">
@@ -245,7 +245,7 @@
   <div id="conn" hidden>Mất kết nối, đang thử lại…</div>
   <div id="leftCol">
     <div id="toasts" aria-live="polite"></div>
-    <ol id="chatLog" aria-label="Tin nhắn trong phòng" hidden></ol>
+    <div id="chatDock"><ol id="chatLog" aria-label="Tin nhắn trong phòng" hidden></ol><button id="chatPreview" type="button" aria-label="Mở lịch sử chat" aria-controls="chatLog">💬 Nhắn cả phòng…</button></div>
   </div>
 
   </div>

@@ -20,9 +20,9 @@ lib/store-redis.js   state dùng chung + pub/sub trong Redis (script Lua nguyên
 lib/store-memory.js  cùng giao diện nhưng trong RAM, cho local và test
 lib/config.js        chọn store theo biến môi trường
 server.js            chạy local: file tĩnh + WebSocket ở /api/ws
-public/              index.html, style.css, game.js (mạng, input, HUD, âm thanh WebAudio),
+public/              index.html, style.css, game.js (mạng, input, HUD), audio.js (âm thanh WebAudio),
                      scene3d.js (toàn bộ phần three.js), vendor/ (three.js chép sẵn),
-                     assets/textures/ (texture sàn, CC0)
+                     assets/textures/ (texture sàn CC0), assets/audio/ (va chạm CC0)
 test/                world.js (bố cục, đường đi), smoke.js (end-to-end, RAM), shared.js (Redis thật, hai instance)
 vercel.json          thư mục tĩnh và maxDuration
 docs/                hướng dẫn chơi, deploy, kiến trúc, phát triển và adr/
@@ -111,3 +111,9 @@ Nhân vật đã lưu hiển thị dạng thông tin chỉ đọc; chế độ s
 `npm run test:minimap` kiểm tra chạm mở/đóng, desktop giữ Tab khi chạy, thả phím/mất focus thì đóng, không bắt phím lúc nhập, radar tròn, người chơi ở tâm, mép mờ dần, cắt boss xa khỏi mini map, giữ chức năng M và cập nhật HP sai thứ tự. `RENDERER_TOUCH=0 npm run test:renderer` cùng lượt touch mặc định kiểm tra đề từ mini boss chỉ ở desktop và thu hồi tài nguyên. Đây là kiểm tra trình duyệt/WebGL phần mềm, không phải đo hiệu năng thiết bị thật.
 
 Tạo lại toàn cảnh README và sơ đồ bằng `CHROMIUM_PATH=/path/to/chromium node scripts/capture-office.cjs`. Script phục vụ world/renderer hiện tại với góc camera chỉ dùng khi chụp; không đổi giới hạn camera hay spawn trong game. Xem cả `artifacts/map-ingame.png` và `artifacts/map-overview.png` trước khi commit. Toàn cảnh là hình dựng từ game; tên phòng trên sơ đồ là chú thích chỉnh sửa.
+
+## Âm thanh
+
+`public/audio.js` trộn sample va chạm Kenney CC0 theo vật liệu với hiệu ứng vũ khí tổng hợp. 24 file WAV PCM mono trong `public/assets/audio/` chỉ tải/giải mã sau thao tác bật âm; nếu sample không tải được thì dùng âm tổng hợp ngắn, không chờ để chơi. Nguồn âm được dọn khi kết thúc; tắt âm dừng cả nguồn đang phát/đã lên lịch. Tối đa 24 lớp cùng lúc; âm lượng giảm theo bình phương khoảng cách và về 0 ở 1.000 đơn vị. Compressor chung và tầng chặn đỉnh mềm xử lý các cú trùng nhau; âm gần có thể thay lớp âm xa nhỏ hơn. VKL lấy đà thường không phát tiếng; chiêu đặc biệt giữ tín hiệu ngắn. Va chạm, vỡ đồ, boss ra đòn và boss ngã có âm riêng.
+
+Chạy `npm run test:audio` với Chromium/`CHROMIUM_PATH`: tải sau thao tác, giải mã mọi WAV, báo đòn thường/đặc biệt, tắt âm, render offline vật liệu/người, giới hạn đỉnh khi đông và im lặng ở xa. Test không đánh giá được cảm giác lực hoặc cân bằng loa thật; nghe thử đập gỗ/kim loại/kính liên tục, phá đồ, đánh boss và room đông trên loa iPad lẫn tai nghe. Nguồn sample, cách chuyển đổi và giấy phép CC0 gốc nằm cạnh WAV.

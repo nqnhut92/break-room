@@ -6,20 +6,25 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  --play-top: 0px;
 }
 /* One layout surface for both WebGL and fixed HUD elements after mobile rotation. */
 #app {
   position: fixed;
   inset: 0;
   width: 100%;
-  height: 100%;
-  height: 100dvh;
-  min-height: var(--layout-min-height, 0px);
+  top: var(--play-top);
+  height: calc(100% - var(--play-top));
+  height: calc(100dvh - var(--play-top));
+  min-height: calc(var(--layout-min-height, 0px) - var(--play-top));
   contain: layout;
   overflow: hidden;
 }
 /* Only game gestures zoom the camera. Dialogs can still scroll normally. */
 @media (pointer: coarse) {
+  :root { --play-top: calc(var(--safe-top) + min(var(--safe-top), 16px)); }
+  /* The system band is outside the play surface; HUD coordinates start below it. */
+  #app { --safe-top: 0px; --safe-height: calc(100 * var(--game-vh) - var(--safe-bottom)); }
   #app :is(button, input, select, textarea) { touch-action: pan-y; }
   #app #joystick, #app #smashBtn { touch-action: none; }
   #app :is(#overlay, #settingsDlg .card, #helpContent, #help ul, #rankList, #chatLog, .roomlist) {
@@ -765,7 +770,6 @@ canvas {
   #bottombar #smashBtn { width: 90px; min-height: 58px; font-size: 18px; }
   #mobileBottomControls { position: fixed; left: 50%; bottom: max(16px, var(--safe-bottom)); transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 8px; width: min(340px, calc(calc(100 * var(--game-vw)) - 320px)); }
   #mobileBottomControls .btn { min-height: 48px; padding: 8px 10px; font-size: 12px; touch-action: manipulation; }
-  #mobileBottomControls #skillBtn { flex: 1; min-width: 0; }
   #mobileBottomControls #chatBtn { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; }
   #emotes { width: 100%; overflow-x: auto; }
   #emotes button { flex: 0 0 36px; min-height: 36px; padding: 3px; }
@@ -773,8 +777,7 @@ canvas {
   #sideBtns .btn { width: 36px; height: 36px; font-size: 18px; }
   #zoomBtns { flex-direction: row; gap: 4px; }
   #minimap { left: max(10px, var(--safe-left)); width: var(--mobile-map-width, 84px); height: var(--mobile-map-width, 84px); }
-  #leftCol { left: max(10px, var(--safe-left)); top: var(--mobile-chat-top, 150px); bottom: auto; width: min(320px, calc(var(--safe-width) - 24px)); max-width: none; }
-  #chatLog { width: 100%; height: var(--mobile-chat-height, 104px); padding: 8px 10px; }
+  #chatLog { width: 100%; height: 104px; padding: 8px 10px; }
   #chatLog .chatline { flex-shrink: 0; font-size: 14px; line-height: 20px; }
   #chatLog:empty { visibility: hidden; }
   #toasts { gap: 3px; }
@@ -858,11 +861,9 @@ canvas {
   #emoteTray { position: fixed; z-index: 28; left: 50%; bottom: max(76px, calc(var(--safe-bottom) + 66px)); transform: translateX(-50%); display: block; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: #151a25; box-shadow: 0 8px 30px #0008; }
   #emoteTray #emotes { display: grid; grid-template-columns: repeat(8, 44px); gap: 4px; width: auto; overflow: visible; }
   #emoteTray #emotes button { width: 44px; height: 44px; padding: 0; font-size: 24px; }
-  #mobileBottomControls #skillBtn { order: 1; }
   #mobileBottomControls #chatBtn { order: 2; }
   #mobileBottomControls #emoteBtn { order: 3; font-size: 22px; }
   #mobileBottomControls { gap: 6px; max-width: calc(100% - 300px); }
-  #mobileBottomControls #skillBtn { padding: 8px; }
 }
 @media (min-width: 760px), (pointer: coarse) and (orientation: landscape) and (min-width: 600px) {
   #overlay { padding: 12px; }
@@ -1053,3 +1054,23 @@ canvas {
 #fullMapCanvas { position: static; inset: auto; display: block; width: 100%; height: min(62vh, 560px); }
 .plabel .boss-motto { display: block; max-width: none; white-space: nowrap; text-align: center; font-size: 11px; line-height: 1.2; color: #e1cfa4; text-shadow: 0 1px 3px #000; }
 @media (pointer: coarse) { .plabel .boss-motto { display: none; } .full-map-panel { width: 68vw; } #fullMapCanvas { height: 58vh; } }
+
+/* The compact mobile dock keeps all tap targets anchored while history grows upward. */
+#chatPreview { display: none; }
+@media (pointer: coarse) and (orientation: landscape) {
+  #mobileBottomControls { left: var(--dock-left, calc(var(--safe-left) + 160px)); right: var(--dock-right, calc(var(--safe-right) + 232px)); width: auto; max-width: 480px; margin-inline: auto; transform: none; }
+  #bottombar #skillBtn { position: fixed; right: calc(var(--safe-right) + 126px); bottom: calc(var(--safe-bottom) + 16px); width: 90px; height: 58px; min-height: 58px; padding: 10px; }
+  #bottombar #skillBtn .ui-icon { width: 34px; height: 34px; }
+  #mobileBottomControls #chatDock { order: 2; flex: 1; min-width: 0; position: relative; height: 48px; }
+  #mobileBottomControls #chatBtn { order: 3; }
+  #mobileBottomControls #emoteBtn { order: 4; flex: 0 0 48px; width: 48px; }
+  #chatPreview { display: block; width: 100%; height: 48px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); font: inherit; font-size: 14px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #chatDock #chatLog { display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: 104px; padding: 8px 10px; opacity: 1; pointer-events: auto; }
+  #chatDock.expanded #chatLog:not([hidden]) { display: flex; }
+  #chatDock.expanded:has(#chatLog:not([hidden])) #chatPreview { visibility: hidden; }
+}
+
+/* Match usable tablet space, rather than guessing physical inches or a model name. */
+@media (pointer: coarse) and (orientation: landscape) and (min-width: 1100px) and (min-height: 800px) {
+  .plabel .boss-motto { display: block; }
+}

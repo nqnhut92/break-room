@@ -34,7 +34,12 @@ async function main(){
       assert.equal(await page.evaluate(()=>localStorage.getItem('br-gfx2')),'high');
       await page.click('#mapBtn');assert.equal(await page.locator('#minimap').isVisible(),false);
       assert.equal(await page.locator('#zoomBtns').evaluate(e=>e.parentElement.id),'sideBtns');
-      for(const id of ['skillBtn','chatBtn'])assert.equal(await page.locator('#'+id).evaluate(e=>e.parentElement.id),'mobileBottomControls');
+      assert.equal(await page.locator('#skillBtn').evaluate(e=>e.parentElement.id),'bottombar');
+      assert.equal(await page.locator('#chatBtn').evaluate(e=>e.parentElement.id),'mobileBottomControls');
+      const skill=await page.locator('#skillBtn').boundingBox(), attack=await page.locator('#smashBtn').boundingBox();
+      assert.equal(skill.width,attack.width);assert.equal(skill.height,attack.height);
+      assert.equal(attack.x-skill.x-skill.width,24,'skill and attack have a deliberate 24px gap');
+      assert.equal(skill.y,attack.y);
       assert.equal(await page.locator('#emotes').evaluate(e=>e.parentElement.id),'emoteTray');
       if(process.env.SETTINGS_SCREENSHOT&&width===844)await page.screenshot({path:process.env.SETTINGS_SCREENSHOT});
       await page.click('#settingsClose');assert.equal(await page.locator('#settingsDlg').isVisible(),false);

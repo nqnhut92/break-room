@@ -15,7 +15,7 @@
     const visual = window.visualViewport;
     const editing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
     const inset = editing && visual && Math.abs(visual.scale - 1) < 0.01
-      ? Math.max(0, height - visual.height - visual.offsetTop) : 0;
+      ? Math.max(0, height + (app?.getBoundingClientRect().top || 0) - visual.height - visual.offsetTop) : 0;
     root.style.setProperty('--keyboard-bottom', inset + 'px');
   }
   function sync() {

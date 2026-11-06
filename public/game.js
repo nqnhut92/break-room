@@ -1,3 +1,4 @@
+import { createGameAudio, distanceVolume } from './audio.js';
 import './actor-collision.js';
 import { accountUI } from './account.js';
 import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js';
@@ -172,89 +173,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
 
   // ---------------------------------------------------------------- audio ----
-  let actx = null;
-  let noiseBuf = null;
-
-  function initAudio() {
-    if (actx) {
-      if (actx.state === 'suspended') actx.resume();
-      return;
-    }
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      actx = new AC();
-      const len = Math.floor(actx.sampleRate * 0.6);
-      noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
-      const data = noiseBuf.getChannelData(0);
-      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-    } catch (e) {
-      actx = null;
-    }
-  }
-
-  function noise(dur, freq, vol) {
-    if (!actx || S.muted) return;
-    const t = actx.currentTime;
-    const src = actx.createBufferSource();
-    src.buffer = noiseBuf;
-    const f = actx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.value = freq;
-    const g = actx.createGain();
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    src.connect(f);
-    f.connect(g);
-    g.connect(actx.destination);
-    src.start(t);
-    src.stop(t + dur);
-  }
-
-  function tone(freq, dur, vol, type, slide) {
-    if (!actx || S.muted) return;
-    const t = actx.currentTime;
-    const osc = actx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    osc.frequency.linearRampToValueAtTime(Math.max(20, freq + slide), t + dur);
-    const g = actx.createGain();
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    osc.connect(g);
-    g.connect(actx.destination);
-    osc.start(t);
-    osc.stop(t + dur);
-  }
-
-  function sfxHit(v) {
-    noise(0.12, 2600, 0.35 * v);
-    tone(130, 0.12, 0.35 * v, 'sine', -70);
-  }
-  function sfxBreak(v) {
-    noise(0.5, 5200, 0.6 * v);
-    tone(90, 0.35, 0.45 * v, 'sawtooth', -60);
-  }
-  function sfxPunch(v) {
-    noise(0.22, 900, 0.8 * v);
-    tone(70, 0.3, 0.7 * v, 'sine', -40);
-  }
-  function sfxWind(v) {
-    tone(180, 0.6, 0.14 * v, 'sawtooth', 140);
-  }
-  function sfxHurt() {
-    noise(0.16, 1800, 0.45);
-    tone(210, 0.22, 0.35, 'square', -130);
-  }
-  function sfxReset() {
-    tone(880, 0.15, 0.18, 'sine', 0);
-    setTimeout(() => tone(1320, 0.25, 0.18, 'sine', 0), 130);
-  }
-
+  const audio = createGameAudio(() => S.muted);
+  const initAudio = () => { if (!S.muted) return audio.init(); };
+  const sfxHit = (v, type = 'body', skill = 'hammer') => audio.hit(v, type, skill);
+  const sfxBreak = (v, type) => audio.break(v, type);
+  const sfxPunch = v => audio.strike(v);
+  const sfxWind = (v, kind) => audio.cue(v, kind);
+  const sfxHurt = () => audio.hurt();
+  const sfxReset = () => audio.reset();
   function volumeAt(x, y) {
     const me = S.players.get(S.me);
-    if (!me) return 0.6;
-    const d = Math.hypot(x - me.x, y - me.y);
-    return clamp(1 - d / 900, 0.15, 1);
+    return me ? distanceVolume(Math.hypot(x-me.x,y-me.y)) : 0;
   }
 
   // -------------------------------------------------------------- effects ----
@@ -578,7 +507,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           scene.fx.floatText(m.x, 190, m.y, m.target === 'boss' ? 'ULTI! -' + m.dmg : 'ULTI!', '#ffd24a', 28);
         }
         S.shake = Math.min(1.6, S.shake + 1.1 * volumeAt(m.x, m.y));
-        sfxHit(volumeAt(m.x, m.y));
+        sfxHit(volumeAt(m.x, m.y), 'body', m.skill);
         break;
       }
       case 'hp':
@@ -624,7 +553,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         if (p) { showSkill(p, m.skill, b); p.swing = 1; p.heading = Math.atan2(b.x - p.x, b.y - p.y); if (m.ult) p.ultUntil = performance.now() + 700; }
         b.pl.hitUntil = performance.now() + 160;
         if (m.skill === 'electric') b.pl.electricUntil = performance.now() + 700;
-        sfxHit(volumeAt(b.x, b.y));
+        sfxHit(volumeAt(b.x, b.y), 'body', m.skill);
         if (scene) { scene.fx.sparks(b.x, 100, b.y, 6); scene.fx.floatText(b.x, 180, b.y, '-' + Math.round(m.dmg), '#ffd27c', 20); }
         if (m.hp <= 0) toast(m.id + ' bị hạ! Thưởng ' + b.cfg.bounty + ' triệu, hồi sinh sau 30 giây.');
         break;
@@ -707,7 +636,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         mole.hitUntil = performance.now() + 300;
         if (scene && m.skill !== 'milkTea') scene.fx.sparks(mole.x, 65, mole.y, 8);
         if (scene) scene.fx.floatText(mole.x, 130, mole.y, m.skill === 'electric' ? '⚡ TÊ TÊ!' : m.skill === 'milkTea' ? 'TRÀ SỮA!' : 'BỐP!', '#ffd24a', 18);
-        sfxHit(volumeAt(mole.x, mole.y));
+        sfxHit(volumeAt(mole.x, mole.y), 'body', m.skill);
         break;
       }
       case 'moleDead': {
@@ -728,7 +657,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         victim.hitUntil = performance.now() + 300;
         if (scene && m.skill !== 'milkTea') scene.fx.sparks(victim.x, 65, victim.y, 8);
         if (scene) scene.fx.floatText(victim.x, 130, victim.y, m.skill === 'electric' ? '⚡ TÊ TÊ!' : m.skill === 'milkTea' ? 'TRÀ SỮA!' : 'BỐP!', '#b8efff', 16);
-        sfxHit(volumeAt(victim.x, victim.y));
+        sfxHit(volumeAt(victim.x, victim.y), 'body', m.skill);
         break;
       }
       case 'officePatrol':
@@ -759,7 +688,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         const roleWords = hitter && ROLE_BY_ID[hitter.role] ? ROLE_BY_ID[hitter.role].hit : null;
         if (o.type !== 'server') floatText(o, 22, roleWords && Math.random() < 0.4 ? pick(roleWords) : pick(HIT_WORDS), '#ffffff', 16);
         const v = volumeAt(o.x, o.y);
-        sfxHit(v);
+        sfxHit(v, o.type, m.skill);
         S.shake = Math.min(1, S.shake + 0.25 * v);
         if (m.by !== S.me) {
           const p = S.players.get(m.by);
@@ -783,7 +712,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         floatText(o, 46, '-' + fmtShort(m.cost), '#ffd34d', 22);
         if (m.cost >= 8) floatText(o, 74, pick(JOKES), '#ff8a78', 15);
         const v = volumeAt(o.x, o.y);
-        sfxBreak(v);
+        sfxBreak(v, o.type);
         S.shake = Math.min(1.4, S.shake + 0.8 * v);
         const label = S.types[m.type] ? S.types[m.type].label : 'đồ vật';
         const breaker = S.players.get(m.by);
@@ -1149,7 +1078,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       toast('📋 VKL: NEW PROCESS · Quy trình mới! Chạy khỏi vùng tím!');
       if (scene) scene.fx.floatText(m.x, 180, m.y, 'NEW PROCESS', '#ceadff', 24);
     }
-    sfxWind(volumeAt(b.x, b.y));
+    if (m.skill === 'newProcess') sfxWind(volumeAt(b.x, b.y), 'newProcess');
   }
   function bossStrike(m) {
     const b = S.boss;
@@ -1175,7 +1104,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     b.hpT = performance.now();
     if (!m.by) return;
     const v = volumeAt(b.x, b.y);
-    sfxHit(v);
+    sfxHit(v, 'body', m.skill);
     if (scene) {
       scene.fx.sparks(b.x, 120, b.y, 6);
       scene.fx.floatText(b.x + rand(-30, 30), 250, b.y, pick(HIT_WORDS), '#ffffff', 16);
@@ -1204,7 +1133,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         for (let i = 0; i < 10; i++) scene.fx.smoke(b.x + rand(-50, 50), 20 + i * 12, b.y + rand(-50, 50));
         scene.fx.sparks(b.x, 140, b.y, 30);
       }
-      sfxBreak(volumeAt(b.x, b.y));
+      audio.down(volumeAt(b.x, b.y));
     }
     S.shake = Math.min(1.4, S.shake + 0.9);
     const names = m.shares.map((s) => s.name);
@@ -1393,19 +1322,36 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const o = chatOldest();
     if (o) chatAsk({ before: o });
   });
-  // On a computer the chat frame stays on screen. On a phone, where room is scarce, it fades out after 3 seconds without
-  // a new message, and comes back with the next one, when the box is focused (💬) or while a finger rests on it.
-  const CHAT_IDLE_MS = 3000;
-  let chatIdleTimer = 0;
-  function chatWake() {
+  // Mobile chat expands upward without moving the skill/compose/emoji targets.
+  const CHAT_IDLE_MS = 8000;
+  let chatIdleTimer = 0, chatTouching = false, chatReading = false;
+  function chatWake(force = false) {
+    const dock = $('chatDock'), preview = $('chatPreview');
+    preview.textContent = chatLog.lastElementChild?.textContent || '💬 Nhắn cả phòng…';
     chatLog.classList.remove('idle');
+    dock.classList.toggle('expanded', !!(force || chatLog.children.length));
     clearTimeout(chatIdleTimer);
-    if (!coarseUi) return; // on a computer the chat frame is always there; only a phone, short of room, fades it
+    if (!coarseUi) return;
     chatIdleTimer = setTimeout(() => {
-      if (document.activeElement !== chatInput && !chatLog.matches(':hover')) chatLog.classList.add('idle');
-      else chatWake();
+      const older = chatReading && chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight > 24;
+      if (document.activeElement === chatInput || chatTouching || older) chatWake(true);
+      else {
+        chatLog.classList.add('idle');
+        dock.classList.remove('expanded');
+      }
     }, CHAT_IDLE_MS);
   }
+  $('chatPreview').addEventListener('click', () => {
+    if (!chatLog.children.length) { chatOpen(); return; }
+    chatReading = false;
+    chatWake(true);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  });
+  chatLog.addEventListener('pointerdown', () => { chatTouching = true; chatReading = true; chatWake(true); });
+  window.addEventListener('pointerup', () => { if (chatTouching) { chatTouching = false; chatWake(true); } });
+  window.addEventListener('pointercancel', () => { chatTouching = false; });
+  window.addEventListener('blur', () => { chatTouching = false; chatReading = false; });
+  chatLog.addEventListener('wheel', () => { chatReading = true; chatWake(true); }, {passive:true});
   function chatOpen() {
     mm.held = false; mmFull(false);
     if (coarseUi) chatForm.classList.add('open');
@@ -1651,7 +1597,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (!me) return;
     const c = canvas.getContext('2d'), aspect = canvas.width / canvas.height;
     // A steady local scale prevents camera zoom from shrinking the whole office into the radar.
-    const range = 600;
+    const range = 2000;
     const width = full ? world.w : range * 2;
     const height = full ? world.h : width / aspect;
     const x0 = full ? 0 : me.x - width / 2, y0 = full ? 0 : me.y - height / 2;
@@ -1713,49 +1659,45 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       const radius = canvas.width/2;
       const fade = c.createRadialGradient(radius,radius,0,radius,radius,radius);
       fade.addColorStop(0,'rgba(0,0,0,1)');
-      fade.addColorStop(.55,'rgba(0,0,0,1)');
-      fade.addColorStop(.85,'rgba(0,0,0,.55)');
+      fade.addColorStop(.78,'rgba(0,0,0,1)');
+      fade.addColorStop(.92,'rgba(0,0,0,.7)');
       fade.addColorStop(1,'rgba(0,0,0,.08)');
       c.globalCompositeOperation = 'destination-in';
       c.fillStyle = fade; c.fillRect(0,0,canvas.width,canvas.height);
     }
     c.restore();
   }
-  // On narrow screens the top bar wraps onto two rows and the damage board sits under it: keep the map below all of it.
+  // On narrow screens, follow the left header; the taller scoreboard must not push the radar down.
   function mmPlace() {
     const narrow = coarseUi || window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
     if (!narrow) {
       mm.cv.style.top = '';
       return;
     }
-    const board = $('board');
-    const bottom = board ? viewport.rect(board).bottom : 0;
-    mm.cv.style.top = Math.max(56, Math.round(bottom) + 8) + 'px';
+    const header = $('topLeft').getBoundingClientRect();
+    const appTop = $('app').getBoundingClientRect().top;
+    const mapTop = Math.max(48, Math.round(header.bottom - appTop) + 8);
+    mm.cv.style.top = mapTop + 'px';
     if (coarseUi && viewport.width > viewport.height && S.joined) {
-      const joystickTop = $('joystick').getBoundingClientRect().top;
-      const mapTop = parseFloat(mm.cv.style.top) || 56;
-      const mapWidth = Math.max(32, Math.min(84, Math.floor(joystickTop - mapTop - 60)));
+      const joystickTop = $('joystick').getBoundingClientRect().top - appTop;
+      const desired = Math.max(96, Math.min(208, Math.round(Math.min(viewport.width * .16, viewport.height * .24))));
+      const mapWidth = Math.max(32, Math.min(desired, Math.floor(joystickTop - mapTop - 8)));
       if (mm.cv.style.getPropertyValue('--mobile-map-width') !== mapWidth + 'px') {
         mm.cv.style.setProperty('--mobile-map-width', mapWidth + 'px');
         if (mm.source) mmBuild(mm.source.world, mm.source.props, mm.source.zones);
       }
-      const chatTop = mm.on ? mm.cv.getBoundingClientRect().bottom + 8 : Math.max(56, Math.round(bottom) + 8);
-      const chatBottom = joystickTop - 8;
-      const availableHeight = Math.max(24, Math.min(112, Math.floor(chatBottom - chatTop)));
-      const lines = Math.max(1, Math.min(4, Math.floor((availableHeight - 16) / 22)));
-      const height = Math.min(availableHeight, lines * 22 + 16);
-      const wasAtEnd = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40;
-      $('leftCol').style.setProperty('--mobile-chat-top', Math.round(chatBottom - height) + 'px');
-      $('leftCol').style.setProperty('--mobile-chat-height', height + 'px');
-      if (wasAtEnd) chatLog.scrollTop = chatLog.scrollHeight;
+      const joystick = $('joystick').getBoundingClientRect(), skill = $('skillBtn').getBoundingClientRect();
+      const dock = $('mobileBottomControls'), origin = $('app').getBoundingClientRect().left;
+      dock.style.setProperty('--dock-left', Math.ceil(joystick.right - origin + 16) + 'px');
+      dock.style.setProperty('--dock-right', Math.ceil(viewport.width - (skill.left - origin) + 16) + 'px');
     }
-
   }
+
   // the side buttons sit in the top-right corner, right under the damage board
   function sidePlace() {
     const board = $('board');
     if (!board) return;
-    const top = Math.max(56, Math.round(viewport.rect(board).bottom) + 8);
+    const top = Math.max(56, Math.round(viewport.rect(board).bottom - $('app').getBoundingClientRect().top) + 8);
     $('sideBtns').style.top = top + 'px';
   }
   setInterval(() => {
@@ -1843,7 +1785,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const settingsEl = $('settingsDlg');
   const settingsMQ = window.matchMedia('(pointer: coarse)');
   // Move the existing controls so state, cooldowns and listeners stay shared.
-  const settingsMoves = ['helpBtn', 'mapBtn', 'gfxBtn', 'copyLink', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn', 'zoomBtns'].map(id => {
+  const settingsMoves = ['helpBtn', 'mapBtn', 'gfxBtn', 'copyLink', 'resetBtn', 'emotes', 'skillBtn', 'chatBtn', 'chatDock', 'zoomBtns'].map(id => {
     const el = $(id), slot = document.createComment(id);
     el.before(slot);
     return { el, slot };
@@ -1861,13 +1803,17 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     $('ragePill').title = settingsMQ.matches ? 'Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì chạm ULTI!' : 'Nộ: đánh sếp hoặc bạn sếp để nạp. Đầy thì bấm R để tung ulti';
     for (const { el, slot } of settingsMoves) {
       if (settingsMQ.matches) {
-        const target = el.id === 'zoomBtns' ? 'sideBtns' : el.id === 'emotes' ? 'emoteTray'
-          : el.id === 'skillBtn' || el.id === 'chatBtn' ? 'mobileBottomControls'
+        const target = el.id === 'zoomBtns' ? 'sideBtns' : el.id === 'emotes' ? 'emoteTray' : el.id === 'skillBtn' ? 'bottombar'
+          : el.id === 'chatBtn' || el.id === 'chatDock' ? 'mobileBottomControls'
           : 'settingsActions';
         $(target).append(el);
       } else slot.after(el);
     }
     $('sideTools').hidden = settingsMQ.matches;
+    const selected = SKILLS.find(s => s.id === S.skill) || SKILLS[0];
+    setButtonIcon($('skillBtn'), selected.icon, settingsMQ.matches ? '' : selected.label);
+    $('skillBtn').setAttribute('aria-label', selected.label + ' · Chạm để đổi skill');
+    $('skillBtn').title = selected.label + ' · Chạm để đổi skill';
     mmPlace(); sidePlace();
   }
   $('settingsBtn').addEventListener('click', () => {
@@ -2278,7 +2224,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   function setSkill(i) {
     const next = SKILLS[(i + SKILLS.length) % SKILLS.length];
     S.skill = next.id;
-    setButtonIcon($('skillBtn'), next.icon, next.label);
+    setButtonIcon($('skillBtn'), next.icon, coarseUi ? '' : next.label);
+    $('skillBtn').setAttribute('aria-label', next.label + ' · Chạm để đổi skill');
+    $('skillBtn').title = next.label + ' · Chạm để đổi skill';
     $('smashBtn').textContent = next.action;
     send({ t: 'skill', skill: next.id }); // so the others see what is in your hand
     toast(next.label + (coarseUi ? ' · Giữ nút ' + next.action + ' để dùng · chạm Skill để đổi' : ' · Space để dùng · phím 1-3 đổi skill'));
@@ -2317,10 +2265,15 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   } catch (e) { /* ignore */ }
   showMute();
 
+  // A returning Home Screen app may need a fresh gesture to resume iOS audio.
+  window.addEventListener('pointerdown', initAudio, {passive:true});
+  window.addEventListener('keydown', initAudio);
+
   $('mute').addEventListener('click', () => {
     S.muted = !S.muted;
     showMute();
     if (!S.muted) initAudio();
+    else audio.stop();
     try {
       localStorage.setItem('br-sound', S.muted ? '0' : '1');
     } catch (e) { /* ignore */ }
@@ -2697,7 +2650,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // ----------------------------------------------------------------- loop ----
   let last = performance.now();
   function positionOfficeNotice() {
-    const bottom = $('topbar').getBoundingClientRect().bottom;
+    const bottom = $('topbar').getBoundingClientRect().bottom - $('app').getBoundingClientRect().top;
     $('officeNotice').style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
   }
   if (window.ResizeObserver) new ResizeObserver(positionOfficeNotice).observe($('topbar'));

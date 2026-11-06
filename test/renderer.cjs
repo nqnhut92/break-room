@@ -47,6 +47,12 @@ async function main() {
       const checks = [], metrics = {};
       const check = (ok, name) => { if(!ok) throw new Error(name); checks.push(name); };
       frame(); frame();
+      const canvas=app.renderer.domElement, bounds=canvas.getBoundingClientRect();
+      const before=app.pick(bounds.left+bounds.width/2,bounds.top+bounds.height/2);
+      canvas.style.transform='translateY(40px)';
+      const after=app.pick(bounds.left+bounds.width/2,bounds.top+bounds.height/2+40);
+      canvas.style.transform='';
+      check(before && JSON.stringify(before)===JSON.stringify(after), 'picking stays aligned when the play surface starts below the system bar');
       check(!app.renderer.shadowMap.enabled && !app.debug.sun.castShadow && !app.debug.sun.shadow.map, 'safe mode has no real-time shadow target');
       check(app.debug.players.get(1).g.children.some(o => o.isMesh && o.geometry.type === 'CircleGeometry' && o.visible), 'safe mode retains the player ground shadow');
       metrics.safe = { calls: app.renderer.info.render.calls, triangles: app.renderer.info.render.triangles };
@@ -83,8 +89,8 @@ async function main() {
       S.minis.set('TML',{x:2000,y:1850,hp:900,mode:'idle',pl:mini});frame();
       check(app.debug.miniRigs.has('TML'), 'mini-boss uses the same owned-resource lifecycle');
       S.minis.set('DMM',{x:2050,y:1850,hp:600,mode:'idle',pl:{...player(-11),mini:'DMM'}});frame();
-      const mottos=[...document.querySelectorAll('.boss-motto')].map(el=>el.textContent);
-      check(matchMedia('(pointer: coarse)').matches ? mottos.length===0 : mottos.includes('Tranh công, chối tội, đổ lỗi, thanh minh') && mottos.includes('Thiên hạ đệ nhất thái giám'), 'mini-boss mottos appear on desktop only');
+      const mottos=[...document.querySelectorAll('.boss-motto')].filter(el=>getComputedStyle(el).display!=='none').map(el=>el.textContent);
+      check(matchMedia('(pointer: coarse)').matches ? mottos.length===0 : mottos.includes('Tranh công, chối tội, đổ lỗi, thanh minh') && mottos.includes('Thiên hạ đệ nhất thái giám'), 'mini-boss mottos are hidden on compact touch screens and visible on desktop');
 
       S.minis.clear();frame();
       check(app.renderer.info.memory.geometries===baseline, 'removed mini-boss releases its rig and telegraph geometry');
@@ -106,16 +112,23 @@ async function main() {
       check(motionErrors===0,'camera movement across the former floor-overlap strip works in safe and high modes without WebGL errors');
       S.boss={x:1920,y:1950,dead:false,mode:'patrol',pl:{...player(-1),gender:'boss',role:'boss',name:'VKL'}};frame();
       const mainMotto=[...document.querySelectorAll('.boss-motto')].find(el=>el.textContent==='Mọi người nghĩ dì dẫy?');
-      check(matchMedia('(pointer: coarse)').matches ? !mainMotto : !!mainMotto, 'VKL motto appears below its name on desktop only');
+      check(!!mainMotto && (matchMedia('(pointer: coarse)').matches ? getComputedStyle(mainMotto).display==='none' : getComputedStyle(mainMotto).display!=='none'), 'VKL motto visibility follows the compact touch layout');
       S.boss.pl.alwaysHp=true;S.boss.pl.hpLabel='6.000 / 6.000';
       for(const [id,x,hp] of [['TML',1600,900],['DMM',2240,600]]) {
         S.minis.set(id,{x,y:1950,hp,mode:'idle',pl:{...player(id==='TML'?-10:-11),name:id,role:'',mini:id,x,y:1950,alwaysHp:true,hpLabel:hp+' / '+hp}});
       }
       frame();
-      check([...document.querySelectorAll('.boss-motto')].every(el=>el.previousElementSibling.classList.contains('nm') && el.getBoundingClientRect().top>=el.previousElementSibling.getBoundingClientRect().bottom), 'desktop mottos sit directly below names without covering them');
+      check([...document.querySelectorAll('.boss-motto')].filter(el=>getComputedStyle(el).display!=='none').every(el=>el.previousElementSibling.classList.contains('nm') && el.getBoundingClientRect().top>=el.previousElementSibling.getBoundingClientRect().bottom), 'desktop mottos sit directly below names without covering them');
       check([...document.querySelectorAll('.boss-motto')].every(el=>getComputedStyle(el).whiteSpace==='nowrap' && el.getBoundingClientRect().height<16), 'desktop boss mottos stay on a single line');
       return {checks,metrics};
     });
+    if(touch)for(const [width,height,show] of [[1210,834,true],[1133,744,false],[1024,768,false],[1366,1024,true],[844,390,false]]) {
+      await page.setViewportSize({width,height});
+      const labels=await page.evaluate(()=>[...document.querySelectorAll('.boss-motto')].map(el=>({visible:getComputedStyle(el).display!=='none',below:el.getBoundingClientRect().top>=el.previousElementSibling.getBoundingClientRect().bottom})));
+      assert.equal(labels.length,3,'all boss tagline elements survive viewport changes');
+      assert.ok(labels.every(el=>el.visible===show&&(!show||el.below)),`${width}x${height}: tagline visibility and placement`);
+      console.log(`ok - ${width}x${height}: boss taglines ${show?'visible':'hidden'} without rebuilding rigs`);
+    }
     assert.deepStrictEqual(errors, [], 'no browser page errors');
     for (const check of result.checks) console.log('ok - ' + check);
     console.log(JSON.stringify(result.metrics));

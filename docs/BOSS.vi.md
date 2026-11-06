@@ -13,6 +13,8 @@ Mỗi server (BR-1, BR-2) có một boss duy nhất, **VKL**, đi tuần trong p
 - Sếp ngã thì **500 triệu tiền thưởng** được cộng vào bảng thiệt hại, chia theo sát thương mỗi người gây ra. 1 phút sau sếp quay lại chỗ cũ với đầy máu.
 - Ngoài sự kiện đi tuần toàn văn phòng, sếp ở phòng server; ra khỏi khu vực sẽ thoát truy đuổi, nhưng sếp không hồi máu. Trong phòng có sáu tủ server, mỗi tủ 120 triệu, nên đáng để liều.
 
+VKL lấy đà đấm thường chỉ dùng vòng báo dưới sàn, không phát tiếng lấy đà. Lúc ra đòn và ngã có âm va chạm riêng; New Process giữ tín hiệu chiêu đặc biệt ngắn. Thời gian và sát thương không đổi.
+
 ## Các con số
 
 Chỉ số giao tranh nằm trong `BOSS` và `PLAYER` ở [`lib/boss.js`](../lib/boss.js); ngưỡng dân số nằm trong [`lib/boss-population.js`](../lib/boss-population.js). Client nhận máu hiện tại/tối đa, không nhận bộ đếm người thật.

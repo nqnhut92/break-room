@@ -27,7 +27,7 @@ edit('index.html', (s) =>
     .replace(/(href|src)="(game\.js|scene3d\.js|viewport\.js|style\.css)(?:\?v=[^"]*)?"/g, '$1="$2?v=' + version + '"'));
 edit('game.js', s => s.replace(/import '\.\/actor-collision\.js(?:\?v=[^']*)?'/g, "import './actor-collision.js?v=" + version + "'"));
 for (const file of ['game.js', 'scene3d.js']) {
-  edit(file, (s) => s.replace(/from '\.\/(scene3d|roles|account|vendor\/lucide-icons)\.js(?:\?v=[^']*)?'/g, "from './$1.js?v=" + version + "'"));
+  edit(file, (s) => s.replace(/from '\.\/(audio|scene3d|roles|account|vendor\/lucide-icons)\.js(?:\?v=[^']*)?'/g, "from './$1.js?v=" + version + "'"));
 }
 // The server learns its own build from the same version (only for the real build, not when a test stamps a temp folder),
 // so it can tell the players of an older deploy to reload.

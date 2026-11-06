@@ -20,9 +20,9 @@ lib/store-redis.js   shared state + pub/sub in Redis (atomic Lua scripts)
 lib/store-memory.js  same interface in RAM, for local runs and tests
 lib/config.js        picks the store from environment variables
 server.js            local run: static files + WebSocket at /api/ws
-public/              index.html, style.css, game.js (network, input, HUD, WebAudio sound),
+public/              index.html, style.css, game.js (network, input, HUD), audio.js (WebAudio sound),
                      scene3d.js (all the three.js code), vendor/ (vendored three.js),
-                     assets/textures/ (floor textures, CC0)
+                     assets/textures/ (floor textures, CC0), assets/audio/ (impact sounds, CC0)
 test/                world.js (layout, paths), smoke.js (end-to-end, RAM), shared.js (real Redis, two instances)
 vercel.json          static directory and maxDuration
 docs/                gameplay, deployment, architecture, development and adr/
@@ -55,6 +55,12 @@ Room boundaries, doors and shared walls live in `FLOOR_ROOMS` in `lib/world.js`;
 Roles in `public/roles.js` must match `ROLE_IDS` in `lib/world.js`. Mana settings live in `MANA` in `lib/realtime.js`.
 
 Both graphics modes render directly to the screen without EffectComposer. Rationale and revisit conditions: [ADR 0003](adr/0003-direct-rendering.md). Viewport rules and device verification: [MOBILE.md](MOBILE.md).
+
+## Sound
+
+`public/audio.js` mixes Kenney CC0 material impacts with synthesized weapon accents. The 24 mono PCM WAVs in `public/assets/audio/` load/decode only after sound is enabled by a gesture; missing samples use a short synthesis fallback without delaying gameplay. Voices clean up on end, mute stops active/scheduled sources, and at most 24 layers play together. Distance gain falls quadratically to zero at 1,000 world units. A shared compressor plus a soft output ceiling handles coincident hits; a nearby layer can replace a quieter distant one. Regular VKL windups are silent; special abilities retain short cues. Material hits, breaks, boss strikes and boss defeat use separate events.
+
+Run `npm run test:audio` with Chromium/`CHROMIUM_PATH`: gesture loading, all WAV decodes, normal/special windups, mute, offline material/body renders, crowd peak bounds and distance silence. Automated renders cannot judge subjective punch or device speaker balance; compare repeated wood/metal/glass hits, breaks, boss combat and busy rooms on iPad speakers and headphones. Sample origin/conversion details and the original CC0 notice sit beside the WAVs.
 
 ## Renderer checks and mobile performance
 
