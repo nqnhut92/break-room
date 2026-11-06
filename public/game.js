@@ -417,7 +417,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         mm.rooms = m.rooms || [];
         mmBuild(m.world, m.props, m.zones);
         S.joined = true;
-        setTimeout(showInstall, 2500); // after the welcome toasts
         syncOrientation();
         autoJoin.set();
         document.documentElement.classList.remove('autojoin');
@@ -2397,6 +2396,59 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     } catch (e) { /* ignore */ }
   });
 
+  // ------------------------------------------------------- Home Screen gate ----
+  // Phones and tablets play from the Home Screen app only (owner's decision): it runs full screen, without browser bars.
+  // In a browser tab the join screen shows how to add the game instead of the form; nothing can join from the tab
+  // (also not the reload auto-join). Web pages cannot tell whether the icon already exists, only whether this launch
+  // came from it (navigator.standalone / display-mode). Android/Chromium fires beforeinstallprompt, so the card gets a
+  // button for the browser's own install dialog; iOS has no install API in any browser (all run on WebKit).
+  // User-observed (Nov 2026): Edge on iPhone has "Add to Home Screen" and its icon works like Safari's; Edge on iPad
+  // has none, so iPads outside Safari are sent to Safari. Automated browsers (navigator.webdriver: the test suites)
+  // are not gated; test/install-card.cjs turns that off.
+  const install = { prompt: null, installed: false };
+  const standaloneApp = () => navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  // iPadOS reports a Mac (platform MacIntel, "Macintosh" user agent) but has a touch screen.
+  const iPadDevice = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const iosDevice = iPadDevice || /iPhone|iPod/.test(navigator.userAgent);
+  // Other iOS browsers name themselves in the user agent (on iPad also in desktop mode: Edg/ or EdgiOS/ and so on).
+  const otherIosBrowser = () => /EdgiOS|Edg\/|CriOS|FxiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|Brave|FBAN|FBAV|Instagram|Line\/|Zalo/i.test(navigator.userAgent);
+  const installGate = () => (coarseUi || iosDevice) && !standaloneApp() && !navigator.webdriver;
+  function installSteps() {
+    const then = ', rồi mở game từ icon mới.';
+    if (install.installed) return 'Đã cài xong. Mở game từ icon trên màn hình chính để chơi.';
+    if (install.prompt) return 'Trên điện thoại và máy tính bảng, game chỉ chơi bằng app ở màn hình chính. Bấm Cài app' + then;
+    const lead = 'Trên điện thoại và máy tính bảng, game chỉ chơi bằng app ở màn hình chính. ';
+    if (!iosDevice) return lead + 'Bấm ⋮ → Thêm vào màn hình chính (hoặc Cài đặt ứng dụng)' + then;
+    if (otherIosBrowser() && iPadDevice) return lead + 'Trình duyệt này trên iPad không thêm được: mở trang bằng Safari → Chia sẻ → Thêm vào Màn hình chính' + then;
+    if (otherIosBrowser()) return lead + 'Bấm ⋯ → Chia sẻ → Thêm vào Màn hình chính' + then;
+    return lead + 'Bấm Chia sẻ → Thêm vào Màn hình chính' + then;
+  }
+  function syncInstallGate() {
+    const gate = installGate();
+    document.documentElement.classList.toggle('install-gate', gate);
+    $('installCard').hidden = !gate;
+    if (!gate) return;
+    $('installText').textContent = installSteps();
+    $('installBtn').hidden = !install.prompt;
+    $('installCopy').hidden = !(iPadDevice && otherIosBrowser());
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); install.prompt = e; syncInstallGate(); });
+  window.addEventListener('appinstalled', () => { install.prompt = null; install.installed = true; syncInstallGate(); });
+  $('installBtn').addEventListener('click', async () => {
+    const ask = install.prompt;
+    if (!ask) return;
+    ask.prompt();
+    const choice = await ask.userChoice.catch(() => null);
+    if (choice && choice.outcome === 'accepted') { install.prompt = null; install.installed = true; }
+    syncInstallGate();
+  });
+  $('installCopy').addEventListener('click', async () => {
+    const link = location.origin + '/';
+    try { await navigator.clipboard.writeText(link); $('installCopy').textContent = 'Đã copy'; } catch (e) { $('installCopy').textContent = link; }
+  });
+  if (window.matchMedia) window.matchMedia('(display-mode: standalone)').addEventListener?.('change', syncInstallGate);
+  syncInstallGate();
+
   // ----------------------------------------------------------------- join ----
   // The two rooms that exist (keep in sync with ROOMS in lib/world.js; the server sends
   // the live list with player counts, this is only the fallback if that request fails).
@@ -2564,6 +2616,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     // back into the office straight away after a reload (see autoJoin); the form stays hidden meanwhile
     const resume = () => {
       if (!autoJoin.on() || S.started) return;
+      if (installGate()) { document.documentElement.classList.remove('autojoin'); return; } // the tab shows the install steps
       if (!$('nameInput').value.trim() || !scene) {
         document.documentElement.classList.remove('autojoin');
         return;
@@ -2580,7 +2633,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
 
     $('joinForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (joinBusy) return;
+      if (joinBusy || installGate()) return; // phones and tablets join from the Home Screen app only
       if (!scene) { $('joinErr').textContent = 'Thiết bị hoặc trình duyệt này không bật được WebGL nên chưa chơi được bản 3D.'; return; }
       setJoinBusy(true);
       try { await account.beforeJoin(); } catch (err) { $('joinErr').textContent = err.message; setJoinBusy(false); return; }
@@ -2779,12 +2832,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   let last = performance.now();
   function positionOfficeNotice() {
     const bottom = $('topbar').getBoundingClientRect().bottom - $('app').getBoundingClientRect().top;
-    const top = Math.ceil(bottom + 8);
-    $('officeNotice').style.setProperty('--office-notice-top', top + 'px');
-    // The Home Screen card stacks under the office notice instead of giving up its spot.
-    const notice = $('officeNotice');
-    const below = notice.hidden ? top : Math.ceil(notice.getBoundingClientRect().bottom - $('app').getBoundingClientRect().top + 6);
-    $('installCard').style.setProperty('--office-notice-top', below + 'px');
+    $('officeNotice').style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
   }
   if (window.ResizeObserver) new ResizeObserver(positionOfficeNotice).observe($('topbar'));
   window.addEventListener('resize', positionOfficeNotice);
@@ -2809,64 +2857,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     officeNoticeText = text;
     $('officeNotice').textContent = text;
     $('officeNotice').hidden = !text;
-    positionOfficeNotice(); // the Home Screen card moves under the notice (or back up)
+    if (text) positionOfficeNotice();
   }
-
-  // Suggest the Home Screen app on phones and tablets that opened the game in a browser tab: it then runs full screen,
-  // without browser bars. Android/Chromium fires beforeinstallprompt, so our button opens the browser's own install
-  // dialog. iOS has no such API in any browser (Safari, Edge and Chrome all run on WebKit), so it only shows the steps.
-  // User-observed (Nov 2026): Edge on iPhone has "Add to Home Screen" and its icon works like Safari's; Edge on iPad
-  // has no such option, so iPads outside Safari are sent to Safari.
-  const install = { prompt: null, shown: false, timer: 0, visibleMs: 0 };
-  const standaloneApp = () => navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  // iPadOS reports a Mac (platform MacIntel, "Macintosh" user agent) but has a touch screen.
-  const iPadDevice = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const iosDevice = iPadDevice || /iPhone|iPod/.test(navigator.userAgent);
-  const installHidden = () => { try { return localStorage.getItem('br-install-hidden') === '1'; } catch (e) { return false; } };
-  function installSteps() {
-    if (install.prompt) return 'Cài game ra màn hình chính để chơi toàn màn hình.';
-    const ua = navigator.userAgent;
-    // Other iOS browsers name themselves in the user agent (on iPad also in desktop mode: Edg/ or EdgiOS/ and so on).
-    const otherBrowser = /EdgiOS|Edg\/|CriOS|FxiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|Brave|FBAN|FBAV|Instagram|Line\/|Zalo/i.test(ua);
-    if (otherBrowser && iPadDevice) return 'Chơi toàn màn hình: mở game bằng Safari → Chia sẻ → Thêm vào Màn hình chính.';
-    if (otherBrowser) return 'Chơi toàn màn hình: ⋯ → Chia sẻ → Thêm vào Màn hình chính.';
-    return 'Chơi toàn màn hình: Chia sẻ → Thêm vào Màn hình chính.';
-  }
-  // The card counts 20 s only while it can actually be seen: not behind the portrait rotate prompt or in a background tab.
-  function installTick() {
-    if ($('installCard').hidden) return;
-    if (!document.hidden && !viewport.portrait) install.visibleMs += 1000;
-    if (install.visibleMs >= 20000) hideInstall(false);
-  }
-  function showInstall() {
-    // iPads with a trackpad report a fine pointer, so iOS is checked on its own; desktops never get the card.
-    if (install.shown || !S.joined || !(coarseUi || iosDevice) || standaloneApp() || installHidden()) return;
-    if (!install.prompt && !iosDevice) return;
-    install.shown = true; // once per page load; × hides it for good
-    $('installText').textContent = installSteps();
-    $('installBtn').hidden = !install.prompt;
-    $('installCard').hidden = false;
-    positionOfficeNotice();
-    install.visibleMs = 0;
-    clearInterval(install.timer);
-    install.timer = setInterval(installTick, 1000);
-  }
-  function hideInstall(forever) {
-    $('installCard').hidden = true;
-    clearInterval(install.timer);
-    if (forever) try { localStorage.setItem('br-install-hidden', '1'); } catch (e) { /* ignore */ }
-  }
-  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); install.prompt = e; showInstall(); });
-  window.addEventListener('appinstalled', () => { install.prompt = null; hideInstall(true); });
-  $('installClose').addEventListener('click', () => hideInstall(true));
-  $('installBtn').addEventListener('click', async () => {
-    const ask = install.prompt;
-    if (!ask) return;
-    install.prompt = null;
-    ask.prompt();
-    const choice = await ask.userChoice.catch(() => null);
-    hideInstall(choice && choice.outcome === 'accepted');
-  });
 
   function frame(now) {
     updateOfficeNotice();

@@ -19,7 +19,7 @@ Open http://localhost:3000. One local process needs no Redis; RAM state resets o
 
 ## Play together
 
-Everyone joins server **BR-1** (20 players) unless a `?server=br-2` link names the other one; the copy-link button shares your server. Enter a name and choose a role and appearance. On phones, use the joystick and rotate to landscape.
+Everyone joins server **BR-1** (20 players) unless a `?server=br-2` link names the other one; the copy-link button shares your server. Enter a name and choose a role and appearance. Phones and tablets play from the Home Screen app (the page shows how to add it); use the joystick and rotate to landscape.
 
 Optional Google login saves a separate character per room; guests remain available. With a database the board is a per-room daily ranking (resets 00:00 Vietnam time, no all-time board) and room chat keeps 24 hours; there is no long-term score history. [Identity setup](docs/IDENTITY.md) · [Scores](docs/SCORES.md).
 

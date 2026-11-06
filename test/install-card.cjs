@@ -1,7 +1,9 @@
 'use strict';
 
-// The "Add to Home Screen" suggestion: iOS gets the steps (no install API in any iOS browser), Android/Chromium gets
-// a button behind beforeinstallprompt, desktops and Home Screen launches get nothing. WebGL is stubbed.
+// The Home Screen gate: phones and tablets in a browser tab get the steps to add the game instead of the join form
+// (iOS: steps only, no install API in any iOS browser; Android/Chromium: a button behind beforeinstallprompt). Home Screen
+// launches and desktops join as usual. Playwright sets navigator.webdriver, which the game exempts so the other touch
+// suites can join; this suite turns it off. WebGL is stubbed.
 const assert = require('assert/strict');
 const fs = require('fs');
 const path = require('path');
@@ -17,7 +19,8 @@ const IPAD_SAFARI = { viewport: { width: 1180, height: 820 }, deviceScaleFactor:
 const IPAD_EDGE = { ...IPAD_SAFARI, userAgent: MAC_UA + ' EdgiOS/131.0.2903.92' };
 const IPAD_EDGE_IOS_UA = { ...devices['iPad Pro 11 landscape'], userAgent: devices['iPad Pro 11 landscape'].userAgent.replace('Version/', 'EdgiOS/131.0 Version/') };
 
-async function open(browser, port, device, { standalone = false, prompt = false, noticeEarly = false } = {}) {
+// Opens the join screen (the card lives there); `join` also enters the office.
+async function open(browser, port, device, { standalone = false, prompt = false, join = false } = {}) {
   const { ipadOs = false, ...contextOptions } = device;
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
@@ -31,22 +34,38 @@ async function open(browser, port, device, { standalone = false, prompt = false,
       const mm = window.matchMedia.bind(window);
       window.matchMedia = q => { const m = mm(q); return /pointer:\s*coarse/.test(q) ? new Proxy(m, { get: (o, k) => k === 'matches' ? false : typeof o[k] === 'function' ? o[k].bind(o) : o[k] }) : m; };
     }
+    Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false });
     Element.prototype.requestFullscreen = () => Promise.reject(new Error('unsupported'));
     if (screen.orientation) screen.orientation.lock = () => Promise.reject(new Error('unsupported'));
     if (standalone) Object.defineProperty(navigator, 'standalone', { value: true });
   }, { standalone, ipadOs });
   await page.goto(`http://localhost:${port}/?server=br-1`);
-  await page.fill('#nameInput', 'Install check'); await page.click('#joinBtn');
-  await page.waitForSelector('#topbar', { state: 'visible' });
-  // An office event (patrol or Prof. K) on screen when the card is due used to cancel the card for the whole visit.
-  if (noticeEarly) await page.evaluate(() => { const n = document.getElementById('officeNotice'); n.textContent = 'Prof. K đang đánh VKL · 20s'; n.hidden = false; });
+  await page.waitForSelector('#joinForm h1', { state: 'visible' });
+  await page.waitForTimeout(300);
   if (prompt) await page.evaluate(() => {
     const e = new Event('beforeinstallprompt', { cancelable: true });
     window.prompted = 0; e.prompt = () => { window.prompted++; }; e.userChoice = Promise.resolve({ outcome: 'accepted' });
     window.dispatchEvent(e);
   });
-  await page.waitForTimeout(3000);
+  if (join) {
+    await page.fill('#nameInput', 'Install check'); await page.click('#joinBtn');
+    await page.waitForSelector('#topbar', { state: 'visible' });
+  }
   return { context, page, errors };
+}
+
+// Gated: the steps sit in the join form on screen, and nothing to join with is shown.
+async function gated(page) {
+  const card = page.locator('#installCard');
+  assert.ok(await card.isVisible(), 'steps on the join screen');
+  const box = await card.boundingBox(), vp = page.viewportSize();
+  assert.ok(box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height, 'steps inside the screen ' + JSON.stringify(box));
+  for (const id of ['#joinBtn', '#nameInput', '#googleLogin', '#scoreNote']) assert.equal(await page.locator(id).isVisible(), false, id + ' hidden in a tab');
+}
+async function joins(page) {
+  assert.equal(await page.locator('#installCard').isVisible(), false);
+  await page.fill('#nameInput', 'Install check ' + Math.floor(Math.random() * 1e4)); await page.click('#joinBtn');
+  await page.waitForSelector('#topbar', { state: 'visible' });
 }
 
 async function main() {
@@ -58,65 +77,71 @@ async function main() {
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true });
 
     let t = await open(browser, port, IPHONE_SAFARI);
-    assert.ok(await t.page.locator('#installCard').isVisible(), 'shown in Safari on iPhone');
-    assert.match(await t.page.locator('#installText').textContent(), /Chia sẻ → Thêm vào Màn hình chính/);
+    await gated(t.page);
+    assert.match(await t.page.locator('#installText').textContent(), /Bấm Chia sẻ → Thêm vào Màn hình chính, rồi mở game từ icon mới/);
     assert.equal(await t.page.locator('#installBtn').isVisible(), false, 'no install button on iOS');
-    await t.page.tap('#installClose');
-    assert.equal(await t.page.locator('#installCard').isVisible(), false);
-    assert.equal(await t.page.evaluate(() => localStorage.getItem('br-install-hidden')), '1');
-    await t.page.reload(); // a reload puts you straight back in the office
-    await t.page.waitForSelector('#topbar', { state: 'visible' }); await t.page.waitForTimeout(3000);
-    assert.equal(await t.page.locator('#installCard').isVisible(), false, '× hides it for good');
+    assert.equal(await t.page.locator('#installCopy').isVisible(), false);
+    // Not even a scripted submit or the reload auto-join gets in from the tab.
+    await t.page.evaluate(() => { document.getElementById('nameInput').value = 'Sneaky'; document.getElementById('joinForm').requestSubmit(); });
+    await t.page.evaluate(() => { sessionStorage.setItem('br-auto', '1'); localStorage.setItem('br-name', 'Sneaky'); });
+    await t.page.reload(); await t.page.waitForTimeout(1500);
+    assert.equal(await t.page.locator('#topbar').isVisible(), false, 'still outside the office');
+    await gated(t.page);
     assert.deepEqual(t.errors, []); await t.context.close();
-    ok('iPhone Safari: the steps, no button; × hides the suggestion for good');
+    ok('iPhone Safari tab: only the steps; no join, not even by submit or reload auto-join');
 
     t = await open(browser, port, EDGE_IOS);
-    assert.match(await t.page.locator('#installText').textContent(), /⋯ → Chia sẻ/);
+    await gated(t.page);
+    assert.match(await t.page.locator('#installText').textContent(), /⋯ → Chia sẻ → Thêm vào Màn hình chính/);
     await t.context.close();
     ok('Edge on iPhone: the steps through its menu');
 
-    t = await open(browser, port, IPHONE_SAFARI, { noticeEarly: true });
-    assert.ok(await t.page.locator('#installCard').isVisible(), 'an office notice no longer cancels the card');
-    const [notice, card] = await Promise.all(['#officeNotice', '#installCard'].map(s => t.page.locator(s).boundingBox()));
-    assert.ok(card.y >= notice.y + notice.height, 'the card sits under the notice, not on top of it');
-    await t.page.evaluate(() => { document.getElementById('officeNotice').hidden = true; dispatchEvent(new Event('resize')); });
-    assert.ok((await t.page.locator('#installCard').boundingBox()).y < card.y, 'and moves back up when the notice goes');
-    assert.deepEqual(t.errors, []); await t.context.close();
-    ok('an office notice and the card share the top: the card stacks under it');
-
     t = await open(browser, port, IPAD_SAFARI);
-    assert.ok(await t.page.locator('#installCard').isVisible(), 'iPadOS with a Mac user agent and a fine pointer still gets the card');
-    assert.match(await t.page.locator('#installText').textContent(), /^Chơi toàn màn hình: Chia sẻ/);
+    await gated(t.page);
+    assert.match(await t.page.locator('#installText').textContent(), /Bấm Chia sẻ → Thêm vào Màn hình chính/);
     await t.context.close();
     for (const device of [IPAD_EDGE, IPAD_EDGE_IOS_UA]) {
       t = await open(browser, port, device);
-      assert.match(await t.page.locator('#installText').textContent(), /mở game bằng Safari/, 'Edge on iPad has no Add to Home Screen');
+      await gated(t.page);
+      assert.match(await t.page.locator('#installText').textContent(), /mở trang bằng Safari/, 'Edge on iPad has no Add to Home Screen');
+      assert.ok(await t.page.locator('#installCopy').isVisible(), 'a link to paste into Safari');
       await t.context.close();
     }
-    ok('iPad: Safari gets the steps, Edge is sent to Safari');
+    ok('iPad (Mac user agent, fine pointer): Safari gets the steps, Edge is sent to Safari with a copy-link button');
 
     t = await open(browser, port, IPHONE_SAFARI, { standalone: true });
-    assert.equal(await t.page.locator('#installCard').isVisible(), false);
-    await t.context.close();
-    ok('a Home Screen launch gets no suggestion');
+    await joins(t.page);
+    assert.deepEqual(t.errors, []); await t.context.close();
+    ok('a Home Screen launch joins as usual');
 
     t = await open(browser, port, ANDROID);
-    assert.equal(await t.page.locator('#installCard').isVisible(), false, 'no prompt event, no card on Android');
+    await gated(t.page);
+    assert.match(await t.page.locator('#installText').textContent(), /⋮ → Thêm vào màn hình chính/);
     await t.context.close();
     t = await open(browser, port, ANDROID, { prompt: true });
+    await gated(t.page);
     assert.ok(await t.page.locator('#installBtn').isVisible(), 'Android gets an install button');
     await t.page.tap('#installBtn'); await t.page.waitForTimeout(200);
     assert.equal(await t.page.evaluate(() => window.prompted), 1, 'the browser dialog is asked for');
-    assert.equal(await t.page.locator('#installCard').isVisible(), false);
+    assert.match(await t.page.locator('#installText').textContent(), /Mở game từ icon/);
+    assert.equal(await t.page.locator('#installBtn').isVisible(), false);
     assert.deepEqual(t.errors, []); await t.context.close();
-    ok('Android: the button opens the browser install dialog once');
+    ok('Android tab: manual steps, or the install button when the browser offers it; then "open the icon"');
+
+    for (const viewport of [{ width: 740, height: 320 }, { width: 667, height: 375 }]) {
+      t = await open(browser, port, { ...IPHONE_SAFARI, viewport });
+      await gated(t.page);
+      await t.page.screenshot({ path: path.join(require('os').tmpdir(), `br-install-${viewport.width}x${viewport.height}.png`) });
+      await t.context.close();
+    }
+    ok('small landscape phones: the steps fit on screen');
 
     t = await open(browser, port, { viewport: { width: 1280, height: 720 } });
-    assert.equal(await t.page.locator('#installCard').isVisible(), false);
+    await joins(t.page);
     await t.context.close();
-    ok('desktop: nothing');
+    ok('desktop: no gate');
 
-    console.log(`All ${passed} install suggestion checks passed (emulated devices; real install dialogs need a phone).`);
+    console.log(`All ${passed} Home Screen gate checks passed (emulated devices; real install dialogs and Home Screen launches need a phone).`);
   } finally { if (browser) await browser.close(); await app.stop(); }
 }
 main().catch(e => { console.error(e); process.exitCode = 1; });

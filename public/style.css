@@ -1040,18 +1040,14 @@ canvas {
 @media (pointer: coarse) {
   #officeNotice { padding: 7px 11px; font-size: 12px; }
 }
-/* "Add to Home Screen" suggestion: same spot as the office notice, shown only while that is empty. */
+/* Home Screen steps: a full-width block under the join screen's title (part of the form, so it scrolls with it). */
 #installCard {
-  position: fixed;
-  top: var(--office-notice-top, 65px);
-  left: var(--hud-center, 50%);
-  transform: translateX(-50%);
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: max-content;
-  max-width: min(560px, calc(100% - 24px));
-  padding: 6px 6px 6px 12px;
+  margin-top: 8px;
+  padding: 4px 4px 4px 12px;
   border: 1px solid rgba(125, 211, 255, .45);
   border-radius: 12px;
   background: rgba(14, 26, 38, .95);
@@ -1059,10 +1055,17 @@ canvas {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
-  z-index: 6;
+  text-align: left;
 }
 #installCard[hidden] { display: none; }
-#installCard .btn { min-height: 34px; padding: 6px 10px; font-size: 12px; flex: 0 0 auto; }
+#installText { flex: 1; }
+#installCard .btn { min-height: 32px; padding: 4px 10px; font-size: 12px; flex: 0 0 auto; }
+/* Home Screen gate (phones and tablets in a browser tab): only the title and the steps; nothing to join with. */
+.install-gate #joinForm > :not(.joinIntro) { display: none !important; }
+.install-gate #joinForm { grid-template-rows: auto; }
+.install-gate #installCard { flex-wrap: wrap; gap: 10px 12px; margin-top: 14px; padding: 14px 16px; font-size: 15px; line-height: 1.5; border-width: 2px; }
+.install-gate #installText { flex: 1 1 260px; }
+.install-gate #installCard .btn { min-height: 44px; padding: 8px 16px; font-size: 15px; }
 #installBtn { background: #1a5f86; border-color: #7dd3ff; color: #fff; }
 
 /* Backgrounds extend to the edges; important content stays inside the reported safe area.

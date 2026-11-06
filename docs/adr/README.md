@@ -18,6 +18,7 @@ Records 0001–0004 document decisions already present in the code and project n
 | [0008](0008-daily-scores-and-chat.md) | Accepted | Persist daily room scores through a durable Redis queue into Postgres, and store 24-hour chat |
 | [0009](0009-office-patrol-and-rack-support.md) | Accepted | Share the NPC lease for office patrol and commit bounded rack support atomically |
 | [0010](0010-population-boss-health.md) | Accepted | Keep additive boss population HP and private timers in the shared store, with ordered health revisions |
+| [0011](0011-home-screen-gate.md) | Accepted | Phones and tablets join only from the Home Screen app; a browser tab shows install steps |
 
 ## Adding or changing a decision
 

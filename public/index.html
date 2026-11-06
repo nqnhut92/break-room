@@ -41,6 +41,15 @@
     } catch (e) { /* storage unavailable: show the form */ }
   </script>
   <script>
+    // Phones and tablets in a browser tab only get the Home Screen steps (see the Home Screen gate in game.js, which has
+    // the final say): hide the form from the first paint so it never flashes before them.
+    try {
+      var ipad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+      var touch = matchMedia('(pointer: coarse)').matches || ipad || /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (touch && navigator.standalone !== true && !matchMedia('(display-mode: standalone)').matches && !navigator.webdriver) document.documentElement.classList.add('install-gate');
+    } catch (e) { /* show the form */ }
+  </script>
+  <script>
     // Ask for the server list right away; game.js picks the answer up once it has loaded.
     window.__rooms = fetch('/api/rooms', { cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return null; });
   </script>
@@ -72,7 +81,6 @@
     </div>
 
     <div id="officeNotice" role="status" aria-live="polite" hidden></div>
-    <div id="installCard" role="region" aria-label="Cài game ra màn hình chính" hidden><span id="installText"></span><button id="installBtn" class="btn" type="button" hidden>Cài app</button><button id="installClose" class="btn" type="button" aria-label="Ẩn gợi ý cài app">×</button></div>
 
     <div id="joystick" role="group" aria-label="Núm di chuyển: kéo để đi"><span id="joystickKnob"></span></div>
     <div id="bottombar">
@@ -176,6 +184,8 @@
       <img class="logo" src="/favicon.svg" width="64" height="64" alt="">
       <h1>Office Rage Room</h1>
       <p class="sub">Vào văn phòng, xả stress cùng đồng nghiệp. Đập laptop, màn hình, máy in thoải mái, IT sẽ thay đồ mới sau.</p>
+      <!-- Phones and tablets in a browser tab: how to add the game to the Home Screen, in place of the form (game.js) -->
+      <div id="installCard" role="region" aria-label="Cài game ra màn hình chính" hidden><span id="installText"></span><button id="installBtn" class="btn smash" type="button" hidden>Cài app</button><button id="installCopy" class="btn" type="button" hidden>Copy link</button></div>
       </div>
       <div id="accountBox" hidden>
         <div class="account-copy"><span id="accountStatus" class="account-status" hidden>Đã đăng nhập Google</span><p id="accountNote" class="sub" role="status"></p></div>
