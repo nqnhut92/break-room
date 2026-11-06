@@ -16,12 +16,20 @@ async function main() {
       localStorage.setItem('br-gfx2','low');
       const Original=WebSocket;
       window.WebSocket=class extends Original{constructor(...args){super(...args);window.chatTestSocket=this;}};
+      document.addEventListener('DOMContentLoaded',()=>{const o=document.getElementById('overlay');new MutationObserver((_,obs)=>{if(!o.classList.contains('gone'))return;obs.disconnect();
+        queueMicrotask(()=>{const r=document.getElementById('chatDock').getBoundingClientRect();window.dockAtJoin=[r.left,r.width];});}).observe(o,{attributes:true,attributeFilter:['class']});});
     });
     if(!real)await page.route('**/scene3d.js',r=>r.fulfill({contentType:'application/javascript',body:`export function createScene3D(){return {resize(){},setQuality(){},update(){},build(){},zoom(){},cameraTo(){},zoomLimits(){return {}},fx:new Proxy({},{get:()=>()=>{}})}}`}));
     await page.goto(`http://127.0.0.1:${port}/?room=br-1`);
     await page.evaluate(()=>{for(const[k,v]of Object.entries({left:59,right:59,bottom:21}))document.documentElement.style.setProperty('--safe-'+k,v+'px')});
     await page.fill('#nameInput','Nick');await page.click('#joinBtn');
     await page.waitForFunction(()=>document.getElementById('overlay').classList.contains('gone'));
+    // The dock is placed when the HUD appears, not on the next 250 ms layout tick: it used to sit at its CSS fallback for
+    // up to a quarter second (5–18px off), which made the anchor check below pass or fail depending on timing.
+    // dockAtJoin is read in a microtask right after the welcome handler hides the join screen (see the init script).
+    await page.waitForTimeout(600);
+    const settled=await page.locator('#chatDock').evaluate(e=>{const r=e.getBoundingClientRect();return [r.left,r.width];});
+    assert.deepEqual(await page.evaluate(()=>window.dockAtJoin),settled,'the chat dock is in place the moment the HUD appears');
     await page.evaluate(()=>{
       const text=['Đi đập sếp không mọi người?','Tui đang ở phòng server nè.','Khoan, để tui hồi máu đã =))','Tủ server giờ giật tê cả người.','Để tui dụ sếp đi chỗ khác.','Ok, nhớ né cú đấm nha!','Có ai thấy TML ở đâu không?','TML vừa đi ngang pantry á.','Sếp đi tuần kìa!','Tui dụ sếp, ông phá server nha!'];
       const messages=text.map((text,i)=>({mid:crypto.randomUUID(),at:Date.now()-60000+i*1000,name:i%2?'tam Co':'Nick2',text}));

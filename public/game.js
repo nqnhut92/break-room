@@ -442,6 +442,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
           if (touch) hint.textContent = 'Kéo núm trái để đi · giữ nút ĐẬP! để đập liên tục · chụm hai ngón để zoom';
           hint.classList.remove('fade'); // the hint stays on screen, kept subtle by its style
         }
+        // Place the minimap, side buttons and the chat dock now, not on the next 250 ms layout tick: until then the dock
+        // sat at its CSS fallback and jumped a few pixels shortly after joining (and test:mobile-chat flaked on it).
+        mmPlace(); sidePlace();
         break;
       }
       case 'pj':
