@@ -397,7 +397,42 @@ function standsOn(o, d, types) {
   return Math.abs(o.x - d.x) <= hw && Math.abs(o.y - d.y) <= hd;
 }
 // Irregular soft blobs in one atlas, one cell per mark kind; drawn once, no image files.
-function drawMarks(ctx, w, h) {
+// The floor-mark atlas, one cell per kind, painted pixel by pixel (see makeAlphaTexture for why not a canvas):
+// soft blobs layered "over" each other, wet highlights on water and soot streaks on scorch. Returns RGBA bytes,
+// row 0 at v = 0.
+function paintMarks(w, h) {
+  const px = new Float32Array(w * h * 4); // straight colour 0..255 and alpha 0..1
+  const over = (i, j, r, g, b, a) => {
+    if (a <= 0 || i < 0 || j < 0 || i >= w || j >= h) return;
+    const k = (j * w + i) * 4, da = px[k + 3], oa = a + da * (1 - a);
+    for (let c = 0; c < 3; c++) px[k + c] = ([r, g, b][c] * a + px[k + c] * da * (1 - a)) / oa;
+    px[k + 3] = oa;
+  };
+  // a radial gradient like canvas: alpha stops [[t, a], ...] over the radius, drawn inside the cell [x0, x1)
+  const blob = (x, y, rad, [r, g, b], stops, x0, x1) => {
+    for (let j = Math.max(0, Math.floor(y - rad)); j < Math.min(h, Math.ceil(y + rad)); j++) {
+      for (let i = Math.max(x0, Math.floor(x - rad)); i < Math.min(x1, Math.ceil(x + rad)); i++) {
+        const t = Math.hypot(i + 0.5 - x, j + 0.5 - y) / rad;
+        if (t >= 1) continue;
+        let n = 1;
+        while (stops[n][0] < t) n++;
+        const [t0, a0] = stops[n - 1], [t1, a1] = stops[n];
+        over(i, j, r, g, b, a0 + ((a1 - a0) * (t - t0)) / (t1 - t0));
+      }
+    }
+  };
+  // a 2px streak with a soft edge
+  const line = (ax, ay, bx, by, [r, g, b], a) => {
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    for (let j = Math.floor(Math.min(ay, by) - 2); j <= Math.ceil(Math.max(ay, by) + 2); j++) {
+      for (let i = Math.floor(Math.min(ax, bx) - 2); i <= Math.ceil(Math.max(ax, bx) + 2); i++) {
+        const cx = i + 0.5, cy = j + 0.5;
+        const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cy - ay) * dy) / len2));
+        const d = Math.hypot(cx - ax - dx * t, cy - ay - dy * t);
+        over(i, j, r, g, b, a * Math.max(0, Math.min(1, 1.5 - d)));
+      }
+    }
+  };
   const cell = w / MARK_KINDS.length;
   const rnd = seeded(4242);
   const style = {
@@ -413,36 +448,30 @@ function drawMarks(ctx, w, h) {
       const x = ox + cell / 2 + (rnd() - 0.5) * cell * 0.35;
       const y = h / 2 + (rnd() - 0.5) * h * 0.35;
       const rad = cell * (0.16 + rnd() * 0.16);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      g.addColorStop(0, `rgba(${cr},${cg},${cb},${ca * 0.7})`);
-      g.addColorStop(0.6, `rgba(${cr},${cg},${cb},${ca * 0.35})`);
-      g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-      ctx.fillStyle = g;
-      ctx.fillRect(ox, 0, cell, h);
+      blob(x, y, rad, [cr, cg, cb], [[0, ca * 0.7], [0.6, ca * 0.35], [1, 0]], ox, ox + cell);
     }
     if (k === 'water') { // a few highlights so it reads as wet
       for (let s = 0; s < 3; s++) {
         const x = ox + cell / 2 + (rnd() - 0.5) * cell * 0.3;
         const y = h / 2 + (rnd() - 0.5) * h * 0.3;
-        const g = ctx.createRadialGradient(x, y, 0, x, y, cell * 0.07);
-        g.addColorStop(0, 'rgba(235,245,255,.55)');
-        g.addColorStop(1, 'rgba(235,245,255,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(ox, 0, cell, h);
+        blob(x, y, cell * 0.07, [235, 245, 255], [[0, 0.55], [1, 0]], ox, ox + cell);
       }
     }
     if (k === 'scorch') { // soot streaks
-      ctx.strokeStyle = 'rgba(10,8,7,.45)';
-      ctx.lineWidth = 2;
       for (let s = 0; s < 9; s++) {
         const a = rnd() * Math.PI * 2;
-        ctx.beginPath();
-        ctx.moveTo(ox + cell / 2 + Math.cos(a) * cell * 0.08, h / 2 + Math.sin(a) * h * 0.08);
-        ctx.lineTo(ox + cell / 2 + Math.cos(a) * cell * (0.25 + rnd() * 0.17), h / 2 + Math.sin(a) * h * (0.25 + rnd() * 0.17));
-        ctx.stroke();
+        const far = 0.25 + rnd() * 0.17;
+        line(ox + cell / 2 + Math.cos(a) * cell * 0.08, h / 2 + Math.sin(a) * h * 0.08,
+          ox + cell / 2 + Math.cos(a) * cell * far, h / 2 + Math.sin(a) * h * far, [10, 8, 7], 0.45);
       }
     }
   });
+  const out = new Uint8Array(w * h * 4);
+  for (let k = 0; k < out.length; k += 4) {
+    out[k] = px[k]; out[k + 1] = px[k + 1]; out[k + 2] = px[k + 2];
+    out[k + 3] = Math.round(px[k + 3] * 255);
+  }
+  return out;
 }
 const wreckVariant = (id) => (Math.imul(id + 1, 2654435761) >>> 0) % WRECK_VARIANTS;
 const idNoise = (id, salt) => ((Math.imul(id + salt, 40503) >>> 0) % 1000) / 1000 - 0.5; // -0.5..0.5, fixed per id
@@ -732,6 +761,32 @@ function makeCanvasTexture(w, h, draw, repeatX = 1, repeatY = 1) {
   return t;
 }
 
+// A texture computed pixel by pixel: alpha(u, v) over a constant colour, u and v in 0..1 at texel centres, v = 0 the
+// first row. For soft floor overlays, not canvas gradients: Safari dithers canvas gradients, and where alpha is
+// nearly zero the upload's un-premultiply turns that noise into coloured specks across the floor (iPad and iPhone).
+function makeAlphaTexture(w, h, rgb, alpha) {
+  const data = new Uint8Array(w * h * 4);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = (j * w + i) * 4;
+      data[k] = rgb[0]; data[k + 1] = rgb[1]; data[k + 2] = rgb[2];
+      data[k + 3] = Math.round(255 * Math.min(1, Math.max(0, alpha((i + 0.5) / w, (j + 0.5) / h))));
+    }
+  }
+  return makePixelTexture(w, h, data);
+}
+function makePixelTexture(w, h, data) {
+  const t = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
+  t.anisotropy = 4;
+  t.needsUpdate = true;
+  return t;
+}
+
 const FLOOR = {
   carpet: (ctx, w, h) => {
     ctx.fillStyle = '#252d3f';
@@ -859,10 +914,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false });
   const pickMat = new THREE.MeshBasicMaterial({ visible: false });
   // floor marks under wrecks: lit like the floor, drawn over it without writing depth
-  const markTex = makeCanvasTexture(512, 128, drawMarks);
-  markTex.wrapS = markTex.wrapT = THREE.ClampToEdgeWrapping;
+  const markTex = makePixelTexture(512, 128, paintMarks(512, 128));
   const markMat = new THREE.MeshLambertMaterial({
-    map: markTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, // mirrored marks show their back polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+    map: markTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, // mirrored marks show their back
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
   });
   const markGeos = {};
   function markGeometry(kind) {
@@ -1068,22 +1123,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     // sunlight from the north windows falling on the floor, and posters between the windows
     {
-      const pool = makeCanvasTexture(128, 128, (ctx, w, h) => {
-        const g = ctx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, 'rgba(255,236,190,.5)');
-        g.addColorStop(1, 'rgba(255,236,190,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-        // feather the left and right edges so the patch has no hard border
-        ctx.globalCompositeOperation = 'destination-in';
-        const e = ctx.createLinearGradient(0, 0, w, 0);
-        e.addColorStop(0, 'rgba(0,0,0,0)');
-        e.addColorStop(0.3, 'rgba(0,0,0,1)');
-        e.addColorStop(0.7, 'rgba(0,0,0,1)');
-        e.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = e;
-        ctx.fillRect(0, 0, w, h);
-      });
+      // bright at the window (v = 1), gone at the far end, feathered at the sides (computed: see makeAlphaTexture)
+      const pool = makeAlphaTexture(128, 128, [255, 236, 190], (u, v) => 0.5 * v * Math.min(1, u / 0.3, (1 - u) / 0.3));
       const poolMat = new THREE.MeshBasicMaterial({ map: pool, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.4 });
       const posters = [
         ['DEADLINE', 'LÀ HÔM NAY', '#c0392b'],
@@ -1204,30 +1245,20 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     return mesh;
   }
   // one soft dark blob (a blurred rounded box) for contact shadows
-  const contactTex = makeCanvasTexture(128, 128, (ctx, w, h) => {
-    ctx.shadowColor = 'rgba(0,0,0,1)';
-    ctx.shadowBlur = 22;
-    ctx.shadowOffsetX = 1000; // only the blur is drawn: the box itself is off the canvas
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.roundRect(w * 0.22 - 1000, h * 0.22, w * 0.56, h * 0.56, 18);
-    ctx.fill();
+  const contactTex = makeAlphaTexture(128, 128, [0, 0, 0], (u, v) => {
+    // a rounded box filling the middle 56%, its edge blurred over about a sixth of the texture
+    const qx = Math.abs(u - 0.5) - 0.28 + 0.14, qy = Math.abs(v - 0.5) - 0.28 + 0.14;
+    const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - 0.14;
+    const t = Math.min(1, Math.max(0, (sd + 0.09) / 0.18));
+    return 1 - t * t * (3 - 2 * t);
   });
-  contactTex.wrapS = contactTex.wrapT = THREE.ClampToEdgeWrapping;
   const contactMat = new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, opacity: 0.5, depthWrite: false });
 
   function buildFloorLight(rooms, props) {
     const W = world.w;
     const H = world.h;
     // the foot of the walls: dark at the wall, gone 50 units out
-    const footTex = makeCanvasTexture(4, 64, (ctx, w, h) => {
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(0,0,0,1)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-    });
-    footTex.wrapS = footTex.wrapT = THREE.ClampToEdgeWrapping;
+    const footTex = makeAlphaTexture(4, 64, [0, 0, 0], (u, v) => 1 - v);
     const foot = [];
     const FOOT = 50;
     // a strip along a wall: its dark edge (v = 1, the quad's -z side before turning) touches the wall
@@ -1249,15 +1280,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     floorLayer(foot, new THREE.MeshBasicMaterial({ map: footTex, transparent: true, opacity: 0.32, depthWrite: false }), FLOOR_LAYER.wallFoot);
 
     // pools of light under the ceiling panels, on a grid per room; the corridors get dimmer ones
-    const poolTex = makeCanvasTexture(128, 128, (ctx, w, h) => {
-      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-      g.addColorStop(0, 'rgba(255,255,255,1)');
-      g.addColorStop(0.45, 'rgba(255,255,255,.55)');
-      g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
+    const poolTex = makeAlphaTexture(128, 128, [255, 255, 255], (u, v) => {
+      const r = Math.hypot(u - 0.5, v - 0.5) * 2; // 0 at the centre, 1 at the edge
+      return r < 0.45 ? 1 - r : r < 1 ? 0.55 * (1 - (r - 0.45) / 0.55) : 0;
     });
-    poolTex.wrapS = poolTex.wrapT = THREE.ClampToEdgeWrapping;
     const pools = [];
     const SPACING = 440;
     const SIZE = 480;
