@@ -12,6 +12,8 @@ async function main() {
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.route('**/scene3d.js', r => r.fulfill({ contentType: 'application/javascript', body: `export function createScene3D(){return {resize(w,h){window.safeRendererSize={w,h}},setQuality(){},update(){},build(){},zoom(){},cameraTo(){},zoomLimits(){return {}},fx:new Proxy({},{get:()=>()=>{}})}}` }));
     await page.goto(`http://127.0.0.1:${port}/?room=br-1`);
+    assert.equal(await page.locator('meta[name="apple-mobile-web-app-status-bar-style"]').count(),0,
+      'Home Screen app uses the system status bar instead of forcing deprecated translucency');
     await page.fill('#nameInput','Safe area'); await page.click('#joinBtn');
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
     const profiles = [
@@ -79,6 +81,24 @@ async function main() {
     await page.waitForFunction(()=>GameViewport.height===834);
     assert.deepEqual(await page.locator('#c').boundingBox(),{x:0,y:0,width:1210,height:834});
     console.log('ok - iPad short Home Screen launch recovers full canvas height without rotation or resize');
+    // An opaque system status bar can sit OUTSIDE the content viewport. Screen
+    // dimensions and legacy root/vh sizing must not push controls below that viewport.
+    const cropped=await browser.newPage({viewport:{width:1210,height:810},screen:{width:1210,height:834},isMobile:true,hasTouch:true});
+    cropped.on('pageerror',e=>errors.push(e.message));
+    await cropped.route('**/scene3d.js',r=>r.fulfill({contentType:'application/javascript',body:`export function createScene3D(){return {resize(w,h){window.safeRendererSize={w,h}},setQuality(){},update(){},build(){},zoom(){},cameraTo(){},zoomLimits(){return {}},fx:new Proxy({},{get:()=>()=>{}})}}`}));
+    await cropped.goto(`http://127.0.0.1:${port}/?room=br-1`);
+    await cropped.addStyleTag({content:'html, body { height: 834px; }'});
+    await cropped.evaluate(()=>document.documentElement.style.setProperty('--safe-bottom','20px'));
+    await cropped.fill('#nameInput','System status bar');await cropped.click('#joinBtn');
+    await cropped.waitForFunction(()=>document.getElementById('overlay').classList.contains('gone'));
+    await cropped.waitForFunction(()=>GameViewport.height===810&&safeRendererSize.h===810);
+    assert.deepEqual(await cropped.locator('#c').boundingBox(),{x:0,y:0,width:1210,height:810});
+    const geometry=await cropped.evaluate(()=>({screen:screen.height,layout:innerHeight,top:document.getElementById('app').getBoundingClientRect().top,
+      buttons:['skillBtn','smashBtn','chatDock','joystick'].map(id=>document.getElementById(id).getBoundingClientRect().bottom)}));
+    assert.equal(geometry.screen,834);assert.equal(geometry.layout,810);assert.equal(geometry.top,0,'no double reservation when the status bar is outside the viewport');
+    assert.ok(geometry.buttons.every(bottom=>bottom<=790),'controls stay in the usable viewport above the home safe area');
+    await cropped.close();
+    console.log('ok - external status bar: canvas fills the shorter content viewport without double top padding or clipped bottom controls');
     assert.deepEqual(errors,[]);
   } finally { await browser?.close(); await app.stop(); }
 }
