@@ -23,7 +23,7 @@ async function step(name, fn) {
   console.log('ok - ' + name);
 }
 
-const INSIDE = world.layoutPoint(3300,1640); // in the server room, near where the boss starts
+const INSIDE = world.serverPoint(420,380); // in the server room, near where the boss starts
 const LOBBY = world.layoutPoint(1900,1950);
 
 async function main() {
@@ -86,7 +86,7 @@ async function main() {
     const deaths = await take(a, (m) => m.t === 'deaths', 1500);
     assert.deepStrictEqual(deaths.list.filter((e) => e.id === a.id).map((e) => [e.n, e.rank]), [[1, 1]], 'the knock-out is counted in today\'s ranking');
     // knocked out: walking and swinging do nothing
-    send(a, { t: 'move', ...world.layoutPoint(2500,1700), d: 1 });
+    send(a, { t: 'move', ...world.serverPoint(-380,440), d: 1 });
     send(a, { t: 'bhit' });
     await none(a, (m) => m.t === 'ps' && m.l.some((e) => e[0] === a.id), 400);
     // refreshing the page does not bring them back: the knock-out lives in the store

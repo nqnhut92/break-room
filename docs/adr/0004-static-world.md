@@ -10,7 +10,7 @@ The server must reject movement through furniture and walls, and the browser nee
 
 ## Decision
 
-Define the world, furniture, room bounds and doors in `lib/world.js`. Generate continuous shared walls from `FLOOR_ROOMS`, merging collinear spans so adjacent rooms share physical boundaries. Connect rooms through intentional doors and corridors. Share the collision model between client and server, using stepped movement resolution to avoid crossing thin obstacles.
+Define the world, furniture, room bounds and doors in `lib/world.js`. Generate continuous shared walls for closed rooms from `FLOOR_ROOMS` (explicitly open workspace areas omit partitions), merging collinear spans so adjacent rooms share physical boundaries. Connect rooms through intentional doors and corridors. Share the collision model between client and server, using stepped movement resolution to avoid crossing thin obstacles.
 
 Keep collision geometry static for a room's lifetime: wreckage still blocks movement. Preserve existing object IDs and types when relocating furniture so stored health and broken-state overlays continue to refer to the same objects.
 

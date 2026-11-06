@@ -177,7 +177,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const initAudio = () => { if (!S.muted) return audio.init(); };
   const sfxHit = (v, type = 'body', skill = 'hammer') => audio.hit(v, type, skill);
   const sfxBreak = (v, type) => audio.break(v, type);
-  const sfxPunch = v => audio.strike(v);
+  const sfxPunch = (v,kind) => audio.strike(v,kind);
   const sfxWind = (v, kind) => audio.cue(v, kind);
   const sfxHurt = () => audio.hurt();
   const sfxReset = () => audio.reset();
@@ -561,7 +561,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       case 'miniStrike': {
         const b = S.minis.get(m.id);
         if (b) { b.pl.swing = 1; b.wind = null; }
-        sfxPunch(volumeAt(m.x, m.y));
+        sfxPunch(volumeAt(m.x, m.y),'mini');
         break;
       }
       case 'snakeSpawn':
@@ -2495,7 +2495,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     updateApologyButton();
     if (duelOn) {
       const name = S.players.get(S.duel.target)?.name || 'Đồng nghiệp';
-      $('duelText').textContent = (S.duel.target === S.me ? '🪢 Bạn đang đấu 1:1 với VKL' : '🔒 VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';
+      $('duelText').textContent = (S.duel.target === S.me ? '🔒 PHÒNG KHÓA · Bạn đấu 1:1 với VKL' : '🔒 PHÒNG KHÓA · VKL vs ' + name) + ' · ' + Math.ceil((S.duel.until - performance.now()) / 1000) + 's';
     }
     const me = S.players.get(S.me);
     if (me) updateMe(me, dt);

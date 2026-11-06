@@ -22,6 +22,8 @@ Module._load = originalLoad;
 const { createMemoryStore } = require('../lib/store-memory');
 const world = require('../lib/world');
 const K=world.LAYOUT_SCALE;
+const X=x=>world.serverPoint(x-2880,0).x;
+const fixturePoint=(x,y)=>x>=2700&&y===1700?world.serverPoint(x-2880,y-1260):world.layoutPoint(x,y);
 const { DUEL } = require('../lib/duel');
 const clock = Date.now, random = Math.random, interval = global.setInterval, clear = global.clearInterval;
 let now = 1000000;
@@ -54,7 +56,7 @@ function instance() {
 }
 async function join(host, name, at, token = name.padEnd(20, 'x'), room = 'duel') {
   const oldSpawn = world.WORLD.spawn;
-  world.WORLD.spawn = {...world.layoutPoint(at.x,at.y),rx:0,ry:0};
+  world.WORLD.spawn = {...fixturePoint(at.x,at.y),rx:0,ry:0};
   const ws = new Socket(); host.wss.clients.add(ws);
   host.wss.emit('connection', ws, {headers:{},socket:{remoteAddress:'127.0.0.1'}});
   await flush(); ws.emit('message', Buffer.from(JSON.stringify({t:'join',name,room,token})));
@@ -63,7 +65,7 @@ async function join(host, name, at, token = name.padEnd(20, 'x'), room = 'duel')
   ws.id = welcome.you; ws.token = token; ws.welcome = welcome;
   return ws;
 }
-async function move(ws, x, y) { ws.emit('message', Buffer.from(JSON.stringify({t:'move',x:x*K,y:y*K,d:1}))); await flush(); }
+async function move(ws, x, y) { ws.emit('message', Buffer.from(JSON.stringify({t:'move',...fixturePoint(x,y),d:1}))); await flush(); }
 async function main() {
   const a = instance(), b = instance();
   const near = await join(a,'Near',{x:2750,y:1700});
@@ -80,10 +82,10 @@ async function main() {
   const cast = near.msgs.find(m=>m.t==='bduel' && m.state.target);
   assert.ok(cast,'boss cast 1:1'); assert.equal(cast.state.target, near.id);
   assert.equal(cast.ms,20000); assert.ok(spectator.msgs.some(m=>m.t==='bduel' && m.state.version===cast.state.version));
-  assert.equal(near.player.x,3100*K); assert.ok(spectator.player.x < world.BOSS_ROOM.x0);
+  assert.equal(near.player.x,X(3100)); assert.ok(spectator.player.x < world.BOSS_ROOM.x0);
   assert.equal(distant.player.x,1900*K); assert.equal(distant.player.y,1950*K);
   console.log('ok - one leader casts after 40s, pulls a nearby user and blows a remote occupant out');
-  await move(near,2750,1700); assert.equal(near.player.x,3100*K,'in-flight pre-pull input is ignored');
+  await move(near,2750,1700); assert.equal(near.player.x,X(3100),'in-flight pre-pull input is ignored');
   await advance(DUEL.pullMs + 100);
   await move(near,2750,1700); assert.ok(near.player.x >= world.BOSS_ROOM.x0 + world.PLAYER_RADIUS);
   await move(spectator,3100,1700); assert.ok(spectator.player.x < world.BOSS_ROOM.x0);

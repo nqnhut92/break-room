@@ -55,4 +55,4 @@ npm run test:scores   # BXH ngày + lịch sử chat, Postgres/Redis dùng-một
 
 ## Giấy phép và credits
 
-Code: [MIT](LICENSE). Texture sàn: [ambientCG](https://ambientcg.com/), CC0 ([ghi chú](public/assets/textures/License.txt)). Âm va chạm: [Kenney](https://kenney.nl/assets/impact-sounds), CC0 ([giấy phép](public/assets/audio/License.txt), [nguồn](public/assets/audio/SOURCE.md)). Three.js: MIT ([giấy phép](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([giấy phép](public/vendor/lucide-LICENSE.txt)). Đồ đạc và nhân vật dựng bằng code.
+Code: [MIT](LICENSE). Texture sàn: [ambientCG](https://ambientcg.com/), CC0 ([ghi chú](public/assets/textures/License.txt)). Âm va chạm: [Kenney](https://kenney.nl/assets/impact-sounds), CC0 ([giấy phép](public/assets/audio/License.txt), [nguồn](public/assets/audio/SOURCE.md)). Bản ghi phá huỷ CC0 bổ sung: Greg_Surr, Saladsounds và magnuswaker ([giấy phép](public/assets/audio/Freesound-License.txt)). Three.js: MIT ([giấy phép](public/vendor/three-LICENSE.txt)). Icons: [Lucide](https://lucide.dev), ISC/MIT ([giấy phép](public/vendor/lucide-LICENSE.txt)). Đồ đạc và nhân vật dựng bằng code.

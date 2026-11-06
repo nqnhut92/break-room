@@ -1,0 +1,19 @@
+The following recordings are released by their respective authors under
+Creative Commons CC0 1.0 Universal (Public Domain Dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
+shatter-glass.wav
+  Glass Shatter 2.wav — Greg_Surr
+  https://freesound.org/people/Greg_Surr/sounds/554564/
+
+splinter-wood.wav
+  Wooden Door breaks — Saladsounds
+  https://freesound.org/people/Saladsounds/sounds/723974/
+
+slam-metal.wav
+  Heavy Metal Impact 2 — magnuswaker
+  https://freesound.org/people/magnuswaker/sounds/614063/
+
+The author pages identify all three recordings as Creative Commons 0.
+Verified 2026-11-06. Local WAVs are edited derivatives of public HQ previews;
+see SOURCE.md for retrieval URLs and conversion details.

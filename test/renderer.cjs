@@ -24,19 +24,19 @@ async function main() {
       const source = fs.readFileSync(path.join(__dirname, '../public/scene3d.js'), 'utf8');
       const marker = 'renderer, build, update, pick, resize, setQuality,';
       assert.ok(source.includes(marker), 'private diagnostic export marker still exists');
-      return route.fulfill({ contentType: 'application/javascript', body: source.replace(marker, 'debug: { scene, players, miniRigs, sun, bodyMat, pickMat }, ' + marker) });
+      return route.fulfill({ contentType: 'application/javascript', body: source.replace(marker, 'debug: { scene, players, miniRigs, sun, bodyMat, pickMat, duelGate, duelGateLabel, duelFloor }, ' + marker) });
     });
     await page.route('**/renderer-check', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><style>body{margin:0}canvas{display:block}</style><canvas></canvas><div id="labels"></div><script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script><script type="module">
       import {createScene3D} from '/scene3d.js';
-      const data=${JSON.stringify({ world: W.WORLD, props: W.PROPS, zones: W.ZONES, objects: W.OBJECTS, types: W.TYPES })};
+      const data=${JSON.stringify({ world: W.WORLD, props: W.PROPS, zones: W.ZONES, bossRoom:W.BOSS_ROOM, objects: W.OBJECTS, types: W.TYPES })};
       const app=createScene3D(document.querySelector('canvas'),document.querySelector('#labels'));
       app.setQuality('low'); app.resize(innerWidth,innerHeight); await app.ready; app.build(data.world,data.props,data.zones);
       const player=id=>({id,name:'Check '+id,gender:'m',role:'dev',company:'',hue:35,x:1920+(id%5)*45,y:1950,heading:0,swing:0,hpFrac:1,moving:false,emoteT:0,chatT:0});
-      const S={me:1,players:new Map([[1,player(1)]]),minis:new Map(),snakes:new Map(),types:data.types,shake:0,
+      const S={world:data.world,me:1,players:new Map([[1,player(1)]]),minis:new Map(),snakes:new Map(),types:data.types,shake:0,
         objects:data.objects.map(o=>({...o,hp:data.types[o.type].hp,hpMax:data.types[o.type].hp,broken:false,shake:0,flash:0,pop:0}))};
       app.renderer.info.autoReset=false;
       const frame=()=>{app.renderer.info.reset();app.update(1/60,S)};
-      window.probe={app,S,player,frame};frame();window.ready=true;
+      window.probe={app,S,player,frame,data};frame();window.ready=true;
     </script>` }));
     await page.goto(`http://localhost:${port}/renderer-check`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.ready, null, { timeout: 180000 });
@@ -53,6 +53,14 @@ async function main() {
       const after=app.pick(bounds.left+bounds.width/2,bounds.top+bounds.height/2+40);
       canvas.style.transform='';
       check(before && JSON.stringify(before)===JSON.stringify(after), 'picking stays aligned when the play surface starts below the system bar');
+      S.duel={target:S.me,until:performance.now()+20000,bounds:probe.data.bossRoom};frame();
+      const gate=app.debug.duelGate,door=S.world.duelDoor;
+      check(gate.visible && gate.position.x===door.x && gate.position.z===door.y,'duel barrier follows the shared relocated doorway');
+      check(gate.children.every(mesh=>mesh.material.opacity===1),'duel barrier stays opaque in safe graphics mode');
+      check(app.debug.duelFloor.visible && app.debug.duelGateLabel.textContent.includes('PHÒNG KHÓA'),'locked room has floor tint and an explicit countdown sign');
+      S.duel.until=performance.now()-1;frame();
+      check(!gate.visible && !app.debug.duelFloor.visible && app.debug.duelGateLabel.hidden,'all lock indicators clear at duel expiry');
+      S.duel=null;
       check(!app.renderer.shadowMap.enabled && !app.debug.sun.castShadow && !app.debug.sun.shadow.map, 'safe mode has no real-time shadow target');
       check(app.debug.players.get(1).g.children.some(o => o.isMesh && o.geometry.type === 'CircleGeometry' && o.visible), 'safe mode retains the player ground shadow');
       metrics.safe = { calls: app.renderer.info.render.calls, triangles: app.renderer.info.render.triangles };

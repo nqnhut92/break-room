@@ -1970,8 +1970,29 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
   const ropeStart = new THREE.Vector3(), ropeEnd = new THREE.Vector3(), ropeDirection = new THREE.Vector3();
   const ropeUp = new THREE.Vector3(0, 1, 0);
-  const duelGate = new THREE.Mesh(new THREE.BoxGeometry(8, 170, 158), new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0.22, depthWrite: false }));
-  duelGate.position.set(2880, 85, 1700); duelGate.visible = false; scene.add(duelGate);
+  // Door placement comes from the shared world, never unscaled map coordinates.
+  const duelGate = new THREE.Group(); duelGate.name='duelGate';
+  const gateGeo=new THREE.BoxGeometry(1,1,1);
+  const gateRed=new THREE.MeshBasicMaterial({color:0xff493c});
+  const gateAmber=new THREE.MeshBasicMaterial({color:0xffce63});
+  const gateParts=[];
+  for(const [y,z,height,width,material] of [
+    [90,-.5,180,.065,gateAmber],[90,.5,180,.065,gateAmber],
+    [38,0,14,1,gateRed],[90,0,14,1,gateRed],[142,0,14,1,gateRed],
+    [90,-.25,130,.045,gateAmber],[90,.25,130,.045,gateAmber],
+  ]) {
+    const mesh=new THREE.Mesh(gateGeo,material);mesh.position.y=y;mesh.scale.set(14,height,1);
+    gateParts.push({mesh,z,width});duelGate.add(mesh);
+  }
+  duelGate.visible=false;scene.add(duelGate);
+  const duelFloor=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({color:0xff493c,transparent:true,opacity:.065,depthWrite:false,side:THREE.DoubleSide}));
+  duelFloor.rotation.x=-Math.PI/2;duelFloor.visible=false;scene.add(duelFloor);
+  const duelBorder=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-.5,0,-.5),new THREE.Vector3(.5,0,-.5),new THREE.Vector3(.5,0,.5),new THREE.Vector3(-.5,0,.5),
+  ]),new THREE.LineBasicMaterial({color:0xffba55,transparent:true,opacity:.9,depthWrite:false}));
+  duelBorder.visible=false;scene.add(duelBorder);
+  const duelGateLabel=document.createElement('div');duelGateLabel.className='duel-gate-label';
+  duelGateLabel.hidden=true;duelGateLabel.setAttribute('aria-hidden','true');labelsEl.appendChild(duelGateLabel);
   const duelMark = new THREE.Mesh(new THREE.RingGeometry(27, 32, 40), new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
   duelMark.rotation.x = -Math.PI / 2; duelMark.visible = false; scene.add(duelMark);
   function updateSpells(dt, S) {
@@ -2004,10 +2025,26 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       }
     }
     const active = S.duel?.target && performance.now() < S.duel.until && !S.boss?.dead;
-    duelGate.visible = !!active;
+    const door=S.world?.duelDoor, bounds=S.duel?.bounds;
+    duelGate.visible=!!(active&&door);
+    duelFloor.visible=duelBorder.visible=!!(active&&bounds);
+    if (active&&bounds) {
+      const width=bounds.x1-bounds.x0,depth=bounds.y1-bounds.y0;
+      duelFloor.scale.set(width,depth,1);duelFloor.position.set((bounds.x0+bounds.x1)/2,4,(bounds.y0+bounds.y1)/2);
+      duelBorder.scale.set(width,1,depth);duelBorder.position.set(duelFloor.position.x,5,duelFloor.position.z);
+    }
+    if(active&&door) {
+      duelGate.position.set(door.x,0,door.y);duelGate.rotation.y=door.axis==='x'?Math.PI/2:0;
+      for(const part of gateParts){part.mesh.position.z=part.z*door.width;part.mesh.scale.z=part.width*door.width;}
+      const projected=project(door.x,215,door.y);
+      duelGateLabel.hidden=!(projected.ok&&projected.sx>-120&&projected.sx<W+120&&projected.sy>0&&projected.sy<H);
+      const text='🔒 PHÒNG KHÓA · '+Math.max(0,Math.ceil((S.duel.until-performance.now())/1000))+'s';
+      if(duelGateLabel.textContent!==text)duelGateLabel.textContent=text;
+      duelGateLabel.style.transform='translate('+projected.sx.toFixed(1)+'px,'+projected.sy.toFixed(1)+'px) translate(-50%,-100%)';
+    } else duelGateLabel.hidden=true;
     duelMark.visible = !!active;
     if (active) {
-      duelGate.material.opacity = 0.17 + Math.sin(time * 6) * 0.06;
+      duelBorder.material.opacity = .8 + Math.sin(time * 3) * .1;
       const p = S.players.get(S.duel.target);
       duelMark.visible = !!p && !p.dead;
       if (p) duelMark.position.set(p.x, 5, p.y);

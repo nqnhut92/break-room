@@ -1,10 +1,12 @@
 'use strict';
+const world = require('../lib/world');
 const assert = require('assert');
 const { BOSS_ROOM, PLAYER_RADIUS, resolveCollisions, LAYOUT_SCALE: K } = require('../lib/world');
 const { DUEL, emptyDuel, nextDuel, nearRoom, activeDuel, canApologize, duelPosition, insideRoom } = require('../lib/duel');
 const { createMemoryStore } = require('../lib/store-memory');
-const near = { id: 1, x: 2750*K, y: 1700*K }, inside = { id: 2, x: 3300*K, y: 1700*K }, far = { id: 3, x: 1900*K, y: 1950*K };
-const dead = { id: 4, x: 3200*K, y: 1700*K, dead: true };
+const X=x=>world.serverPoint(x-2880,0).x, Y=y=>world.serverPoint(0,y-1260).y;
+const near = { id: 1, x: X(2750), y: Y(1700) }, inside = { id: 2, x: X(3300), y: Y(1700) }, far = { id: 3, x: 1900*K, y: 1950*K };
+const dead = { id: 4, x: X(3200), y: Y(1700), dead: true };
 let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('ok - ' + name); }
 check('random schedule is 40–60 seconds; dead and faraway players cannot be selected', () => {
@@ -30,13 +32,17 @@ check('selection is random across eligible users, no capture when nobody is near
   assert.equal(nextDuel(scheduled, 40999, [near], true, () => 0), null);
 });
 check('doorway blocks escape and entry throughout 20s, free movement immediately after expiry', () => {
-  const exit = {x: BOSS_ROOM.x0 - 100, y:1700*K};
+  const exit = {x: BOSS_ROOM.x0 - 100, y:Y(1700)};
   const captive = duelPosition(duel, 1, exit.x, exit.y, duel.until - 1);
   assert.ok(captive.x >= BOSS_ROOM.x0 + PLAYER_RADIUS); assert.ok(insideRoom(captive.x, captive.y));
-  const outsider = duelPosition(duel, 2, 3100*K, 1700*K, duel.until - 1);
+  const outsider = duelPosition(duel, 2, X(3100), Y(1700), duel.until - 1);
   assert.ok(!insideRoom(outsider.x, outsider.y, PLAYER_RADIUS));
   assert.deepEqual(duelPosition(duel, 1, exit.x, exit.y, duel.until), exit);
-  assert.deepEqual(duelPosition(duel, 2, 3100*K, 1700*K, duel.until), {x:3100*K,y:1700*K});
+  assert.deepEqual(duelPosition(duel, 2, X(3100), Y(1700), duel.until), {x:X(3100),y:Y(1700)});
+});
+check('a capture from the old room layout is released after relocation',()=>{
+  const stale={...duel,moves:[{id:near.id,kind:'pull',...world.layoutPoint(3100,1700)}]};
+  assert.equal(nextDuel(stale,42000,[near],true).target,0);
 });
 check('apology requires the captive, current duel and 10 elapsed seconds before expiry', () => {
   const at = duel.startedAt + 10000;

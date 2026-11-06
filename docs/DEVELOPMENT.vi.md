@@ -106,7 +106,7 @@ Nhân vật đã lưu hiển thị dạng thông tin chỉ đọc; chế độ s
 
 ## Kiểm tra dân số, tìm đường và bản đồ
 
-`test/shared.js` kiểm tra ngưỡng người thật riêng trên memory/Redis, thời gian giữ/ngắt ngưỡng, tăng máu đồng thời với đánh, đổi runner, damage ulti/tủ theo phần trăm, giữ mốc rắn, reconnect, hồi sinh và truyền HP giữa hai server đang chạy. `test/miniboss.js` kiểm tra đi chéo đúng tốc độ và đủ khoảng trống cho thân qua tường/nội thất. Bố cục khôi phục có một cửa mỗi phòng. Test kiểm tra vách kín ngoài cửa, cửa đi được, tới được đồ vật và zone sàn không chồng nhau; giữ ID/loại đồ vật đã lưu khi sửa.
+`test/shared.js` kiểm tra ngưỡng người thật riêng trên memory/Redis, thời gian giữ/ngắt ngưỡng, tăng máu đồng thời với đánh, đổi runner, damage ulti/tủ theo phần trăm, giữ mốc rắn, reconnect, hồi sinh và truyền HP giữa hai server đang chạy. `test/miniboss.js` kiểm tra đi chéo đúng tốc độ và đủ khoảng trống cho thân qua tường/nội thất. Phòng kín có một cửa định sẵn; khu làm việc được khai báo mở. Test kiểm tra vách phòng kín ngoài cửa, cửa đi được, tới được đồ vật và zone sàn không chồng nhau; giữ ID/loại đồ vật đã lưu khi sửa.
 
 `npm run test:minimap` kiểm tra chạm mở/đóng, desktop giữ Tab khi chạy, thả phím/mất focus thì đóng, không bắt phím lúc nhập, radar tròn, người chơi ở tâm, mép mờ dần, cắt boss xa khỏi mini map, giữ chức năng M và cập nhật HP sai thứ tự. `RENDERER_TOUCH=0 npm run test:renderer` cùng lượt touch mặc định kiểm tra đề từ mini boss chỉ ở desktop và thu hồi tài nguyên. Đây là kiểm tra trình duyệt/WebGL phần mềm, không phải đo hiệu năng thiết bị thật.
 
@@ -114,6 +114,13 @@ Tạo lại toàn cảnh README và sơ đồ bằng `CHROMIUM_PATH=/path/to/chr
 
 ## Âm thanh
 
-`public/audio.js` trộn sample va chạm Kenney CC0 theo vật liệu với hiệu ứng vũ khí tổng hợp. 24 file WAV PCM mono trong `public/assets/audio/` chỉ tải/giải mã sau thao tác bật âm; nếu sample không tải được thì dùng âm tổng hợp ngắn, không chờ để chơi. Nguồn âm được dọn khi kết thúc; tắt âm dừng cả nguồn đang phát/đã lên lịch. Tối đa 24 lớp cùng lúc; âm lượng giảm theo bình phương khoảng cách và về 0 ở 1.000 đơn vị. Compressor chung và tầng chặn đỉnh mềm xử lý các cú trùng nhau; âm gần có thể thay lớp âm xa nhỏ hơn. VKL lấy đà thường không phát tiếng; chiêu đặc biệt giữ tín hiệu ngắn. Va chạm, vỡ đồ, boss ra đòn và boss ngã có âm riêng.
+`public/audio.js` trộn sample va chạm Kenney CC0 theo vật liệu với hiệu ứng vũ khí tổng hợp. 27 file WAV PCM mono trong `public/assets/audio/` chỉ tải/giải mã sau thao tác bật âm; nếu sample không tải được thì dùng âm tổng hợp ngắn, không chờ để chơi. Nguồn âm được dọn khi kết thúc; tắt âm dừng cả nguồn đang phát/đã lên lịch. Tối đa 24 lớp cùng lúc; âm lượng giảm theo bình phương khoảng cách và về 0 ở 1.000 đơn vị. Compressor chung và tầng chặn đỉnh mềm xử lý các cú trùng nhau; âm gần có thể thay lớp âm xa nhỏ hơn. VKL lấy đà thường không phát tiếng; chiêu đặc biệt giữ tín hiệu ngắn. Va chạm, vỡ đồ, boss ra đòn và boss ngã có âm riêng.
 
 Chạy `npm run test:audio` với Chromium/`CHROMIUM_PATH`: tải sau thao tác, giải mã mọi WAV, báo đòn thường/đặc biệt, tắt âm, render offline vật liệu/người, giới hạn đỉnh khi đông và im lặng ở xa. Test không đánh giá được cảm giác lực hoặc cân bằng loa thật; nghe thử đập gỗ/kim loại/kính liên tục, phá đồ, đánh boss và room đông trên loa iPad lẫn tai nghe. Nguồn sample, cách chuyển đổi và giấy phép CC0 gốc nằm cạnh WAV.
+
+
+## Văn phòng mở và cánh đông
+
+Khu làm việc có metadata mở sẽ không sinh vách ngăn; các phòng họp/server/WC kín vẫn có tường chung và cửa. Cánh đông nới chiều rộng world thay vì ép các phòng cũ. Đồ mới nối sau 359 món gốc; test fingerprint giữ ID/loại/vị trí đã lưu, chỉ bỏ qua vị trí rack đã chuyển. `serverPoint` dùng tọa độ cục bộ trong `SERVER_ROOM`; rack, tuần tra boss và điểm kéo đấu cùng dùng gốc đó. `WORLD.duelDoor` đưa tọa độ cửa thật sau scale sang renderer. Không ghi cứng tọa độ cũ chưa scale. Khi sửa, kiểm tra đường tới mọi món đồ, cửa kín, sàn không chồng nhau, tuần tra/truy đuổi boss, di chuyển/reconnect khi bị bắt đấu và toàn bộ test Redis.
+
+Phát PCM giữ envelope tự nhiên, chỉ fade 12 ms cuối. Lớp bản ghi kính vỡ/gỗ gãy/kim loại va chạm phân biệt phá hủy với cú đập thường. Boss có bus ưu tiên và tạm hạ tiếng đập thường; mini-boss dùng lớp slam nhẹ hơn. Tầng chặn đỉnh chung vẫn chống clipping và giới hạn 24 lớp. `test:audio` còn đo năng lượng đuôi vỡ và phân biệt boss/đánh người; đây là hồi quy kỹ thuật, không chứng minh cảm giác lực. Thông báo CC0 liệt kê trang tác giả và cách chuyển đổi. Tham khảo thiết kế: [đội âm thanh God of War](https://www.asoundeffect.com/god-of-war-sound/), [đội Rovio](https://www.asoundeffect.com/angry-birds-journey-game-audio/). Không chép âm từ các game đó.

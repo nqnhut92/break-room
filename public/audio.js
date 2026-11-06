@@ -12,8 +12,9 @@ export function distanceVolume(distance) {
   return v * v;
 }
 const GROUPS = ['Wood','Metal','Glass','Punch','Soft','Plate'];
+const DESTRUCTION = ['shatter-glass','splinter-wood','slam-metal'];
 export function createGameAudio(isMuted) {
-  let ctx, master, loading, noiseBuffer;
+  let ctx, master, normalBus, bossBus, loading, noiseBuffer;
   const buffers = new Map(), previous = new Map(), voices = new Set();
   function stop() {
     for (const voice of voices) { try { voice.source.stop(); } catch (_) { /* already ended */ } }
@@ -25,8 +26,11 @@ export function createGameAudio(isMuted) {
         ctx = new AC();
         const compressor = ctx.createDynamicsCompressor();
         compressor.threshold.value = -12; compressor.knee.value = 12;
-        compressor.ratio.value = 6; compressor.attack.value = .003; compressor.release.value = .12;
+        compressor.ratio.value = 3; compressor.attack.value = .012; compressor.release.value = .12;
         master = ctx.createGain(); master.gain.value = .65;
+        normalBus = ctx.createGain(); normalBus.gain.value = .8;
+        bossBus = ctx.createGain();
+        normalBus.connect(master); bossBus.connect(master);
         // Catch coincident transients before the compressor's attack has settled.
         const ceiling = ctx.createWaveShaper();
         ceiling.curve = Float32Array.from({length:2049}, (_,i) => {
@@ -37,43 +41,49 @@ export function createGameAudio(isMuted) {
         noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
         const data = noiseBuffer.getChannelData(0);
         for (let i=0;i<data.length;i++) data[i]=Math.random()*2-1;
-        loading = Promise.allSettled(GROUPS.flatMap(group => ['medium','heavy'].flatMap(weight => [0,1].map(async i => {
-          const key = `impact${group}_${weight}_00${i}`;
+        const keys = GROUPS.flatMap(group => ['medium','heavy'].flatMap(weight => [0,1].map(i => `impact${group}_${weight}_00${i}`)));
+        loading = Promise.allSettled([...keys,...DESTRUCTION].map(async key => {
           const response = await fetch(new URL(`./assets/audio/${key}.wav`, import.meta.url));
           if (!response.ok) throw new Error('audio sample unavailable');
           buffers.set(key, await ctx.decodeAudioData(await response.arrayBuffer()));
-        }))));
+        }));
       } catch (_) { ctx = null; return Promise.resolve(); }
     }
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     return loading;
   }
   function available(v) { return ctx && ctx.state === 'running' && !isMuted() && v > .015; }
-  function play(source, vol, duration, delay=0, filter=null) {
+  function play(source, vol, duration, delay=0, filter=null, options={}) {
     if (!available(vol)) return;
     // Keep busy rooms bounded; a nearby hit can replace the quietest distant layer.
     if (voices.size >= 24) {
-      const quietest = [...voices].reduce((a,b) => a.vol < b.vol ? a : b);
-      if (quietest.vol >= vol) return;
+      const quietest = [...voices].reduce((a,b) => a.priority < b.priority || (a.priority === b.priority && a.vol < b.vol) ? a : b);
+      const priority = options.boss ? 1 : 0;
+      if (quietest.priority > priority || (quietest.priority === priority && quietest.vol >= vol)) return;
       try { quietest.source.stop(); } catch (_) { /* already stopped */ }
       voices.delete(quietest);
     }
     const t=ctx.currentTime+delay, gain=ctx.createGain();
     gain.gain.setValueAtTime(0,t);
     gain.gain.linearRampToValueAtTime(vol,t+.002);
-    gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    if (options.natural) {
+      // PCM already has its own attack/body/debris decay. Fading the entire file
+      // exponentially erased its tail (~40dB halfway through every recording).
+      gain.gain.setValueAtTime(vol,t+Math.max(.003,duration-.012));
+      gain.gain.linearRampToValueAtTime(0,t+duration);
+    } else gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
     source.connect(filter || gain); if (filter) filter.connect(gain);
-    gain.connect(master);
-    const voice={source,vol}; voices.add(voice);
+    gain.connect(options.boss ? bossBus : normalBus);
+    const voice={source,vol,priority:options.boss ? 1 : 0}; voices.add(voice);
     source.onended=()=>{voices.delete(voice);source.disconnect();filter?.disconnect();gain.disconnect();};
     source.start(t); source.stop(t+duration+.005);
   }
-  function noise(dur, freq, vol, delay=0) {
+  function noise(dur, freq, vol, delay=0, options={}) {
     if (!available(vol)) return;
     const src=ctx.createBufferSource(); src.buffer=noiseBuffer;
     src.playbackRate.value=.9+Math.random()*.2;
     const filter=ctx.createBiquadFilter(); filter.type='bandpass';filter.frequency.value=freq;filter.Q.value=.7;
-    play(src,vol,dur,delay,filter);
+    play(src,vol,dur,delay,filter,options);
   }
   function tone(freq,dur,vol,slide=0,delay=0) {
     if (!available(vol)) return;
@@ -82,16 +92,29 @@ export function createGameAudio(isMuted) {
     osc.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),ctx.currentTime+delay+dur);
     play(osc,vol,dur,delay);
   }
-  function sample(group,weight,v,rate=1,delay=0) {
+  function recording(key,v,rate=1,delay=0,options={}) {
+    if (!available(v)) return;
+    const buffer=buffers.get(key);
+    if (!buffer) { noise(.07,2400,v*.3,delay,options); return; }
+    const src=ctx.createBufferSource();src.buffer=buffer;
+    src.playbackRate.value=rate*(.96+Math.random()*.08);
+    play(src,v,buffer.duration/src.playbackRate.value,delay,null,{...options,natural:true});
+  }
+  function sample(group,weight,v,rate=1,delay=0,options={}) {
     if (!available(v)) return;
     const family=group+weight, last=previous.get(family);
     const i=last === undefined ? Math.floor(Math.random()*2) : 1-last;
     previous.set(family,i);
-    const buffer=buffers.get(`impact${group}_${weight}_00${i}`);
-    if (!buffer) { noise(.055,group==='Metal'?3000:1800,v*.35,delay); return; }
-    const src=ctx.createBufferSource();src.buffer=buffer;
-    src.playbackRate.value=rate*(.94+Math.random()*.12);
-    play(src,v,Math.min(.65,buffer.duration/src.playbackRate.value),delay);
+    recording(`impact${group}_${weight}_00${i}`,v,rate,delay,options);
+  }
+  function bossFocus(v) {
+    if (!available(v)) return false;
+    const t=ctx.currentTime, gain=normalBus.gain;
+    gain.cancelScheduledValues(t);gain.setValueAtTime(gain.value,t);
+    gain.linearRampToValueAtTime(.8*(1-.65*v),t+.008);
+    gain.setValueAtTime(.8*(1-.65*v),t+.15);
+    gain.linearRampToValueAtTime(.8,t+.32);
+    return true;
   }
   function accent(skill,v) {
     if (skill==='electric') { noise(.035,6500,v*.22);noise(.065,3200,v*.13,.035); }
@@ -101,18 +124,34 @@ export function createGameAudio(isMuted) {
     init, stop,
     hit(v,type='body',skill='hammer') {
       sample(materialFor(type),'medium',v*.75);
-      // A tiny, short body supports small speakers without masking the foley attack.
-      tone(170,.065,v*.09,-70); accent(skill,v);
+      // Keep the contact bright; a generic bass thump made all materials sound alike.
+      noise(.018,3200,v*.1); accent(skill,v);
     },
     break(v,type='desk') {
       const group=materialFor(type);
-      sample(group,'heavy',v*.9,.92);
-      sample(group,'medium',v*.28,1.25,.055);
-      noise(.09,group==='Glass'?5800:2400,v*.12,.035);
+      const key=group==='Glass'?'shatter-glass':group==='Wood'||group==='Soft'?'splinter-wood':'slam-metal';
+      recording(key,v*.85);
+      sample(group,'heavy',v*.32,1.05);
+      // Electronics have both a casing and small glass/plastic fragments.
+      if (group==='Plate') recording('shatter-glass',v*.24,1.3,.025);
+      sample(group,'medium',v*.14,1.35,.13);
+      sample(group,'medium',v*.08,1.65,.28);
     },
-    strike(v) { sample('Punch','heavy',v*.95,.82);sample('Wood','heavy',v*.25,.8,.015); },
-    hurt() { sample('Punch','medium',.58,.88); },
-    down(v) { sample('Punch','heavy',v,.72);sample('Soft','heavy',v*.65,.8,.09);tone(110,.12,v*.12,-55); },
+    strike(v,kind='boss') {
+      const mini=kind==='mini';
+      if (!bossFocus(v*(mini?.6:1))) return;
+      recording('slam-metal',v*(mini?.38:.75),mini?1.1:.82,0,{boss:true});
+      sample('Punch','heavy',v*.48,.95,0,{boss:true});
+      recording('splinter-wood',v*.23,1.1,.025,{boss:true});
+      noise(.035,2300,v*.2,0,{boss:true});
+    },
+    hurt() { sample('Punch','medium',.48,1,0,{boss:true}); },
+    down(v) {
+      if (!bossFocus(v)) return;
+      recording('splinter-wood',v*.7,.85,0,{boss:true});
+      sample('Punch','heavy',v*.55,.85,0,{boss:true});
+      recording('slam-metal',v*.35,.75,.09,{boss:true});
+    },
     cue(v,kind='cast') {
       // Rare abilities only: a short two-note cue, never the old sawtooth wind-up.
       tone(kind==='newProcess'?660:440,.065,v*.16,0);

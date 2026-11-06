@@ -31,14 +31,15 @@ step('rooms: unique url-safe ids, readable names, at least one', () => {
   }
 });
 
-step('rooms and corridors expand while furniture dimensions and closed partitions stay intact', () => {
-  assert.deepStrictEqual([W.WORLD.w,W.WORLD.h],[6480,4050]);
+step('east wing expands the office without enlarging furniture', () => {
+  assert.deepStrictEqual([W.WORLD.w,W.WORLD.h],[8910,4050]);
   const it=W.FLOOR_ROOMS.find(r=>r.name==='IT WORKSPACE');
   const server=W.FLOOR_ROOMS.find(r=>r.name==='SERVER / VKL');
   assert.ok(server.x0-it.x1>=243,'service corridor widens from 180 to 243');
   assert.deepStrictEqual([server.x1-server.x0,server.y1-server.y0],[1296,1215]);
   assert.deepStrictEqual([W.TYPES.desk.w,W.TYPES.desk.h],[150,115],'furniture does not grow with the room');
-  assert.ok(W.FLOOR_ROOMS.every(r=>!r.passages),'no new holes through the partitions');
+  assert.equal(W.FLOOR_ROOMS.filter(r=>r.name.startsWith('MEETING ')).length,5);
+  assert.ok(server.x0>=W.WORLD.w-1296&&server.y0===0,'server moves to the northeast edge behind a forecourt');
 });
 
 step('object ids are dense and every type is known', () => {
@@ -48,6 +49,13 @@ step('object ids are dense and every type is known', () => {
     assert.ok(o.x >= 0 && o.x <= W.WORLD.w && o.y >= 0 && o.y <= W.WORLD.h, 'inside the world: ' + o.id);
   });
   assert.ok(W.OBJECTS.length > 100);
+});
+
+step('saved object ids retain their identity and placement outside the relocated server racks',()=>{
+  const crypto=require('crypto');
+  const original=W.OBJECTS.slice(0,359).map(o=>[o.id,o.type,...(o.type==='server'?[]:[o.x,o.y]),o.rot||0]);
+  assert.equal(crypto.createHash('sha256').update(JSON.stringify(original)).digest('hex'),'b32ddedce61f90b13fe3fcc4afbeb3b8c698ad87fb9da313c880dca1ad16cc6b');
+  assert.equal(W.OBJECTS.filter(o=>o.type==='server').length,6);
 });
 
 step('IT wing has four six-seat islands with facing rows and paired arm monitors', () => {
@@ -82,6 +90,16 @@ step('floor overlays never overlap at the shared render height', () => {
     const height = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
     assert.ok(width <= 0 || height <= 0, 'coplanar floor overlap between zones ' + i + ' and ' + j);
   }
+});
+
+
+step('working areas are open and the duel door matches the relocated room',()=>{
+  const walls=W.PROPS.filter(p=>p.k==='wall');
+  assert.ok(W.FLOOR_ROOMS.filter(r=>r.name.includes('WORKSPACE')).every(r=>r.open));
+  assert.ok(!walls.some(p=>Math.abs(p.x-1400*K)<1&&p.y<1260*K),'no divider between workspaces');
+  assert.ok(!walls.some(p=>Math.abs(p.y-1260*K)<1&&p.x<2700*K),'workspace opens onto circulation');
+  const room=W.FLOOR_ROOMS.find(r=>r.name==='SERVER / VKL');
+  assert.deepStrictEqual(W.WORLD.duelDoor,{x:room.x0,y:room.door.at,width:room.door.w,axis:'y'});
 });
 
 step('spawn area is open floor', () => {
@@ -129,9 +147,9 @@ step('every breakable object can be reached from the spawn point', () => {
   assert.deepStrictEqual(unreachable.map((o) => o.type + '#' + o.id), []);
 });
 
-step('every room has continuous walls and a single intentional doorway', () => {
+step('closed rooms have continuous walls and a single intentional doorway', () => {
   const walls = W.PROPS.filter(p => p.k === 'wall');
-  for (const r of W.FLOOR_ROOMS) {
+  for (const r of W.FLOOR_ROOMS.filter(r=>!r.open)) {
     for (const [side, lo, hi, c, horizontal] of [
       ['n',r.x0,r.x1,r.y0,true], ['s',r.x0,r.x1,r.y1,true],
       ['w',r.y0,r.y1,r.x0,false], ['e',r.y0,r.y1,r.x1,false],
