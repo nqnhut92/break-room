@@ -6,7 +6,7 @@
 
 ## Context
 
-Project notes record intermittent flickering black rectangles on the user's GPU with an EffectComposer bloom chain. A bisect pointed to the bloom pass, which was removed. A short screenshot check cannot establish that the intermittent issue is gone. Touch devices also need a lower rendering budget.
+Project notes record intermittent flickering black rectangles on affected hardware with an EffectComposer bloom chain. A bisect pointed to the bloom pass, which was removed. A short screenshot check cannot establish that the intermittent issue is gone. Touch devices also need a lower rendering budget.
 
 ## Decision
 
@@ -22,7 +22,7 @@ Keep the direct path when warming effects and changing quality settings.
 
 ## Consequences
 
-Lighting and geometry carry the look, and some glow effects are approximations. Both modes still share geometry and CPU work; lowering quality cannot fix every performance issue. Do not restore a composer without moving-scene checks on the user's GPU, including screenshots spaced over several seconds. Headless software WebGL is useful for pipeline checks, not proof of hardware performance.
+Lighting and geometry carry the look, and some glow effects are approximations. Both modes still share geometry and CPU work; lowering quality cannot fix every performance issue. Do not restore a composer without moving-scene checks on affected hardware, including screenshots spaced over several seconds. Headless software WebGL is useful for pipeline checks, not proof of hardware performance.
 
 ## References
 

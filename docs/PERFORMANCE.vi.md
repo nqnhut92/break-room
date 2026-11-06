@@ -6,7 +6,7 @@
 
 ## Bản sửa để thử trên thiết bị
 
-Người dùng đã xác nhận giật ngay từ phiên mới. Thiếu cleanup sau nhiều lượt vào/rời **không giải thích được riêng trường hợp đó**; đây là lỗi tài nguyên độc lập. Bản sửa xử lý cả cleanup và tải bóng có ngay từ frame đầu:
+Hiện tượng giật đã được báo cáo ngay từ phiên mới. Thiếu cleanup sau nhiều lượt vào/rời **không giải thích được riêng trường hợp đó**; đây là lỗi tài nguyên độc lập. Bản sửa xử lý cả cleanup và tải bóng có ngay từ frame đầu:
 
 - Safe mode tắt shadow pass thời gian thực, giữ bóng tròn dưới chân. High mode giữ bóng thời gian thực (1024 trên cảm ứng, 2048 desktop), có thể bật lại bằng nút ✨. Lựa chọn đã lưu không bị reset.
 - Chuyển sang safe mode giải phóng shadow target; chuyển lại high tạo lại đúng cách.
@@ -22,7 +22,7 @@ Lượt kiểm tra cleanup/bóng ban đầu hoàn tất **17 checks** trên mỗ
 
 Báo cáo tiếp theo từ iPhone cho biết cả safe/high đã hết lag nhưng xuất hiện vạch ngang chớp khi di chuyển. Kiểm tra map phát hiện hai zone hành lang chồng sàn sảnh tại `y=1420..1460`, phủ tổng `x=0..2880`; chúng đều được vẽ ở cùng độ cao. Đây là lỗi coplanar/z-fighting cụ thể trong layout, dùng chung ở cả hai chế độ; chưa phải tái hiện trực tiếp dấu vạch trên GPU iPhone.
 
-Bản sửa bắt đầu sàn sảnh ở `y=1460`, chỉ tiếp giáp cạnh hành lang, giữ tối ưu bóng hiện tại. `test/world.js` kiểm tra mọi cặp zone không chồng diện tích; renderer test đi camera qua khu này ở safe/high. Đồng thời bỏ biển tên phòng lơ lửng theo yêu cầu người dùng. Cần xác nhận lại vạch chớp trên máy thật trong lúc di chuyển, không suy ra từ ảnh tĩnh. Lượt regression renderer cảm ứng mới nhất qua 18 checks, có 50 draw calls ở safe và 302 ở high, geometry giữ ổn định ở 90; bỏ biển tên làm số mesh nhìn thấy khác lượt trước.
+Bản sửa bắt đầu sàn sảnh ở `y=1460`, chỉ tiếp giáp cạnh hành lang, giữ tối ưu bóng hiện tại. `test/world.js` kiểm tra mọi cặp zone không chồng diện tích; renderer test đi camera qua khu này ở safe/high. Đồng thời bỏ biển tên phòng lơ lửng khỏi thiết kế. Cần xác nhận lại vạch chớp trên máy thật trong lúc di chuyển, không suy ra từ ảnh tĩnh. Lượt regression renderer cảm ứng mới nhất qua 18 checks, có 50 draw calls ở safe và 302 ở high, geometry giữ ổn định ở 90; bỏ biển tên làm số mesh nhìn thấy khác lượt trước.
 
 ## Kết luận hiện tại
 
@@ -30,7 +30,7 @@ Chưa có bằng chứng iPhone thiếu RAM. Có bằng chứng local cho hai v�
 
 1. **Chế độ an toàn vẫn render bóng thời gian thực khá nặng.** Cùng một góc ở sảnh, tắt bóng giảm từ 302 xuống 51 draw calls, từ 813.404 xuống 26.860 tam giác. `setQuality('low')` chỉ giảm độ phân giải shadow map, vẫn giữ đối tượng đổ bóng và vùng shadow rộng bám camera. Giảm độ phân giải không tự giảm chi phí gửi hình học.
 2. **Geometry của nhân vật rời phòng chưa được giải phóng.** `disposePlayer()` gỡ group/label nhưng chỉ dispose pick proxy và tài nguyên điện. Sau khi đám đông rời đi, bộ đếm geometry vẫn cao; tám lượt vào/rời tiếp theo tăng mười geometry mỗi lượt, kể cả sau khi ép JS GC. Bản cleanup chỉ chèn trong response chẩn đoán giữ bộ đếm ổn định.
-3. **Chế độ cao đã lưu có thể nhân tải pixel trên điện thoại.** `public/game.js` đọc `br-gfx2` thay vì luôn dùng mặc định cảm ứng. Với DPR 3 của probe, high render ở DPR 2, low ở DPR 1: canvas high gấp bốn số pixel. Cả hai vẫn dùng antialiasing của context. Chưa biết máy người dùng đang lưu chế độ nào.
+3. **Chế độ cao đã lưu có thể nhân tải pixel trên điện thoại.** `public/game.js` đọc `br-gfx2` thay vì luôn dùng mặc định cảm ứng. Với DPR 3 của probe, high render ở DPR 2, low ở DPR 1: canvas high gấp bốn số pixel. Cả hai vẫn dùng antialiasing của context. Báo cáo phiên chơi chưa ghi lại chế độ đồ họa đang bật.
 4. **Đông nhân vật làm tăng tải rõ rệt.** Cảnh mô phỏng 20 người/40 rắn gửi 823 draw calls và 1.396.808 tam giác, tính cả bóng. Mỗi người dựng geometry riêng. Frustum culling không loại bỏ hết việc duyệt scene, cập nhật từng món và render bóng ngoài khung nhìn.
 
 ## Bằng chứng và phạm vi đo
@@ -74,7 +74,7 @@ Cả hai lượt đo hoàn tất, không có page error. CPU profile chứa cả
 | P2 | Giảm độ chi tiết nhân vật xa, dùng chung geometry bất biến và giảm cập nhật ngoài màn hình. Cân nhắc instancing nội thất lặp nếu vẫn giữ được hình khi bị đánh. | Profile cảnh đông trước. Giữ nhắm đánh, phụ kiện, picking, điện và ownership tài nguyên đúng; không ẩn nhầm đối tượng còn cần cho bóng/hiệu ứng. |
 | P3 | Cache cập nhật HUD/đồ vật không đổi và chia vùng truy vấn di chuyển/chọn mục tiêu nếu trace CPU chỉ ra chúng. Chỉ điều tra MSAA khi chi phí pixel/buffer vẫn trội. | Chưa phải nguyên nhân đo được trong lượt này. Đổi MSAA có thể phải tạo lại renderer và kiểm tra rộng hơn. |
 
-Nên làm P0 và đối chứng P1 trước khi viết lại renderer. Cleanup nhắm tới phiên chơi dài; bóng nặng có thể ảnh hưởng ngay phiên mới. Không tự xoá lựa chọn đồ họa đã lưu của người dùng.
+Nên làm P0 và đối chứng P1 trước khi viết lại renderer. Cleanup nhắm tới phiên chơi dài; bóng nặng có thể ảnh hưởng ngay phiên mới. Không tự xoá lựa chọn đồ họa đã lưu của người chơi.
 
 ## Chế độ đẹp trên iPad và iPhone (tháng 11/2026)
 
@@ -94,7 +94,7 @@ Vậy chỗ tốn không phải số điểm ảnh mà là lượt vẽ bóng: v
 
 ## Kiểm tra trên iPhone
 
-Dùng cùng iPhone 17 Pro Max với Safari và app Home Screen; ghi viewport, OS/browser, chất lượng, DPR và nhịp frame thực tế. Đổi từng yếu tố, bắt đầu khi máy mát, giữ nguyên Low Power Mode/độ sáng; lặp sau 10–15 phút để phân biệt ảnh hưởng nhiệt. Đây là kế hoạch kiểm tra, chưa phải các lượt đã chạy.
+Dùng iPhone 17 Pro Max để có lượt đo tương đương với Safari và app Home Screen; ghi viewport, OS/browser, chất lượng, DPR và nhịp frame thực tế. Đổi từng yếu tố, bắt đầu khi máy mát, giữ nguyên Low Power Mode/độ sáng; lặp sau 10–15 phút để phân biệt ảnh hưởng nhiệt. Đây là kế hoạch kiểm tra, chưa phải các lượt đã chạy.
 
 - So safe/high, bật/tắt bóng và DPR 1/0,75 ở cùng góc. Thử sảnh yên tĩnh, đi liên tục, cú đập đầu, đập liên tục, VKL/rắn và đám đông thực tế. Phân biệt kéo giật vị trí do mạng với frame bị nghẽn tại máy.
 - Ghi khoảng cách frame p50/p95/p99, stall >50 ms, JS/GC timeline, thời gian GPU nếu hỗ trợ và resource. Dùng Safari Web Inspector để xem allocation và dấu hiệu áp lực bộ nhớ nếu có. Màn hình 120 Hz không có nghĩa đã đo được 120 FPS.

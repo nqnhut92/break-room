@@ -6,7 +6,7 @@ Original investigation recorded 2026-11-04 against runtime revision `dcbcb33`. B
 
 ## Implementation for device testing
 
-The user confirmed stutter immediately after joining a fresh session. Retention after repeated joins/leaves **does not explain that case by itself**; it is an independent resource-lifecycle bug. This change addresses both lifecycle and shadow work present from the first frames:
+Stutter was reported immediately after joining a fresh session. Retention after repeated joins/leaves **does not explain that case by itself**; it is an independent resource-lifecycle bug. This change addresses both lifecycle and shadow work present from the first frames:
 
 - Safe mode disables the real-time shadow pass while retaining player ground/blob shadows. High mode retains live shadows (1024 on touch, 2048 desktop), selectable with ✨. Saved preferences are preserved.
 - Switching to safe mode releases the shadow target; returning to high recreates it correctly.
@@ -22,7 +22,7 @@ These are measured submission reductions on SwiftShader, not an established iPho
 
 A later iPhone report says both modes are smooth but show a horizontal flickering line while moving. Layout inspection found two corridor zones overlapping reception over `y=1420..1460`, together spanning `x=0..2880`; all are rendered at the same height. This is a concrete coplanar/z-fighting defect shared by both graphics modes, not a direct reproduction of the observed line on the iPhone GPU.
 
-The fix starts reception at `y=1460`, sharing only an edge with the corridor, while keeping the shadow optimizations. `test/world.js` checks all zone pairs for area overlap; renderer checks move the camera through this region in safe/high. Floating room-name signs were also removed at the user's request. Confirm the reported line on hardware while moving; a still image cannot establish that it is resolved. The latest touch renderer regression run passes 18 checks, with 50 safe-mode draws versus 302 in high and a resource plateau at 90 geometries; removing signs changes the visible-mesh counts from the earlier run.
+The fix starts reception at `y=1460`, sharing only an edge with the corridor, while keeping the shadow optimizations. `test/world.js` checks all zone pairs for area overlap; renderer checks move the camera through this region in safe/high. Floating room-name signs were also removed from the design. Confirm the reported line on hardware while moving; a still image cannot establish that it is resolved. The latest touch renderer regression run passes 18 checks, with 50 safe-mode draws versus 302 in high and a resource plateau at 90 geometries; removing signs changes the visible-mesh counts from the earlier run.
 
 ## Findings
 
@@ -30,7 +30,7 @@ There is no evidence yet that the phone has too little RAM. A rendering workload
 
 1. **Safe mode still pays for a large real-time shadow pass.** At a fixed reception view, turning off shadows cuts submitted draw calls from 302 to 51 and triangles from 813,404 to 26,860. `setQuality('low')` reduces shadow-map resolution, but retains real-time shadow casters and the broad camera-following shadow frustum. Lower resolution alone does not eliminate geometry submission.
 2. **Departing player rigs retain uploaded geometry.** `disposePlayer()` removes the group and label but disposes only a pick proxy and electric-effect resources, leaving the rig's other geometries. After a crowd leaves, renderer geometry counts stay elevated; eight further join/leave cycles add ten geometries each, even after forced JavaScript GC. A response-only disposal patch keeps the count flat.
-3. **A saved high setting can multiply pixel work on phones.** `public/game.js` restores `br-gfx2` before applying the default. At the probe's DPR 3, high renders at DPR 2 and low at DPR 1: four times as many canvas pixels in high mode. Both retain the context's antialiasing. We have not inspected the user's saved setting.
+3. **A saved high setting can multiply pixel work on phones.** `public/game.js` restores `br-gfx2` before applying the default. At the probe's DPR 3, high renders at DPR 2 and low at DPR 1: four times as many canvas pixels in high mode. Both retain the context's antialiasing. The reported session did not record the active graphics setting.
 4. **Crowds raise submission costs substantially.** A synthetic 20-player/40-snake view submits 823 draw calls and 1,396,808 triangles including shadows. Each player builds its own rig geometry. Frustum culling does not prevent all scene traversal, per-object updates or shadow work.
 
 ## Evidence and limits
@@ -74,7 +74,7 @@ Both probes completed with zero page errors. CPU profiles include quality change
 | P2 | Reduce character complexity at distance, share immutable rig geometry, and reduce offscreen updates. Consider instancing repeated static furniture where per-object damage visuals allow it. | Profile crowds first. Preserve damage targeting, accessories, picking, electric effects and shared ownership. Avoid hiding objects needed by shadows or effects. |
 | P3 | Cache unchanged HUD/object updates and spatially index movement/target queries if CPU traces identify them. Investigate MSAA changes only if fill/attachment cost remains dominant. | These are secondary candidates, not measured root causes here. MSAA context changes can require renderer recreation and broader verification. |
 
-Implement P0 and a measured P1 comparison before a broad renderer rewrite. Resource cleanup addresses longer sessions; shadow work can affect a fresh session too, so a new session stuttering does not rule out the shadow finding. Do not reset the user's graphics preference silently.
+Implement P0 and a measured P1 comparison before a broad renderer rewrite. Resource cleanup addresses longer sessions; shadow work can affect a fresh session too, so a new session stuttering does not rule out the shadow finding. Do not reset saved player graphics preferences silently.
 
 ## High mode on iPad and iPhone (November 2026)
 
@@ -94,7 +94,7 @@ So the cost was not pixels but the shadow pass: its box was a square sized from 
 
 ## iPhone acceptance plan
 
-Use the same iPhone 17 Pro Max in Safari and the Home Screen app, recording actual viewport, browser/OS, quality, DPR and refresh cadence. Compare one change at a time with a cool phone and unchanged Low Power Mode/brightness; repeat after 10–15 minutes to distinguish sustained thermal behavior. These are checks to perform, not conditions already tested here.
+Use an iPhone 17 Pro Max for a comparable run in Safari and the Home Screen app, recording actual viewport, browser/OS, quality, DPR and refresh cadence. Compare one change at a time with a cool phone and unchanged Low Power Mode/brightness; repeat after 10–15 minutes to distinguish sustained thermal behavior. These are checks to perform, not conditions already tested here.
 
 - Compare safe/high, shadows on/off and DPR 1/0.75 at the same camera. Include quiet lobby, continuous movement, first impact, sustained impacts, VKL/snakes and a representative crowd. Separate slow network corrections from local frame stalls.
 - Record frame intervals (p50/p95/p99), >50 ms stalls, JS/GC timelines, supported GPU timings and resource counts. Use Safari Web Inspector for allocations and process/memory evidence where available. Do not equate a 120 Hz display with measured 120 FPS.

@@ -6,11 +6,11 @@
 
 ## Context
 
-The user reports stutter on an iPhone 17 Pro Max immediately after entering the game. Resource retention after players leave is a separate bug and cannot explain a fresh session by itself. The earlier safe mode reduced shadow-map resolution but still rendered a broad shadow frustum. A local synthetic reception view submitted 302 draws and 813,404 triangles with shadows versus 51 and 26,860 without them. These counters establish submission cost, not iPhone FPS.
+Stutter was reported on an iPhone 17 Pro Max immediately after entering the game. Resource retention after players leave is a separate bug and cannot explain a fresh session by itself. The earlier safe mode reduced shadow-map resolution but still rendered a broad shadow frustum. A local synthetic reception view submitted 302 draws and 813,404 triangles with shadows versus 51 and 26,860 without them. These counters establish submission cost, not iPhone FPS.
 
 ## Decision
 
-Disable the real-time shadow pass in safe mode and retain the existing player ground/blob shadows. Keep high-mode live shadows and existing resolution limits available through the graphics switch. Release shadow render targets when disabling shadows and recreate them when high mode returns. Preserve the user's saved quality setting, native viewport and gesture behavior. Do not add a composer or dynamic resolution in this change.
+Disable the real-time shadow pass in safe mode and retain the existing player ground/blob shadows. Keep high-mode live shadows and existing resolution limits available through the graphics switch. Release shadow render targets when disabling shadows and recreate them when high mode returns. Preserve saved player quality settings, native viewport and gesture behavior. Do not add a composer or dynamic resolution in this change.
 
 Separately fix ownership cleanup for departed character rigs: dispose private geometry and private ground/ring/electric materials, while keeping shared materials alive.
 
