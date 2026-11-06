@@ -18,12 +18,43 @@
       ? Math.max(0, height + (app?.getBoundingClientRect().top || 0) - visual.height - visual.offsetTop) : 0;
     root.style.setProperty('--keyboard-bottom', inset + 'px');
   }
+  // iPadOS Home Screen apps without black-translucent: the web view still runs under the
+  // status bar (iPad draws its scroll-edge blur there) but reports env(safe-area-inset-top)=0
+  // and a layout viewport one status-bar height short. A fixed full-height layer then stops
+  // short of the bottom edge, leaving the dark page background as a band, while the top of
+  // the game sits under the blur. Only this mode is corrected: Safari tabs and iPhones keep
+  // layout-viewport sizing. The gap is the full window height (100lvh, or the screen's short
+  // side for a full-width landscape window) minus innerHeight, capped at a status-bar height.
+  const nav = window.navigator || {};
+  let probe = null;
+  function standaloneIPad() {
+    const standalone = nav.standalone === true || !!window.matchMedia?.('(display-mode: standalone)').matches;
+    const ua = nav.userAgent || '';
+    return standalone && (/iPad/.test(ua) || (/Macintosh/.test(ua) && (nav.maxTouchPoints || 0) > 1));
+  }
+  function statusGap(layoutHeight) {
+    if (!standaloneIPad() || !document.createElement || !document.body) return 0;
+    if (!probe) {
+      probe = document.createElement('div');
+      probe.setAttribute('aria-hidden', 'true');
+      probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100vh;height:100lvh;visibility:hidden;pointer-events:none';
+      document.body.appendChild(probe);
+    }
+    let full = probe.getBoundingClientRect().height;
+    const s = window.screen, long = Math.max(s?.width || 0, s?.height || 0), short = Math.min(s?.width || 0, s?.height || 0);
+    if (window.innerWidth > layoutHeight && Math.abs(window.innerWidth - long) <= 1) full = Math.max(full, short);
+    const gap = Math.round(full - layoutHeight);
+    return gap > 0 && gap <= 48 ? gap : 0;
+  }
   function sync() {
     // Measure the same CSS layout surface that contains WebGL and the HUD.
     // Safari can update the dynamic app box after the root's resize notification.
     // innerHeight is a layout-viewport measurement. It also covers stale dvh/root
     // values on native rotation; visualViewport measurements never size the game.
-    root.style.setProperty('--layout-min-height', (window.innerHeight || root.clientHeight) + 'px');
+    const layoutHeight = window.innerHeight || root.clientHeight;
+    const gap = statusGap(layoutHeight);
+    root.style.setProperty('--status-gap', gap + 'px');
+    root.style.setProperty('--layout-min-height', layoutHeight + gap + 'px');
     const bounds = app?.getBoundingClientRect();
     const w = Math.round(bounds?.width || root.clientWidth || window.innerWidth);
     const h = Math.round(bounds?.height || root.clientHeight || window.innerHeight);
@@ -41,6 +72,7 @@
     rect: el => el.getBoundingClientRect(),
     get width() { return width; }, get height() { return height; },
     get portrait() { return mobilePortrait(); }, syncOrientation,
+    get statusGap() { return parseFloat(root.style.getPropertyValue?.('--status-gap')) || 0; },
   };
   function resync() {
     sync();
