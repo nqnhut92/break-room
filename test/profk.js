@@ -58,12 +58,12 @@ async function main() {
   await check('Prof. K and the office patrol usually keep 20 s apart (whichever falls due waits, neither is skipped); about one outing in four may overlap', () => {
     const due = (patrol, t = 1000) => { const s = createProfK(0, () => 0, cfg); stepProfK(s, t, 0.1, world({ patrol }), () => 0, cfg); return s; };
     for (const patrol of [{ phase: 'warning' }, { phase: 'active' }, { phase: 'returning' }, { phase: 'idle', endedAt: 1000 - EVENT_GAP_MS + 1, nextAt: 1e9 },
-      { phase: 'idle', nextAt: 1000 + PROFK.warningMs + PROFK.fightMs + EVENT_GAP_MS - 1 }]) {
+      { phase: 'idle', nextAt: 1000 + PROFK.warningMs + PROFK.seekMs + PROFK.fightMs + EVENT_GAP_MS - 1 }]) {
       const s = due(patrol);
       assert.equal(s.phase, 'home', JSON.stringify(patrol)); assert.equal(s.nextAt, 3000, 'retries soon instead of skipping a whole rest');
     }
     assert.equal(due({ phase: 'idle', endedAt: 1000 - EVENT_GAP_MS, nextAt: 1e9 }).phase, 'warning', 'goes once the gap has passed');
-    assert.equal(due({ phase: 'idle', nextAt: 1000 + PROFK.warningMs + PROFK.fightMs + EVENT_GAP_MS }).phase, 'warning');
+    assert.equal(due({ phase: 'idle', nextAt: 1000 + PROFK.warningMs + PROFK.seekMs + PROFK.fightMs + EVENT_GAP_MS }).phase, 'warning');
     // the patrol waits for Prof. K: while he is out or walking home, and for 20 s after he is back
     const env = { alive: true, duel: false, humans: 1, home: true };
     const old = { ...emptyPatrol(), nextAt: 5000 };
@@ -80,28 +80,47 @@ async function main() {
     assert.equal(nextPatrol(old, 10000, { ...env, profk: profkNear({ ...free, phase: 'out' }, 10000) }).phase, 'warning', 'and the patrol does not wait for it');
   });
 
-  await check('warns 5 s, walks out to VKL and punches with VKL\'s telegraph; damage only counts with a player hitting', () => {
+  await check('warns 5 s, walks out to VKL and punches with VKL\'s telegraph for 30 s from the first contact; damage only counts with a player hitting', () => {
     const s = createProfK(0, () => 0, cfg);
     let t = 1000;
     stepProfK(s, t, 0.1, world(), () => 0.5, cfg);
     assert.equal(s.phase, 'warning'); assert.equal(s.until, 6000);
     const strikes = [];
-    let windups = 0;
-    for (t = 1100; t <= 37000; t += 100) {
+    let windups = 0, engagedAt = 0;
+    for (t = 1100; t <= 60000 && !(engagedAt && s.phase === 'home'); t += 100) { // one outing
       // a player hits VKL every second between 20 s and 25 s
       const assistAt = t >= 20000 && t <= 25000 ? Math.floor(t / 1000) * 1000 : 0;
       if (s.wind && s.mode === 'windup' && s.wind.until === t + PROFK.windupMs) windups++;
       for (const e of stepProfK(s, t, 0.1, world({ assistAt }), () => 0.5, cfg)) strikes.push({ ...e, t, assistAt });
-      if (t === 6000) assert.equal(s.phase, 'out');
+      if (t === 6000) { assert.equal(s.phase, 'out'); assert.equal(s.engaged, false, 'no countdown on the way'); assert.equal(profkView(s, t).engaged, false); }
+      if (s.engaged && !engagedAt) { engagedAt = t; assert.equal(s.until, t + PROFK.fightMs, '30 s from the first contact'); assert.equal(profkView(s, t).engaged, true); }
       if (s.wind) assert.equal(s.wind.r, BOSS.punchRadius);
     }
     assert.ok(strikes.length >= 8, 'kept punching: ' + strikes.length);
     assert.ok(strikes.every(e => e.hit), 'every punch reached VKL standing still');
     assert.ok(strikes.some(e => e.real) && strikes.some(e => !e.real));
     for (const e of strikes) assert.equal(e.real, e.t - e.assistAt <= PROFK.assistMs);
-    assert.ok(strikes.every(e => e.t < 36000), 'stops at the end of the 30 s');
+    assert.ok(engagedAt > 6000, 'reached VKL after walking over: ' + engagedAt);
+    assert.ok(strikes.every(e => e.t < engagedAt + PROFK.fightMs + 100), 'stops at the end of the 30 s');
+    assert.ok(strikes.some(e => e.t > 36000), 'the walk did not eat into the 30 s');
+    assert.equal(s.gaveUpUntil, 0, 'a finished fight is not a give-up');
     assert.ok(['returning', 'home'].includes(s.phase));
     assert.equal(s.wind, null);
+  });
+
+  await check('no contact within the seek limit: he gives up and walks home, and clients are told for a few seconds', () => {
+    const short = { ...cfg, seekMs: 500 };
+    const s = createProfK(0, () => 0, short);
+    stepProfK(s, 1000, 0.1, world(), () => 0, short);
+    stepProfK(s, 6000, 0.1, world(), () => 0, short);
+    assert.equal(s.phase, 'out'); assert.equal(s.until, 6500);
+    for (let t = 6100; t <= 6500; t += 100) stepProfK(s, t, 0.1, world(), () => 0, short);
+    assert.equal(s.phase, 'returning'); assert.equal(s.engaged, false);
+    assert.equal(s.gaveUpUntil, 6500 + PROFK.gaveUpMs);
+    assert.equal(profkView(s, 7000).gaveUpMs, PROFK.gaveUpMs - 500);
+    let t = 6600;
+    while (s.phase === 'returning' && t < 60000) { stepProfK(s, t, 0.1, world(), () => 0, short); t += 100; }
+    assert.equal(s.phase, 'home'); assert.equal(s.gaveUpUntil, 0); assert.equal(s.engaged, false);
   });
 
   await check('VKL falling mid-outing sends him home, where the next 60–90 s wait starts', () => {

@@ -980,6 +980,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     b.snapT = at;
     b.cfg = item.cfg; b.mode = item.mode; b.phase = item.phase; b.tx = item.x; b.ty = item.y; b.d = item.d;
     b.until = Date.now() + item.ms;
+    b.engaged = !!item.engaged; b.gaveUpUntil = Date.now() + (item.gaveUpMs || 0);
     b.wind = item.wind ? { ...item.wind, t0: performance.now() - (item.wind.ms - item.wind.remainingMs) } : null;
   }
   function miniTick(dt) {
@@ -2867,8 +2868,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     audio.music(!active ? 0 : s.phase === 'warning' ? 1 : s.phase === 'active' && seconds > 0 ? 2 : 0);
     // Prof. K's outing shares the banner (a second line when the patrol is on too); his own cue is a chime, not music.
     const k = S.joined && S.profk, kSeconds = k ? Math.max(0, Math.ceil((k.until - Date.now()) / 1000)) : 0;
+    // Out: no countdown while he is still on his way; the 30 s start when he first reaches VKL (one steady line after
+    // that, even when he takes a few steps after a dodging VKL). No contact within 20 s and he gives up.
     const profkText = !k ? '' : k.phase === 'warning' ? 'Prof. K chuẩn bị đi tìm VKL nói chuyện phải trái. Ngon thì vô làm! · ' + kSeconds + 's'
-      : k.phase === 'out' && kSeconds > 0 ? 'Prof. K đang đánh VKL — đánh cùng thì cú đấm của Prof. K mới trừ máu! · ' + kSeconds + 's' : '';
+      : k.phase === 'out' && !k.engaged ? 'Prof. K đang đi tìm VKL…'
+      : k.phase === 'out' && kSeconds > 0 ? 'Prof. K đang đánh VKL — đánh cùng thì cú đấm của Prof. K mới trừ máu! · ' + kSeconds + 's'
+      : k.phase === 'returning' && k.gaveUpUntil > Date.now() ? 'Prof. K không đuổi kịp VKL, đành quay về.' : '';
     text = [text, profkText].filter(Boolean).join('\n');
     if (text === officeNoticeText) return;
     officeNoticeText = text;
