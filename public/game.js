@@ -1540,6 +1540,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); mmFull(!mm.open); }
   });
   $('fullMapClose').addEventListener('click', () => { mm.held = false; mmFull(false); });
+  // Tapping anywhere outside the overview closes it, except the movement/attack controls (walking
+  // while the map is open is allowed) and the radar itself, whose own click toggles it.
+  document.addEventListener('pointerdown', e => {
+    if (!mm.open || e.target.closest('#minimap, #fullMapClose, #joystick, #smashBtn, #skillBtn, #ultBtn, #drinkBtn')) return;
+    mm.held = false; mmFull(false);
+  });
   const syncMapBtn = () => $('mapBtn').setAttribute('aria-pressed', String(mm.on));
   $('mapBtn').addEventListener('click', () => {
     mmToggle();
@@ -1848,6 +1854,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.keys.clear(); resetJoystick(); S.smashHeld = false; S.target = null; S.attackId = null;
     settingsEl.hidden = false;
     $('settingsBtn').setAttribute('aria-expanded', 'true');
+    $('viewportInfo').textContent = window.GameViewport?.describe?.() || '';
     $('settingsClose').focus();
   });
   $('settingsClose').addEventListener('click', () => settingsClose());

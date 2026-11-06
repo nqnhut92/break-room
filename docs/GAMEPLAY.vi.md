@@ -24,7 +24,7 @@ Màn vào còn hỏi vai trò trong công ty (kế toán, nhân sự, IT, dev, s
 | Chat | Enter hoặc `/`, hoặc bấm vào ô chat cạnh thanh emoji (nút 💬 trên màn hình cảm ứng); Enter để gửi và quay lại game, Esc để huỷ. Khung chat luôn hiện trên máy tính; trên màn hình cảm ứng nằm ngang, lịch sử ở giữa cạnh dưới thu về một hàng sau tám giây không hoạt động; chạm bản thu gọn để mở lại |
 | Zoom camera | Lăn chuột, chụm hai ngón tay, hoặc nút + / − trên màn hình cảm ứng |
 | Bản đồ nhỏ | Phím M hoặc tiện ích bản đồ để ẩn/hiện bản đồ quanh bạn; chạm/click mini map để mở/đóng bản đồ toàn room |
-| Bản đồ toàn room | Desktop: giữ Tab để xem, thả để đóng; Esc hoặc × đóng bản mở bằng click. Mobile: chạm lại mini map hoặc × để đóng. Vẫn di chuyển được; lúc nhập chat giữ thao tác bàn phím bình thường |
+| Bản đồ toàn room | Desktop: giữ Tab để xem, thả để đóng; Esc hoặc × đóng bản mở bằng click. Chạm/click bất kỳ đâu ngoài joystick và các nút đánh/skill (kể cả chính bản đồ), chạm lại mini map hoặc × để đóng. Vẫn di chuyển được; lúc nhập chat giữ thao tác bàn phím bình thường |
 
 Trên thiết bị không cảm ứng, nút xin lỗi và nút nhận nước ghi kèm phím "(E)" / "(Q)"; dòng gợi ý và danh sách hướng dẫn đều nhắc hai phím này.
 

@@ -56,7 +56,18 @@ async function main() {
     assert.equal(await page.locator('#fullMap').isVisible(),false);
     await page.tap('#minimap'); await page.tap('#minimap');
     assert.equal(await page.locator('#fullMap').isVisible(),false);
-    console.log('ok - touch opens the full room map and closes it through the same map or close button');
+    await page.tap('#minimap');
+    const stick=await page.locator('#joystick').boundingBox();
+    await page.touchscreen.tap(stick.x+stick.width/2,stick.y+stick.height/2);
+    assert.equal(await page.locator('#fullMap').isVisible(),true,'using the joystick keeps the overview open');
+    const panel=await page.locator('#fullMapCanvas').boundingBox();
+    await page.touchscreen.tap(panel.x+panel.width/2,panel.y+panel.height/2);
+    assert.equal(await page.locator('#fullMap').isVisible(),false,'tapping the overview closes it');
+    await page.tap('#minimap');
+    const vp=page.viewportSize();
+    await page.touchscreen.tap(vp.width*0.5,Math.max(panel.y-30,vp.height*0.08));
+    assert.equal(await page.locator('#fullMap').isVisible(),false,'tapping outside the overview closes it');
+    console.log('ok - touch opens the full room map and closes it through the same map, the close button or a tap outside; the joystick keeps it open');
     await page.reload();
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
     await page.waitForFunction(() => {

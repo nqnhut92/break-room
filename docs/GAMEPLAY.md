@@ -24,7 +24,7 @@ The join screen also asks for a company role (accountant, HR, IT, dev, sale, mar
 | Chat | Enter or `/`, or click the chat box next to the emoji bar (💬 button on touch screens); Enter sends and returns to the game, Esc cancels. The chat frame stays on screen on a computer; on a touch landscape screen its bottom-center history collapses to a one-line preview after eight idle seconds; tap the preview to reopen |
 | Zoom | Mouse wheel, pinch with two fingers, or the + / − buttons on touch screens |
 | Mini map | M or the map utility hides/shows the local map; click/tap the mini map to toggle the full-room overview |
-| Full-room map | Desktop: hold Tab to view, release to close; Esc or × closes a clicked-open overview. Mobile: tap the mini map again or × to close. Movement continues; chat fields retain normal keyboard behavior |
+| Full-room map | Desktop: hold Tab to view, release to close; Esc or × closes a clicked-open overview. Click/tap anywhere outside the joystick and attack/skill buttons (including the map itself), the mini map again or × to close. Movement continues; chat fields retain normal keyboard behavior |
 
 On non-touch devices the duel and drink buttons show their key as "(E)" / "(Q)"; the hint line and the help list mention both keys.
 
