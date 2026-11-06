@@ -134,7 +134,7 @@ Snakes have a continuous S-shaped body, a tapered tail and a forked tongue. Summ
 
 Tests: `test/duel.js` (rules, timing, boundaries), `test/duel-realtime.js` (two instances, reconnects and leader handover), `test/shared.js` (memory/Redis store contract).
 
-VKL has a solid living body for player movement and avoids living targets when walking; its defeated body is nonblocking. Body collision does not change attack timing or damage.
+VKL has a solid living body for player movement and avoids living targets when walking; its defeated body is nonblocking. Living VKL, TML/DMM and Prof. K also block each other: each walks around the others' bodies, turning along a body met head-on instead of stopping behind it. Body collision does not change attack timing or damage.
 
 
 ## Electrified server racks
@@ -171,7 +171,7 @@ The server room sits in the north row, beside the lobby spine, with its door in 
 
 **Damage.** A landed punch takes **20 HP** off VKL only while players are fighting too: some player damaged VKL (a hit, an ultimate or a rack shock) within the last **2 seconds**. Otherwise the punch is for show. Moles hitting VKL do not count. His damage is credited to nobody: not on the damage board, and if VKL falls the whole bounty is split among players by their own damage, even when Prof. K lands the last punch.
 
-**He cannot be hurt.** Prof. K has no HP and no health bar. Players cannot target him, VKL never targets him, and TML/DMM ignore him. His living body blocks players like a mini-boss.
+**He cannot be hurt.** Prof. K has no HP and no health bar. Players cannot target him, VKL never targets him, and TML/DMM ignore him. His living body blocks players like a mini-boss, and he walks around VKL's and the mini-bosses' bodies (he stops at VKL's body to punch).
 
 | Setting | Prof. K | Compared with |
 | --- | --- | --- |

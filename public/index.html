@@ -171,7 +171,7 @@
   </div>
 
   <div id="overlay">
-    <form id="joinForm" class="card" autocomplete="off">
+    <form id="joinForm" class="card no-server-pick" autocomplete="off">
       <div class="joinIntro">
       <img class="logo" src="/favicon.svg" width="64" height="64" alt="">
       <h1>Office Rage Room</h1>
@@ -222,7 +222,7 @@
       </div>
       </div>
       <div class="joinRooms">
-      <div class="roompick" id="roomPick">
+      <div class="roompick" id="roomPick" hidden><!-- hidden from the first paint; game.js shows it when SHOW_SERVER_PICKER is on -->
         <span class="lbl">Chọn server</span>
         <div id="roomList" class="roomlist" role="group" aria-label="Chọn server" aria-busy="true"><div class="roomskel" aria-hidden="true"></div><div class="roomskel" aria-hidden="true"></div></div>
       </div>

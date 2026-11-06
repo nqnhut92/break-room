@@ -11,20 +11,35 @@ const { createApp } = require('../server');
 const IPHONE_SAFARI = devices['iPhone 13 landscape'];
 const EDGE_IOS = { ...IPHONE_SAFARI, userAgent: IPHONE_SAFARI.userAgent.replace('Version/', 'EdgiOS/131.0 Version/') };
 const ANDROID = devices['Pixel 7 landscape'];
+// iPadOS presents itself as a Mac: "Macintosh" user agent, platform MacIntel, several touch points.
+const MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+const IPAD_SAFARI = { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 2, isMobile: false, hasTouch: true, userAgent: MAC_UA, ipadOs: true };
+const IPAD_EDGE = { ...IPAD_SAFARI, userAgent: MAC_UA + ' EdgiOS/131.0.2903.92' };
+const IPAD_EDGE_IOS_UA = { ...devices['iPad Pro 11 landscape'], userAgent: devices['iPad Pro 11 landscape'].userAgent.replace('Version/', 'EdgiOS/131.0 Version/') };
 
-async function open(browser, port, device, { standalone = false, prompt = false } = {}) {
-  const context = await browser.newContext({ ...device });
+async function open(browser, port, device, { standalone = false, prompt = false, noticeEarly = false } = {}) {
+  const { ipadOs = false, ...contextOptions } = device;
+  const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.route('**/scene3d.js', route => route.fulfill({ contentType: 'application/javascript', body: `export function createScene3D(){return {resize(){},setQuality(){},update(){},build(){},zoom(){},zoomStep(){},cameraTo(){},zoomLimits(){return {atMin:false,atMax:false}},fx:new Proxy({},{get:()=>()=>{}})}}` }));
-  await page.addInitScript(({ standalone }) => {
+  await page.addInitScript(({ standalone, ipadOs }) => {
+    if (ipadOs) {
+      Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'MacIntel' });
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+      // an iPad with a trackpad reports a fine pointer; the card must still appear
+      const mm = window.matchMedia.bind(window);
+      window.matchMedia = q => { const m = mm(q); return /pointer:\s*coarse/.test(q) ? new Proxy(m, { get: (o, k) => k === 'matches' ? false : typeof o[k] === 'function' ? o[k].bind(o) : o[k] }) : m; };
+    }
     Element.prototype.requestFullscreen = () => Promise.reject(new Error('unsupported'));
     if (screen.orientation) screen.orientation.lock = () => Promise.reject(new Error('unsupported'));
     if (standalone) Object.defineProperty(navigator, 'standalone', { value: true });
-  }, { standalone });
+  }, { standalone, ipadOs });
   await page.goto(`http://localhost:${port}/?server=br-1`);
   await page.fill('#nameInput', 'Install check'); await page.click('#joinBtn');
   await page.waitForSelector('#topbar', { state: 'visible' });
+  // An office event (patrol or Prof. K) on screen when the card is due used to cancel the card for the whole visit.
+  if (noticeEarly) await page.evaluate(() => { const n = document.getElementById('officeNotice'); n.textContent = 'Prof. K đang đánh VKL · 20s'; n.hidden = false; });
   if (prompt) await page.evaluate(() => {
     const e = new Event('beforeinstallprompt', { cancelable: true });
     window.prompted = 0; e.prompt = () => { window.prompted++; }; e.userChoice = Promise.resolve({ outcome: 'accepted' });
@@ -59,6 +74,26 @@ async function main() {
     assert.match(await t.page.locator('#installText').textContent(), /⋯ → Chia sẻ/);
     await t.context.close();
     ok('Edge on iPhone: the steps through its menu');
+
+    t = await open(browser, port, IPHONE_SAFARI, { noticeEarly: true });
+    assert.ok(await t.page.locator('#installCard').isVisible(), 'an office notice no longer cancels the card');
+    const [notice, card] = await Promise.all(['#officeNotice', '#installCard'].map(s => t.page.locator(s).boundingBox()));
+    assert.ok(card.y >= notice.y + notice.height, 'the card sits under the notice, not on top of it');
+    await t.page.evaluate(() => { document.getElementById('officeNotice').hidden = true; dispatchEvent(new Event('resize')); });
+    assert.ok((await t.page.locator('#installCard').boundingBox()).y < card.y, 'and moves back up when the notice goes');
+    assert.deepEqual(t.errors, []); await t.context.close();
+    ok('an office notice and the card share the top: the card stacks under it');
+
+    t = await open(browser, port, IPAD_SAFARI);
+    assert.ok(await t.page.locator('#installCard').isVisible(), 'iPadOS with a Mac user agent and a fine pointer still gets the card');
+    assert.match(await t.page.locator('#installText').textContent(), /^Chơi toàn màn hình: Chia sẻ/);
+    await t.context.close();
+    for (const device of [IPAD_EDGE, IPAD_EDGE_IOS_UA]) {
+      t = await open(browser, port, device);
+      assert.match(await t.page.locator('#installText').textContent(), /mở game bằng Safari/, 'Edge on iPad has no Add to Home Screen');
+      await t.context.close();
+    }
+    ok('iPad: Safari gets the steps, Edge is sent to Safari');
 
     t = await open(browser, port, IPHONE_SAFARI, { standalone: true });
     assert.equal(await t.page.locator('#installCard').isVisible(), false);

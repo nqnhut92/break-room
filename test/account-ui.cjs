@@ -32,11 +32,12 @@ async function main() {
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const origin='http://127.0.0.1:'+server.address().port;
   let browser;
-  // The game ships with the server picker hidden (SHOW_SERVER_PICKER in game.js); `picker` shows it to test switching.
+  // The game ships with the server picker hidden, already in index.html (SHOW_SERVER_PICKER in game.js only shows it);
+  // `picker` shows it to test switching.
   async function setup(page, picker = false) {
     await page.goto(origin);
     await page.evaluate(async(picker)=>{
-      if(!picker){document.getElementById('roomPick').hidden=true;document.getElementById('joinForm').classList.add('no-server-pick');}
+      if(picker){document.getElementById('roomPick').hidden=false;document.getElementById('joinForm').classList.remove('no-server-pick');}
       const {accountUI}=await import('/account.js');
       const $=id=>document.getElementById(id);
       const role=$('roleSelect');role.add(new Option('Dev','dev'));role.value='dev';
@@ -59,6 +60,17 @@ async function main() {
   }
   try {
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true});
+    // Slow network: before game.js has run, the hidden server picker must not flash its skeleton rows.
+    for(const viewport of [{width:1366,height:768},{width:844,height:390,touch:true}]){
+      const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},hasTouch:!!viewport.touch,isMobile:!!viewport.touch});
+      await page.route('**/game.js*',route=>route.abort());
+      await page.goto(origin);
+      assert.equal(await page.locator('#roomPick').isVisible(),false,'no picker before the script');
+      assert.equal(await page.locator('.roomskel').first().isVisible(),false,'no skeleton rows before the script');
+      assert.ok(await page.locator('#joinForm').evaluate(e=>e.classList.contains('no-server-pick')),'the picker-less layout from the first paint');
+      await page.close();
+    }
+    console.log('ok - the hidden server picker shows no skeleton rows before game.js runs');
     for(const viewport of [{width:1366,height:768},{width:1280,height:720},{width:844,height:390,touch:true},{width:740,height:320,touch:true}]) {
       const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height},hasTouch:!!viewport.touch,isMobile:!!viewport.touch});
       await setup(page);
@@ -149,7 +161,7 @@ async function main() {
     const action=await mobile.locator('#joinBtn').boundingBox();assert.ok(action.y>=0&&action.y+action.height<=320);
     await mobile.screenshot({path:'/tmp/br-profile-readonly-mobile.png'});await mobile.close();
     console.log('ok - read-only summary, keyboard/pointer editing, focus restoration and busy radios remain accessible on desktop/mobile');
-    console.log('All 6 account UI browser checks passed (mock profile endpoints).');
+    console.log('All 7 account UI browser checks passed (mock profile endpoints).');
   }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

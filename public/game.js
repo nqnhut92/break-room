@@ -2460,10 +2460,11 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     let rooms = FALLBACK_ROOMS.map((r) => ({ ...r, online: null, max: 20 }));
     let picked = rooms.some((r) => r.id === roomParam) ? roomParam : null;
     // With the picker hidden everyone lands in the first server unless a ?server= link names another.
-    if (!SHOW_SERVER_PICKER) {
-      picked = picked || rooms[0].id;
-      $('roomPick').hidden = true;
-      $('joinForm').classList.add('no-server-pick');
+    // index.html ships it hidden (no skeleton rows flash on a slow network); only showing it needs the script.
+    if (!SHOW_SERVER_PICKER) picked = picked || rooms[0].id;
+    else {
+      $('roomPick').hidden = false;
+      $('joinForm').classList.remove('no-server-pick');
     }
     let chosenByUser = picked !== null;
     const account = accountUI({
@@ -2778,7 +2779,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   let last = performance.now();
   function positionOfficeNotice() {
     const bottom = $('topbar').getBoundingClientRect().bottom - $('app').getBoundingClientRect().top;
-    for (const id of ['officeNotice', 'installCard']) $(id).style.setProperty('--office-notice-top', Math.ceil(bottom + 8) + 'px');
+    const top = Math.ceil(bottom + 8);
+    $('officeNotice').style.setProperty('--office-notice-top', top + 'px');
+    // The Home Screen card stacks under the office notice instead of giving up its spot.
+    const notice = $('officeNotice');
+    const below = notice.hidden ? top : Math.ceil(notice.getBoundingClientRect().bottom - $('app').getBoundingClientRect().top + 6);
+    $('installCard').style.setProperty('--office-notice-top', below + 'px');
   }
   if (window.ResizeObserver) new ResizeObserver(positionOfficeNotice).observe($('topbar'));
   window.addEventListener('resize', positionOfficeNotice);
@@ -2803,36 +2809,51 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     officeNoticeText = text;
     $('officeNotice').textContent = text;
     $('officeNotice').hidden = !text;
-    if (text) { positionOfficeNotice(); hideInstall(false); } // an office event takes the spot
+    positionOfficeNotice(); // the Home Screen card moves under the notice (or back up)
   }
 
   // Suggest the Home Screen app on phones and tablets that opened the game in a browser tab: it then runs full screen,
   // without browser bars. Android/Chromium fires beforeinstallprompt, so our button opens the browser's own install
   // dialog. iOS has no such API in any browser (Safari, Edge and Chrome all run on WebKit), so it only shows the steps.
-  const install = { prompt: null, shown: false, timer: 0 };
+  // User-observed (Nov 2026): Edge on iPhone has "Add to Home Screen" and its icon works like Safari's; Edge on iPad
+  // has no such option, so iPads outside Safari are sent to Safari.
+  const install = { prompt: null, shown: false, timer: 0, visibleMs: 0 };
   const standaloneApp = () => navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  const iosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // iPadOS reports a Mac (platform MacIntel, "Macintosh" user agent) but has a touch screen.
+  const iPadDevice = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const iosDevice = iPadDevice || /iPhone|iPod/.test(navigator.userAgent);
   const installHidden = () => { try { return localStorage.getItem('br-install-hidden') === '1'; } catch (e) { return false; } };
   function installSteps() {
     if (install.prompt) return 'Cài game ra màn hình chính để chơi toàn màn hình.';
     const ua = navigator.userAgent;
-    if (/EdgiOS|CriOS|FxiOS/.test(ua)) return 'Chơi toàn màn hình: ⋯ → Chia sẻ → Thêm vào Màn hình chính.';
+    // Other iOS browsers name themselves in the user agent (on iPad also in desktop mode: Edg/ or EdgiOS/ and so on).
+    const otherBrowser = /EdgiOS|Edg\/|CriOS|FxiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|Brave|FBAN|FBAV|Instagram|Line\/|Zalo/i.test(ua);
+    if (otherBrowser && iPadDevice) return 'Chơi toàn màn hình: mở game bằng Safari → Chia sẻ → Thêm vào Màn hình chính.';
+    if (otherBrowser) return 'Chơi toàn màn hình: ⋯ → Chia sẻ → Thêm vào Màn hình chính.';
     return 'Chơi toàn màn hình: Chia sẻ → Thêm vào Màn hình chính.';
   }
+  // The card counts 20 s only while it can actually be seen: not behind the portrait rotate prompt or in a background tab.
+  function installTick() {
+    if ($('installCard').hidden) return;
+    if (!document.hidden && !viewport.portrait) install.visibleMs += 1000;
+    if (install.visibleMs >= 20000) hideInstall(false);
+  }
   function showInstall() {
-    if (install.shown || !S.joined || !coarseUi || standaloneApp() || installHidden() || !$('officeNotice').hidden) return;
+    // iPads with a trackpad report a fine pointer, so iOS is checked on its own; desktops never get the card.
+    if (install.shown || !S.joined || !(coarseUi || iosDevice) || standaloneApp() || installHidden()) return;
     if (!install.prompt && !iosDevice) return;
     install.shown = true; // once per page load; × hides it for good
     $('installText').textContent = installSteps();
     $('installBtn').hidden = !install.prompt;
     $('installCard').hidden = false;
     positionOfficeNotice();
-    clearTimeout(install.timer);
-    install.timer = setTimeout(() => hideInstall(false), 20000);
+    install.visibleMs = 0;
+    clearInterval(install.timer);
+    install.timer = setInterval(installTick, 1000);
   }
   function hideInstall(forever) {
     $('installCard').hidden = true;
-    clearTimeout(install.timer);
+    clearInterval(install.timer);
     if (forever) try { localStorage.setItem('br-install-hidden', '1'); } catch (e) { /* ignore */ }
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); install.prompt = e; showInstall(); });

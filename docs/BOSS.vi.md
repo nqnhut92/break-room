@@ -138,7 +138,7 @@ Rắn có thân liền uốn chữ S, đuôi thuôn và lưỡi chẻ. Khi tri�
 
 Test: `test/duel.js` (luật, lịch, cửa khóa), `test/duel-realtime.js` (hai instance, tải lại trang, đổi leader), `test/shared.js` (hợp đồng store trên memory và Redis).
 
-VKL còn sống chặn đường người chơi và tránh mục tiêu còn sống khi bước đi; thân đã chết không chặn đường. Va chạm thân không đổi timing hay sát thương đòn đánh.
+VKL còn sống chặn đường người chơi và tránh mục tiêu còn sống khi bước đi; thân đã chết không chặn đường. VKL, TML/DMM và Prof. K còn sống cũng chặn nhau: mỗi người đi vòng qua thân người kia, gặp trực diện thì rẽ theo mép thân thay vì đứng kẹt phía sau. Va chạm thân không đổi timing hay sát thương đòn đánh.
 
 
 ## Tủ server phản điện
@@ -175,7 +175,7 @@ Phòng server nằm ở hàng phía bắc, cạnh trục sảnh, cửa ở tư�
 
 **Sát thương.** Một cú trúng trừ **20 HP** của VKL chỉ khi người chơi cũng đang đánh: có người chơi gây sát thương lên VKL (đánh thường, ulti hoặc giật điện từ tủ) trong **2 giây** vừa qua. Nếu không, cú đấm chỉ để cho vui. Nội gián đánh VKL không tính. Sát thương của ông không tính cho ai: không lên bảng sát thương, và nếu VKL gục thì toàn bộ tiền thưởng chia cho người chơi theo sát thương của chính họ, kể cả khi Prof. K đấm cú cuối.
 
-**Ông không bị đánh.** Prof. K không có HP và không có thanh máu. Người chơi không nhắm được ông, VKL không bao giờ đánh ông, TML/DMM cũng lờ ông đi. Thân ông chặn đường người chơi như mini-boss.
+**Ông không bị đánh.** Prof. K không có HP và không có thanh máu. Người chơi không nhắm được ông, VKL không bao giờ đánh ông, TML/DMM cũng lờ ông đi. Thân ông chặn đường người chơi như mini-boss, và ông đi vòng qua thân VKL và các mini-boss (dừng ở thân VKL để đấm).
 
 | Thông số | Prof. K | So với |
 | --- | --- | --- |
