@@ -137,6 +137,17 @@ async function main() {
       assert.ok(labels.every(el=>el.visible===show&&(!show||el.below)),`${width}x${height}: tagline visibility and placement`);
       console.log(`ok - ${width}x${height}: boss taglines ${show?'visible':'hidden'} without rebuilding rigs`);
     }
+    // The start view is the closest zoom and scales with the game height; + cannot go closer.
+    const zoomCheck=await page.evaluate(()=>{const {app}=probe;localStorage.removeItem('br-zoom');const out={};
+      for(const [w,h] of [[844,390],[1210,802],[1600,950]]){app.resize(w,h);const z=app.zoomLimits();out[h]={min:z.min,max:z.max,dist:Math.round(z.dist),atMin:z.atMin};}
+      app.resize(1210,802);app.zoom(-0.2);out.inAtStart=app.zoomLimits().atMin;
+      app.zoom(0.25);const out1=app.zoomLimits();out.outLeavesMin=!out1.atMin;
+      app.resize(844,390);out.keepsChoice=Math.round(app.zoomLimits().dist)===Math.round(out1.dist);
+      app.resize(956,440);return out;});
+    assert.deepStrictEqual([zoomCheck[390].dist,zoomCheck[802].dist,zoomCheck[950].dist],[901,1451,1648],'start zoom scales with game height');
+    assert.ok([390,802,950].every(h=>zoomCheck[h].atMin&&zoomCheck[h].dist===zoomCheck[h].min&&zoomCheck[h].max>=Math.max(2300,zoomCheck[h].min*1.6-1)),'start view is the closest zoom with room to zoom out');
+    assert.ok(zoomCheck.inAtStart&&zoomCheck.outLeavesMin&&zoomCheck.keepsChoice,'+ cannot pass the start view; a chosen zoom survives resizes');
+    console.log('ok - start zoom is the closest view and scales with screen height (phone 901, iPad 1451, desktop 1648)');
     assert.deepStrictEqual(errors, [], 'no browser page errors');
     for (const check of result.checks) console.log('ok - ' + check);
     console.log(JSON.stringify(result.metrics));

@@ -533,17 +533,21 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   scene.environmentIntensity = 0.22;
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
-  const ZOOM_MIN = 560;
-  const ZOOM_MAX = 2300;
-  // roughly the middle of the range on a computer (a whole meeting room fits, characters stay readable); closer on a phone,
-  // where the narrow screen already pulls the camera back (see `wide` below). Touch tablets (short side >= 600px, so every
-  // iPad, never a landscape phone) have room for the wider view and start a little further out than a computer (players on an iPad zoomed out from 1200).
-  const tablet = coarse && Math.min(window.innerWidth || 0, window.innerHeight || 0) >= 600;
-  const ZOOM_START = coarse && !tablet ? 900 : tablet ? 1450 : 1300;
-  const cam = { x: 0, z: 0, dist: ZOOM_START, pitch: 0.97, ready: false };
+  // The closest view is also the starting view, and it scales with the height of the game in CSS pixels: a taller screen
+  // has room to show more of the office. Fitted to the views players chose: 900 on a 390px-tall phone, 1450 on an
+  // 802px-tall iPad, so a 950px-tall desktop window starts near 1650. Players zoom further out with −; + only returns
+  // towards this start. The furthest view stays at least 2300 and 1.6x the start.
+  const zoomRange = h => {
+    const min = Math.round(Math.min(2600, Math.max(700, 380 + 1.335 * h)));
+    return { min, max: Math.max(2300, Math.round(min * 1.6)) };
+  };
+  let zoomMin, zoomMax;
+  ({ min: zoomMin, max: zoomMax } = zoomRange(window.innerHeight || 600));
+  const cam = { x: 0, z: 0, dist: zoomMin, pitch: 0.97, ready: false };
+  let zoomChosen = false; // until the player zooms, the start view follows window size changes
   try {
     const saved = Number(localStorage.getItem('br-zoom'));
-    if (saved >= ZOOM_MIN && saved <= ZOOM_MAX) cam.dist = saved; // the player's own choice, remembered
+    if (saved > 0) { cam.dist = Math.min(zoomMax, Math.max(zoomMin, saved)); zoomChosen = true; } // the player's own choice
   } catch (e) { /* ignore */ }
   let shadowR = 900;
 
@@ -2367,7 +2371,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     const aspect = W / H;
     const wide = aspect < 1.25 ? 1 + (1.25 - aspect) * 0.9 : 1;
-    const d = Math.min(cam.dist * wide, ZOOM_MAX * 1.45);
+    const d = Math.min(cam.dist * wide, zoomMax * 1.45);
     // the fog follows the camera: with fixed distances the far half of the screen went dark whenever we zoomed out,
     // and a phone (which pulls the camera back further) was always dark
     scene.fog.near = d * 1.8;
@@ -2570,15 +2574,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    ({ min: zoomMin, max: zoomMax } = zoomRange(h));
+    cam.dist = zoomChosen ? Math.min(zoomMax, Math.max(zoomMin, cam.dist)) : zoomMin;
   }
 
   // for the zoom buttons: are we at the closest or the furthest view?
   function zoomLimits() {
-    return { atMin: cam.dist <= ZOOM_MIN + 1, atMax: cam.dist >= ZOOM_MAX - 1 };
+    return { atMin: cam.dist <= zoomMin + 1, atMax: cam.dist >= zoomMax - 1, min: zoomMin, max: zoomMax, dist: cam.dist };
   }
 
   function zoom(delta) {
-    cam.dist = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, cam.dist * (1 + delta)));
+    cam.dist = Math.min(zoomMax, Math.max(zoomMin, cam.dist * (1 + delta)));
+    zoomChosen = true;
     try {
       localStorage.setItem('br-zoom', String(Math.round(cam.dist)));
     } catch (e) { /* ignore */ }

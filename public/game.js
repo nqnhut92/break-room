@@ -1737,10 +1737,10 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     mmPlace();
     sidePlace();
     mmDraw();
-    // zoom buttons fade out at the end of their range
+    // + is hidden at the closest (starting) view; − fades out at the furthest
     if (scene) {
       const z = scene.zoomLimits();
-      $('zoomIn').classList.toggle('dim', z.atMin);
+      $('zoomIn').style.visibility = z.atMin ? 'hidden' : '';
       $('zoomOut').classList.toggle('dim', z.atMax);
       $('zoomIn').setAttribute('aria-disabled', String(z.atMin));
       $('zoomOut').setAttribute('aria-disabled', String(z.atMax));
