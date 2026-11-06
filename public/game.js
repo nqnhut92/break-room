@@ -869,13 +869,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     $('rankTabDeaths').setAttribute('aria-selected', String(byDeaths));
     let rows = S.board || [];
     if (byDeaths) {
-      // today's "bị sa thải" ranking from the server: top rows including players who are offline now
+      // today's "bị PIP" ranking from the server: top rows including players who are offline now
       rows = (S.deaths || []).map((e) => ({ ...e, deaths: e.n }));
       if (S.deathsMine && !rows.some((e) => e.id === S.me)) rows.push({ id: S.me, name: 'Bạn', rank: S.deathsMine.rank, deaths: S.deathsMine.n });
       if (!(S.deaths || []).length) {
         const li = document.createElement('li');
         li.className = 'empty';
-        li.textContent = 'Hôm nay chưa ai bị sa thải. Đi gặp sếp đi 😈';
+        li.textContent = 'Hôm nay chưa ai bị PIP. Đi gặp sếp đi 😈';
         list.appendChild(li);
       }
     }
@@ -900,7 +900,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       }
       const sc = document.createElement('span');
       sc.className = 'sc';
-      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần bị sa thải hôm nay' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
+      sc.textContent = byDeaths ? '💀 ' + e.deaths + ' lần bị PIP hôm nay' : fmtShort(e.score) + (e.breaks ? ' · ' + e.breaks + ' món' : '');
       li.append(who, sc);
       list.appendChild(li);
     }

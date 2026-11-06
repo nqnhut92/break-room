@@ -4,9 +4,9 @@
 
 ## Người chơi nhận được gì
 
-- **BXH hôm nay** — mỗi phòng (BR-1, BR-2) một bảng, về 0 lúc 00:00 giờ Asia/Ho_Chi_Minh. Bảng gồm mọi người đã chơi phòng đó hôm nay: online, offline, khách và bot, xếp theo điểm hôm nay. Điểm bằng nhau cùng hạng, thứ tự phụ ổn định. Tiêu đề ghi "BXH hôm nay · phòng", tổng ở đầu bảng là thiệt hại hôm nay của phòng. Hộp thoại có tab thứ hai **bị sa thải**: số lần bị sa thải hôm nay của từng người (kể cả offline), cùng cách reset và lưu như điểm, top 50 cộng hạng của bạn. Mọi người nhận top 50; ai ngoài top được gửi hạng của riêng mình khi hỏi.
+- **BXH hôm nay** — mỗi phòng (BR-1, BR-2) một bảng, về 0 lúc 00:00 giờ Asia/Ho_Chi_Minh. Bảng gồm mọi người đã chơi phòng đó hôm nay: online, offline, khách và bot, xếp theo điểm hôm nay. Điểm bằng nhau cùng hạng, thứ tự phụ ổn định. Tiêu đề ghi "BXH hôm nay · phòng", tổng ở đầu bảng là thiệt hại hôm nay của phòng. Hộp thoại có tab thứ hai **bị PIP**: số lần bị PIP hôm nay của từng người (kể cả offline), cùng cách reset và lưu như điểm, top 50 cộng hạng của bạn. Mọi người nhận top 50; ai ngoài top được gửi hạng của riêng mình khi hỏi.
 - Ai ở lại qua nửa đêm tự sang ngày mới với 0 điểm, không cần vào lại. Đổi ngày không xóa nhân vật. Không có BXH all-time và không lưu lịch sử người thắng.
-- **Khách** có tên trên bảng. Điểm khách chỉ nhận lại được khi token định danh của tab còn hợp lệ (lưu trong `sessionStorage`); tên không phải bằng chứng sở hữu. Sau khi đăng nhập Google ở cùng tab, điểm hôm nay của khách trong phòng đó được chuyển **một lần** sang nhân vật và cộng vào điểm đã có. Chỉ điểm và số đồ phá được chuyển: khách giữ dòng của mình (về 0) cùng số lần bị sa thải, số lần ngỏm không bao giờ chuyển. Khách chưa có điểm hôm nay thì không chuyển gì. Đăng xuất hoặc đăng nhập tài khoản khác không chuyển lại được.
+- **Khách** có tên trên bảng. Điểm khách chỉ nhận lại được khi token định danh của tab còn hợp lệ (lưu trong `sessionStorage`); tên không phải bằng chứng sở hữu. Sau khi đăng nhập Google ở cùng tab, điểm hôm nay của khách trong phòng đó được chuyển **một lần** sang nhân vật và cộng vào điểm đã có. Chỉ điểm và số đồ phá được chuyển: khách giữ dòng của mình (về 0) cùng số lần bị PIP, số lần ngỏm không bao giờ chuyển. Khách chưa có điểm hôm nay thì không chuyển gì. Đăng xuất hoặc đăng nhập tài khoản khác không chuyển lại được.
 - **Chat** thuộc phòng, giữ 24 giờ kể từ lúc server nhận tin. Vào phòng tải 50 dòng mới nhất; kéo lên tải trang cũ hơn bằng cursor; reconnect tự lấp khoảng thiếu. Dòng lịch sử không tạo bong bóng trên đầu. Tin chỉ hiện là đã gửi sau khi lưu xong; nếu lưu lỗi người gửi thấy "Chưa gửi được tin nhắn" và không ai thấy tin. Khi đổi tên nhân vật (chỉ làm được lúc offline), các tin nó đã gửi trong 24 giờ gần nhất hiện tên mới từ lần tải lịch sử kế tiếp; dòng đang nằm trên màn hình ai đó giữ tên cũ tới khi họ vào lại.
 
 ## Dữ liệu nằm ở đâu
@@ -53,7 +53,7 @@ Khóa của bảng và sự kiện được tính lúc chốt khoản thưởng,
 
 | Dữ liệu | Giữ |
 | --- | --- |
-| `daily_scores` (điểm, số đồ phá, số lần bị sa thải), `score_events`, `score_transfers` | hôm nay và hôm qua (dòng có `day` < hôm qua bị job xóa) → 24–48 giờ sau khi hết ngày |
+| `daily_scores` (điểm, số đồ phá, số lần bị PIP), `score_events`, `score_transfers` | hôm nay và hôm qua (dòng có `day` < hôm qua bị job xóa) → 24–48 giờ sau khi hết ngày |
 | Sự kiện trong hàng đợi của ngày cũ hơn | **không ghi**; đếm vào `expired` trong kết quả job (để dòng đã dọn không hiện lại) |
 | Chat | 24 giờ từ lúc nhận; truy vấn tự lọc theo tuổi dù job chưa chạy; job xóa theo lô 2000 |
 | Khóa Redis của bảng ngày | TTL 4 ngày |
