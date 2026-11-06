@@ -2886,10 +2886,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     sc2.updateProjectionMatrix();
     shadowR = Math.max(r - l, t - b) / 2;
   }
-  const timing = { scene: 0, render: 0, labels: 0 }; // ms spent in the last update(), for the perf overlay
   function update(dt, S) {
     if (!loaded || !built) return; // models still loading
-    const t0 = performance.now();
     time += dt;
     const me = S.players.get(S.me);
     localPlayerId = S.me;
@@ -3017,11 +3015,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     updateSpells(dt, S);
     updateParticles(dt);
-    const t1 = performance.now();
     renderer.render(scene, camera);
-    const t2 = performance.now();
-    timing.scene = t1 - t0;
-    timing.render = t2 - t1;
     if (effectPrograms.visible) {
       scene.remove(effectPrograms);
       effectPrograms.visible = false;
@@ -3064,7 +3058,6 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       t.el.style.opacity = String(Math.min(1, t.life * 2));
       t.el.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-50%)';
     }
-    timing.labels = performance.now() - t2;
   }
 
   // ---- picking ------------------------------------------------------------
@@ -3168,9 +3161,6 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    // for the ?perf=1 / "/perf" overlay: what the last frame drew (shadow pass included) and at what size
-    timing,
-    stats: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, w: renderer.domElement.width, h: renderer.domElement.height, pr: renderer.getPixelRatio(), shadow: renderer.shadowMap.enabled ? sun.shadow.mapSize.x : 0, shadowBox: Math.round(shadowR * 2), quality }),
     renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomStep, zoomLimits, cameraTo, ready,
     fx: { summon: fxSummon, duelCast: fxDuelCast, blow: fxBlow, rope: fxRope, process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),

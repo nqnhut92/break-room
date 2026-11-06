@@ -434,8 +434,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         $('conn').hidden = true;
         $('roomName').textContent = m.roomLabel || S.room;
         try {
-          // keep ?perf=1: a reload must not drop the overlay (or, on a phone or tablet, land on the Home Screen gate)
-          history.replaceState(null, '', '?server=' + encodeURIComponent(S.room) + (/[?&]perf=1(&|$)/.test(location.search) ? '&perf=1' : ''));
+          history.replaceState(null, '', '?server=' + encodeURIComponent(S.room));
         } catch (e) { /* ignore */ }
         if (!S.welcomed) {
           S.welcomed = true;
@@ -2432,8 +2431,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   const iosDevice = iPadDevice || /iPhone|iPod/.test(navigator.userAgent);
   // Other iOS browsers name themselves in the user agent (on iPad also in desktop mode: Edg/ or EdgiOS/ and so on).
   const otherIosBrowser = () => /EdgiOS|Edg\/|CriOS|FxiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|Brave|FBAN|FBAV|Instagram|Line\/|Zalo/i.test(navigator.userAgent);
-  // ?perf=1 (the frame-time overlay) also skips it, so a device can be measured from a browser tab
-  const installGate = () => (coarseUi || iosDevice) && !standaloneApp() && !navigator.webdriver && !/[?&]perf=1(&|$)/.test(location.search);
+  const installGate = () => (coarseUi || iosDevice) && !standaloneApp() && !navigator.webdriver;
   // The steps for this browser, as list items ([text, bold part] pairs).
   function installSteps() {
     const open = [['Mở game từ icon mới', '']];
@@ -2897,65 +2895,14 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     positionOfficeNotice(); // also moves the toasts below the notice, or back up
   }
 
-  // Frame-time overlay for comparing devices (docs/PERFORMANCE.md), only with ?perf=1 in the URL.
-  // Intervals cover the last 5 seconds; "stalls" are frames over 50 ms. Work is this page's JS + render submission
-  // time per frame, not GPU time.
-  const perf = { on: false, el: null, gaps: [], work: [], parts: [], stalls: 0, shown: 0, prev: 0 };
-  function perfToggle(on) {
-    perf.on = on;
-    if (on && !perf.el) {
-      perf.el = document.createElement('pre');
-      perf.el.id = 'perfHud';
-      perf.el.style.cssText = 'position:fixed;left:50%;top:calc(var(--safe-top, 0px) + 56px);transform:translateX(-50%);margin:0;padding:6px 10px;'
-        + 'background:rgba(8,10,15,.82);color:#d8f5d0;font:11px/1.35 ui-monospace,Menlo,monospace;border-radius:8px;z-index:60;pointer-events:none;white-space:pre';
-      document.body.append(perf.el);
-    }
-    if (perf.el) perf.el.hidden = !on;
-    perf.gaps = []; perf.work = []; perf.parts = []; perf.stalls = 0; perf.prev = 0;
-  }
-  // parts: [game logic + HUD, scene update, renderer.render, world labels] in ms for one frame
-  function perfFrame(now, workMs, parts) {
-    perf.parts.push([now, parts]);
-    while (perf.parts.length && perf.parts[0][0] < now - 5000) perf.parts.shift();
-    if (perf.prev) {
-      const gap = now - perf.prev;
-      perf.gaps.push([now, gap]);
-      if (gap > 50) perf.stalls++;
-    }
-    perf.prev = now;
-    perf.work.push([now, workMs]);
-    while (perf.gaps.length && perf.gaps[0][0] < now - 5000) perf.gaps.shift();
-    while (perf.work.length && perf.work[0][0] < now - 5000) perf.work.shift();
-    if (now - perf.shown < 500 || !perf.gaps.length) return;
-    perf.shown = now;
-    const pct = (list, q) => { const v = list.map((e) => e[1]).sort((a, b) => a - b); return v[Math.min(v.length - 1, Math.floor(v.length * q))]; };
-    const span = perf.gaps[perf.gaps.length - 1][0] - perf.gaps[0][0] + perf.gaps[0][1];
-    const st = scene && scene.stats ? scene.stats() : null;
-    perf.el.textContent = [
-      `FPS ${(perf.gaps.length / span * 1000).toFixed(0)}   frame p50 ${pct(perf.gaps, 0.5).toFixed(1)}  p95 ${pct(perf.gaps, 0.95).toFixed(1)}  p99 ${pct(perf.gaps, 0.99).toFixed(1)} ms`,
-      `stalls >50ms ${perf.stalls}   work p50 ${pct(perf.work, 0.5).toFixed(1)}  p95 ${pct(perf.work, 0.95).toFixed(1)} ms`,
-      // averages, not percentiles: Safari rounds performance.now() to whole milliseconds
-      'avg  game ' + ['', 'scene ', 'render ', 'labels '].map((k, i) => k + (perf.parts.reduce((a, e) => a + e[1][i], 0) / perf.parts.length).toFixed(1)).join('  ') + ' ms',
-      st ? `${st.quality}  ${st.w}x${st.h} @${st.pr}  dpr ${window.devicePixelRatio}  draws ${st.calls}  tris ${(st.tris / 1000).toFixed(0)}k  shadow ${st.shadow || 'off'}/${st.shadowBox}` : 'renderer not ready',
-    ].join('\n');
-  }
-  if (/[?&]perf=1(&|$)/.test(location.search)) perfToggle(true);
-  try { localStorage.removeItem('perf'); } catch (e) { /* left by the old "/perf" chat toggle; private mode */ }
-
   function frame(now) {
-    const workStart = performance.now();
     updateOfficeNotice();
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt);
     if (S.manaCfg) S.manaFrac = manaNow() / S.manaCfg.max;
     if (S.manaEmptyT > 0) S.manaEmptyT = Math.max(0, S.manaEmptyT - dt * 2.5);
-    const gameMs = performance.now() - workStart;
     if (scene && S.joined) scene.update(dt, S);
-    if (perf.on) {
-      const t = scene && scene.timing ? scene.timing : { scene: 0, render: 0, labels: 0 };
-      perfFrame(now, performance.now() - workStart, [gameMs, t.scene, t.render, t.labels]);
-    }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
