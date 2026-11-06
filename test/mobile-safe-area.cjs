@@ -122,8 +122,6 @@ async function main() {
     assert.deepEqual(band,{top:0,width:1210,height:12,clip:'text',text:'',events:'none'},'status-bar tint band is full width, >10px tall, paints nothing and takes no input');
     const hud=await ipad.evaluate(()=>['topbar','minimap','skillBtn','smashBtn','chatDock','joystick'].map(id=>{const r=document.getElementById(id).getBoundingClientRect();return {id,bottom:r.bottom};}));
     for (const r of hud) assert.ok(r.bottom<=802-25,`iPad Home Screen: ${r.id} stays above the home indicator ${JSON.stringify(r)}`);
-    await ipad.click('#settingsBtn');
-    assert.match(await ipad.textContent('#viewportInfo'),/inner 1210x802 .* safe 0\/\d+ .* app 0\+802 · standalone yes/);
     await ipad.close();
     console.log('ok - iPad Home Screen (measured geometry): canvas fills the web view below the status bar without a second band');
     assert.deepEqual(errors,[]);

@@ -41,22 +41,6 @@
     rect: el => el.getBoundingClientRect(),
     get width() { return width; }, get height() { return height; },
     get portrait() { return mobilePortrait(); }, syncOrientation,
-    // One line of raw measurements for device reports (shown in Settings on touch screens).
-    describe() {
-      const measure = css => {
-        const el = document.createElement('div');
-        el.style.cssText = 'position:fixed;top:0;left:0;width:0;box-sizing:content-box;visibility:hidden;pointer-events:none;' + css;
-        document.body.appendChild(el);
-        const cs = getComputedStyle(el), out = { h: el.getBoundingClientRect().height, top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
-        el.remove(); return out;
-      };
-      const r = n => Math.round(n * 10) / 10, s = window.screen || {}, a = app?.getBoundingClientRect();
-      const safe = measure('height:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)');
-      const mode = window.navigator?.standalone === true || !!window.matchMedia?.('(display-mode: standalone)').matches ? 'yes' : 'no';
-      return `screen ${s.width}x${s.height} · inner ${window.innerWidth}x${window.innerHeight} · client ${root.clientHeight}`
-        + ` · dvh ${r(measure('height:100dvh').h)} · lvh ${r(measure('height:100lvh').h)} · svh ${r(measure('height:100svh').h)}`
-        + ` · safe ${safe.top}/${safe.bottom} · app ${r(a?.top || 0)}+${r(a?.height || 0)} · standalone ${mode}`;
-    },
   };
   function resync() {
     sync();

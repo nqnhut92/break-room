@@ -1854,7 +1854,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     S.keys.clear(); resetJoystick(); S.smashHeld = false; S.target = null; S.attackId = null;
     settingsEl.hidden = false;
     $('settingsBtn').setAttribute('aria-expanded', 'true');
-    $('viewportInfo').textContent = window.GameViewport?.describe?.() || '';
     $('settingsClose').focus();
   });
   $('settingsClose').addEventListener('click', () => settingsClose());
