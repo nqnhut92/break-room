@@ -1664,9 +1664,95 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       group.add(halo);
     }
     scene.add(group);
-    rig = { group, body, glow, halo, wreck, mark, support, y: lift(o.type), vy: 0, mat, proxy, o, barLift: largeScreen ? 158 : null, popPrev: 0, shown: null };
+    rig = { group, body, glow, halo, wreck, mark, support, y: lift(o.type), vy: 0, mat, proxy, o, barLift: largeScreen ? 158 : null, popPrev: 0, shown: null, modelKey, slot: null, batched: false };
     rigs.set(o.id, rig);
     return rig;
+  }
+
+  // Untouched furniture is drawn in batches: one InstancedMesh per model and per 600-unit cell of the office holds
+  // every idle copy (body, lit screen and screen halo), so a view of 170 desks, chairs and screens costs a few dozen
+  // draws instead of three per object, in both the picture and the shadow pass (each draw is a cross-process call in
+  // Safari). An object leaves its batch and draws its own meshes while it is hit, flashing, shaking, electrified,
+  // falling, popping or broken, and returns when it is whole and still again. The cells keep frustum culling useful.
+  // Measured on an iPad (M4) in the lobby: high mode 51 → 60 FPS (333 → 157 draws, 222 → 86 shadow draws, script time
+  // 10.5 → 6.2 ms a frame). Bigger cells mean fewer draws but more off-screen copies drawn: 900 tripled the triangles
+  // of a phone view in safe mode, 300 cost more script time than it saved.
+  const BATCH_CELL = 600;
+  const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
+  const batchM = new THREE.Matrix4();
+  const batches = [];
+  let batchesBuilt = false;
+  const haloBatchMats = {};
+  // A halo batch faces the view like a sprite: each copy is a quad grown around its centre in view space.
+  function haloBatchMat(opacity) {
+    if (haloBatchMats[opacity]) return haloBatchMats[opacity];
+    const m = new THREE.MeshBasicMaterial({ map: haloMat.map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity });
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `
+        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        mvPosition.xy += position.xy * vec2(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz));
+        gl_Position = projectionMatrix * mvPosition;`);
+    };
+    m.customProgramCacheKey = () => 'haloBatch';
+    return (haloBatchMats[opacity] = m);
+  }
+  function buildBatches() {
+    batchesBuilt = true;
+    const groups = new Map();
+    for (const rig of rigs.values()) {
+      const key = rig.modelKey + ':' + Math.floor(rig.o.x / BATCH_CELL) + ':' + Math.floor(rig.o.y / BATCH_CELL);
+      let g = groups.get(key);
+      if (!g) groups.set(key, (g = []));
+      g.push(rig);
+    }
+    const haloGeo = new THREE.PlaneGeometry(1, 1);
+    for (const list of groups.values()) {
+      const first = list[0], mod = models[first.modelKey], n = list.length;
+      const layer = (geo, mat, shadow) => {
+        const m = new THREE.InstancedMesh(geo, mat, n);
+        m.castShadow = !!shadow;
+        m.receiveShadow = shadow !== null;
+        m.raycast = () => {}; // picking uses each object's proxy box
+        scene.add(m);
+        return m;
+      };
+      const batch = {
+        body: layer(mod.body, bodyMat, first.body.castShadow),
+        glow: first.glow ? layer(mod.glow, glowMat, false) : null,
+        halo: first.halo ? layer(haloGeo, haloBatchMat(first.halo.material.opacity), null) : null,
+      };
+      if (batch.halo) batch.halo.renderOrder = first.halo.renderOrder;
+      list.forEach((rig, i) => {
+        rig.slot = { batch, i };
+        rig.group.updateMatrix();
+        batch.body.setMatrixAt(i, rig.group.matrix);
+        if (batch.glow) batch.glow.setMatrixAt(i, rig.group.matrix);
+        if (batch.halo) { rig.halo.updateMatrix(); batch.halo.setMatrixAt(i, batchM.multiplyMatrices(rig.group.matrix, rig.halo.matrix)); }
+      });
+      // bounds of every copy in place; hiding a copy later never needs them to grow
+      for (const m of [batch.body, batch.glow, batch.halo]) if (m) { m.computeBoundingBox(); m.computeBoundingSphere(); }
+      for (const rig of list) setBatched(rig, false);
+      batches.push(batch);
+    }
+  }
+  function setBatched(rig, on) {
+    const { batch, i } = rig.slot;
+    rig.batched = on;
+    // A batched object also leaves the scene graph, so three.js does not walk and re-multiply the matrices of
+    // ~1000 idle groups (five meshes each) every frame. Its pick box keeps the world matrix it had when it left.
+    if (on) {
+      rig.group.updateMatrixWorld(true);
+      scene.remove(rig.group);
+      batch.body.setMatrixAt(i, rig.group.matrix);
+      if (batch.glow) batch.glow.setMatrixAt(i, rig.group.matrix);
+      if (batch.halo) batch.halo.setMatrixAt(i, batchM.multiplyMatrices(rig.group.matrix, rig.halo.matrix));
+    } else {
+      if (!rig.group.parent) scene.add(rig.group);
+      batch.body.setMatrixAt(i, HIDDEN);
+      if (batch.glow) batch.glow.setMatrixAt(i, HIDDEN);
+      if (batch.halo) batch.halo.setMatrixAt(i, HIDDEN);
+    }
+    for (const m of [batch.body, batch.glow, batch.halo]) if (m) m.instanceMatrix.needsUpdate = true;
   }
 
   const snakeRigs = new Map();
@@ -2937,13 +3023,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     if (!contactBuilt && built && S.objects.length) buildContactShadows(S.objects, S.types);
     for (const o of S.objects) {
       const rig = objectRig(o, S.types, S.objects);
-      if (rig.halo) rig.halo.visible = haloOn && !o.broken;
       if (rig.shown !== o.broken) {
         // IT cleared a wreck: a puff of dust where it lay
         if (rig.shown === true && !lift(o.type)) fxDust(o.x, o.y, 12);
         rig.shown = o.broken;
-        rig.body.visible = !o.broken;
-        if (rig.glow) rig.glow.visible = !o.broken;
         rig.wreck.visible = o.broken;
         if (rig.mark) rig.mark.visible = o.broken;
         rig.proxy.userData.broken = o.broken;
@@ -2983,6 +3066,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig.mat.emissive.setRGB(f * 0.7 + electric * 0.18, f * 0.6 + electric * 0.3, f * 0.5 + electric * 0.65);
       } else if (rig.body.material !== bodyMat) rig.body.material = bodyMat;
       rig.group.rotation.z = o.broken ? 0 : dmg * 0.05 * (o.id % 2 ? 1 : -1); // a wreck lies flat on the floor
+      // whole and still: drawn by its batch; otherwise by its own meshes
+      const idle = !o.broken && dmg <= 0.001 && f <= 0 && electric <= 0 && shake <= 0 && sc === 1 && rig.vy === 0 && rig.y === lift(o.type);
+      if (rig.slot && idle !== rig.batched) setBatched(rig, idle);
+      const own = !o.broken && !rig.batched;
+      rig.body.visible = own;
+      if (rig.glow) rig.glow.visible = own;
+      if (rig.halo) rig.halo.visible = haloOn && own;
       if (o.broken && ELECTRONIC.has(o.type)) {
         o.smokeT -= dt;
         if (o.smokeT <= 0) {
@@ -2991,6 +3081,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         }
       }
     }
+
+    if (!batchesBuilt && rigs.size && rigs.size === S.objects.length) buildBatches();
+    for (const b of batches) if (b.halo) b.halo.visible = haloOn;
 
     // players
     for (const [id, p] of S.players) {

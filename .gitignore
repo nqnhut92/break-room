@@ -5,3 +5,4 @@ node_modules/
 .vercel
 lib/build-info.json
 public/version.json
+look-out/

@@ -31,6 +31,8 @@ Run `npm run test:redis` for the complete suite, including the viewport regressi
 - Full rage reveals ULTI above attack, sends the ult action, and hides after rage is consumed.
 - Profile the first impact after entering and after changing quality, then sustained impacts. Check shader initialization and draw/instance counts separately from frame intervals.
 
+For Safari rendering and frame rate, `npm run look` (headless WebKit) and `npm run look:device` (Safari on a connected iPad or iPhone) join the real game and report draws, FPS and screenshots; see [Development](DEVELOPMENT.md#safari-and-real-devices).
+
 Before claiming the Safari smart-zoom issue or impact smoothness fully resolved on hardware, repeat the joystick double-tap, chat keyboard open/close and sustained attacks on an actual iPhone, both from Safari and from the Home Screen app.
 
 ## Current performance investigation

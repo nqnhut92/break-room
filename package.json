@@ -24,7 +24,9 @@
     "test:scores": "bash scripts/test-scores.sh",
     "test:account-ui": "node test/account-ui.cjs",
     "test:install": "node test/install-card.cjs",
-    "test:unit": "node scripts/test.js --unit"
+    "test:unit": "node scripts/test.js --unit",
+    "look": "node scripts/look.cjs",
+    "look:device": "node scripts/look-device.cjs"
   },
   "engines": {
     "node": ">=20"
