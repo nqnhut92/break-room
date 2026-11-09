@@ -92,6 +92,29 @@ async function main() {
     await page.waitForFunction(()=>GameViewport.height===834);
     assert.deepEqual(await page.locator('#c').boundingBox(),{x:0,y:0,width:1210,height:834});
     console.log('ok - iPad short Home Screen launch recovers full canvas height without rotation or resize');
+    // Fault injection: a cold landscape iPhone Home Screen launch keeps a portrait
+    // top inset. This models the reported black band, not iOS's native launch itself.
+    const phone=await browser.newPage({viewport:{width:844,height:390},isMobile:true,hasTouch:true,
+      userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 Version/26.1 Mobile/15E148 Safari/604.1'});
+    phone.on('pageerror',e=>errors.push(e.message));
+    await phone.addInitScript(()=>Object.defineProperty(Navigator.prototype,'standalone',{configurable:true,get:()=>true}));
+    await phone.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:''}));
+    await phone.route('**/style.css',async route=>{
+      const response=await route.fetch();
+      await route.fulfill({response,body:(await response.text())+'\n:root { --safe-top: 100px; --safe-left: 59px; --safe-right: 59px; --safe-bottom: 21px; }'});
+    });
+    await phone.goto(`http://127.0.0.1:${port}/`);
+    await phone.waitForTimeout(350);
+    assert.deepEqual(await phone.locator('#app').boundingBox(),{x:0,y:0,width:844,height:390},
+      'cold landscape iPhone standalone must not reserve a stale portrait status band');
+    assert.equal(await phone.locator('#rotateOverlay').isVisible(),false);
+    await phone.setViewportSize({width:390,height:844});
+    await phone.waitForFunction(()=>GameViewport.portrait);
+    assert.equal((await phone.locator('#app').boundingBox()).y,116,'portrait still reserves its reported top inset');
+    await phone.setViewportSize({width:844,height:390});
+    await phone.waitForFunction(()=>GameViewport.height===390);
+    await phone.close();
+    console.log('ok - cold landscape iPhone standalone ignores a stale portrait top inset; native portrait/landscape still works');
     // An opaque system status bar can sit OUTSIDE the content viewport. Screen
     // dimensions and legacy root/vh sizing must not push controls below that viewport.
     const cropped=await browser.newPage({viewport:{width:1210,height:810},screen:{width:1210,height:834},isMobile:true,hasTouch:true});

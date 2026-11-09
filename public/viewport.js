@@ -3,6 +3,11 @@
   'use strict';
   const root = document.documentElement;
   const app = document.getElementById('app');
+  // iPhone hides the status bar in landscape standalone mode. A cold launch
+  // can retain a portrait top inset; it must not become an empty play-surface band.
+  const iphoneStandalone = /iPhone|iPod/.test(window.navigator?.userAgent || '') &&
+    (window.navigator?.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches);
+  root.classList?.toggle('iphone-standalone', !!iphoneStandalone);
   let width = 0, height = 0;
   function mobilePortrait() {
     return !!window.matchMedia?.('(pointer: coarse)').matches && height > width;

@@ -43,6 +43,12 @@
   #nameInput, #roleSelect { font-size: 16px; }
 }
 
+/* Landscape iPhone Home Screen apps have no top status bar. Ignore a stale
+   portrait top inset on cold launch; retain side/home insets and iPad status bars. */
+@media (pointer: coarse) and (orientation: landscape) {
+  :root.iphone-standalone { --play-top: 0px; }
+}
+
 :root {
   --bg: #0d1017;
   --panel: rgba(18, 22, 31, 0.82);
