@@ -14,6 +14,13 @@ async function main() {
     await page.goto(`http://127.0.0.1:${port}/?room=br-1`);
     assert.equal(await page.locator('meta[name="apple-mobile-web-app-status-bar-style"]').count(),0,
       'Home Screen app uses the system status bar instead of forcing deprecated translucency');
+    // Safari must expose the iPhone metadata before a Home Screen icon is installed.
+    const installPage=await browser.newPage({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) Version/27.2 Mobile/15E148 Safari/604.1'});
+    await installPage.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:''}));
+    await installPage.goto(`http://127.0.0.1:${port}/`);
+    assert.equal(await installPage.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]','content'),'black-translucent',
+      'Safari install page includes the iPhone-only status-bar configuration');
+    await installPage.close();
     await page.fill('#nameInput','Safe area'); await page.click('#joinBtn');
     await page.waitForFunction(() => document.getElementById('overlay').classList.contains('gone'));
     // No gesture may zoom the page itself: the meta blocks pinch on Android, iOS gesture events are cancelled, and
