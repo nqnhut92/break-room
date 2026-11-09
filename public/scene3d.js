@@ -985,7 +985,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   };
   let zoomMin, zoomMax, zoomStart;
   ({ min: zoomMin, max: zoomMax, start: zoomStart } = zoomRange(window.innerHeight || 600));
-  const cam = { x: 0, z: 0, dist: zoomStart, pitch: 0.97, ready: false };
+  const cam = { x: 0, z: 0, dist: zoomStart, pitch: 0.72, ready: false };
   let zoomChosen = false; // until the player zooms, the start view follows window size changes
   try {
     const saved = Number(localStorage.getItem('br-zoom'));
@@ -2010,13 +2010,11 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const mini = !!p.mini;
     const bossLook = boss || mini;
     const female = p.gender === 'f';
-    const jacket = boss ? '#1f2a44' : mini ? (p.mini === 'TML' ? '#68432c' : p.mini === 'PROFK' ? '#5d6675' : '#49315e') : shirtHex;
-    const pantsHex = bossLook ? '#161c2c' : '#2a3040';
-    const hairHex = boss ? '#d3d9e3' : mini ? (p.mini === 'TML' ? '#a8a2a0' : p.mini === 'PROFK' ? '#eceef2' : '#24202e') : hair;
-    // hairstyles: 0 long bob, 1 spiky, 2 bun, 3 side part. Girls get 0 or 2, boys 1 or 3, the boss is always spiky silver.
-    const style = boss ? 1 : female ? (p.id % 2 ? 0 : 2) : p.id % 2 ? 1 : 3;
+    const jacket = boss ? '#1a2233' : mini ? (p.mini === 'TML' ? '#68432c' : p.mini === 'PROFK' ? '#5d6675' : '#49315e') : shirtHex;
+    const pantsHex = bossLook ? '#161c2c' : '#222733';
+    const hairHex = boss ? '#cfd6e0' : mini ? (p.mini === 'TML' ? '#8a8482' : p.mini === 'PROFK' ? '#eceef2' : '#1e1b26') : hair;
+    const style = boss ? 0 : Math.abs(p.id) % 4;
 
-    // A round "chibi" body: big head, capsule limbs, no hard edges.
     const capsule = (r, len, hex, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
       const g = new THREE.CapsuleGeometry(r, len, 4, 14);
       g.scale(sx, sy, sz);
@@ -2024,63 +2022,476 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     };
     const cone = (r, h, hex, x, y, z, rx = 0, ry = 0, rz = 0) => place(paint(new THREE.ConeGeometry(r, h, 10), hex), x, y, z, rx, ry, rz);
 
-    const torsoParts = [capsule(14, 8, jacket, 0, 0, 0, 1, 1, 0.82), cyl(14.6, 14.6, 3.5, shade(jacket, 0.7), 0, -13, 0, 16)];
-    if (bossLook) {
-      torsoParts.push(box(9, 20, 2.4, '#f4f6fa', 0, 6, 11.2), box(3.8, 17, 2.4, '#c0392b', 0, 3, 12.6));
-    }
-    if (mini) {
-      // Lapels and broad shoulders make these office bruisers read differently from staff.
-      torsoParts.push(box(7, 18, 3, shade(jacket, 0.7), -8, 6, 11, 0, 0, -0.22),
-        box(7, 18, 3, shade(jacket, 0.7), 8, 6, 11, 0, 0, 0.22));
-    }
-    const torso = merge(torsoParts);
-
-    const ez = 16.6; // eyes sit on the front of the head
-    const headParts = [
-      sph(19, skin, 0, 0, 0, 1, 0.96, 0.98),
-      sph(3.1, '#161a24', -7.2, -1, ez, 0.85, 1.3, 0.55),
-      sph(3.1, '#161a24', 7.2, -1, ez, 0.85, 1.3, 0.55),
-      sph(1.15, '#ffffff', -6.3, 1, ez + 1.4),
-      sph(1.15, '#ffffff', 8.1, 1, ez + 1.4),
-      sph(3.4, '#f09a9a', -12, -6.5, 12.2, 1, 0.6, 0.4),
-      sph(3.4, '#f09a9a', 12, -6.5, 12.2, 1, 0.6, 0.4),
-      sph(1.8, '#8b3a3a', 0, -8, 16.6, 1.5, 0.45, 0.4),
-      sph(20.4, hairHex, 0, 3, -3.2, 1, 0.94, 1), // hair cap
-    ];
-    if (style === 0) {
-      headParts.push(sph(10, hairHex, 0, 11, 11.5, 1.5, 0.5, 0.9), sph(7, hairHex, -17.5, -4, -1, 0.7, 1.7, 1), sph(7, hairHex, 17.5, -4, -1, 0.7, 1.7, 1), sph(19, hairHex, 0, -5, -8, 1, 1.1, 0.8));
-    } else if (style === 1) {
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        headParts.push(cone(4.2, 12, hairHex, Math.sin(a) * 11, 21 + (i % 2) * 1.5, Math.cos(a) * 9 - 3, Math.cos(a) * 0.55, 0, -Math.sin(a) * 0.55));
-      }
-    } else if (style === 2) {
-      headParts.push(sph(10, hairHex, 0, 11, 11.5, 1.5, 0.5, 0.9), sph(7.5, hairHex, 0, 21, -6), sph(2.4, '#c0392b', 0, 17, -6));
-    } else {
-      headParts.push(sph(9, hairHex, -6, 12, 12, 1.7, 0.5, 0.8), sph(6, hairHex, -16, 3, 2, 0.7, 1.2, 1));
-    }
-    if (mini) {
-      headParts.push(box(8, 2, 2, hairHex, -7, 5, 17.4, 0, 0, -0.14),
-        box(8, 2, 2, hairHex, 7, 5, 17.4, 0, 0, 0.14));
-    }
-    const head = merge(headParts);
-
-    const legGeo = () => merge([capsule(5.6, 18, pantsHex, 0, -14, 0), sph(6.4, '#262c3b', 0, -33, 3.5, 1, 0.62, 1.5)]);
     const mat = bodyMat;
     const mk = (geo) => {
       const m = new THREE.Mesh(geo, mat);
       m.castShadow = true;
       return m;
     };
-    const root = new THREE.Group(); // bobbing part
+
+    let torso, head, thighGeoL, thighGeoR, shinGeoL, shinGeoR, makeArm;
+    let legBaseY = 50, legOffsetX = 6.2;
+    let torsoPosY = 50, headPosY = 82;
+    let armPosY = 74, armPosX = 13.5;
+    let thighLen = 22;
+    let ponytailGroup = null;
+
+    if (boss) {
+      // ---------------- BOSS VKL (WUXIA EXECUTIVE RIG WITH REALISTIC LIMP) ----------------
+      legBaseY = 46;
+      legOffsetX = 9.0;
+      torsoPosY = 48;
+      headPosY = 80;
+      armPosY = 74;
+      armPosX = 17.5;
+      thighLen = 22;
+
+      // Torso: charcoal waistcoat vest, crisp white collar, crimson silk necktie, gold tie bar, draped navy trench coat
+      const torsoParts = [
+        // Back & sides draped overcoat
+        box(23, 26, 14, '#1a2233', 0, 15, -1),
+        // Tailored suit vest
+        box(18, 22, 12, '#242b3d', 0, 13, 1),
+        // White shirt collar & placket
+        cyl(4.5, 5.5, 3.5, '#f4f6fa', 0, 24, 1.5, 12),
+        box(6.5, 14, 1.2, '#f4f6fa', 0, 18, 7.2),
+        // Crimson silk necktie
+        box(3.2, 16, 1.4, '#991b1b', 0, 16, 7.6),
+        box(3.6, 1.2, 1.6, '#eab308', 0, 18, 7.8), // gold tie bar
+        // Open overcoat lapels
+        box(5.5, 20, 2.2, '#101624', -9.5, 16, 6.2, 0, 0.18, -0.15),
+        box(5.5, 20, 2.2, '#101624', 9.5, 16, 6.2, 0, -0.18, 0.15),
+      ];
+      torso = merge(torsoParts);
+
+      // Head: distinguished swept-back silver hair, stern wuxia brows, sharp anime eyes
+      const headParts = [
+        cyl(4.2, 4.8, 8, skin, 0, -2, 0, 10), // neck
+        sph(13.5, skin, 0, 7, 0, 1, 1.08, 0.96),
+        box(8.5, 6, 8.5, skin, 0, 1.6, 1.8, 0.28, 0, 0), // jaw
+        ell(1.8, 3.2, 1.8, skin, -13.5, 6.5, -0.8),
+        ell(1.8, 3.2, 1.8, skin, 13.5, 6.5, -0.8),
+        // Sharp eyes
+        box(3.4, 2.4, 0.6, '#181d28', -4.8, 6.5, 13.2),
+        box(3.4, 2.4, 0.6, '#181d28', 4.8, 6.5, 13.2),
+        sph(0.8, '#ffffff', -4.2, 7.0, 13.6),
+        sph(0.8, '#ffffff', 5.4, 7.0, 13.6),
+        // Stern brows
+        box(4.2, 1.1, 0.6, '#4b5563', -5.0, 9.2, 13.3, 0, 0, -0.18),
+        box(4.2, 1.1, 0.6, '#4b5563', 5.0, 9.2, 13.3, 0, 0, 0.18),
+        // Silver-grey hair
+        sph(14.8, '#d1d5db', 0, 9, -2, 1.05, 1.04, 1.1),
+        box(14, 12, 5.5, '#d1d5db', 0, 0.5, -11, 0.22, 0, 0),
+        ell(8.5, 4.0, 4.0, '#cbd5e1', -6, 14, 11.5, 0.18, 0.28, -0.28),
+        ell(6.5, 3.5, 3.5, '#cbd5e1', 5.5, 14.5, 11, 0.18, -0.35, 0.18),
+        box(12, 4.0, 3.0, '#cbd5e1', -1.5, 15.5, 10.5),
+      ];
+      head = merge(headParts);
+
+      // Healthy Left Leg: tailored suit trousers, polished black oxford leather shoe
+      thighGeoL = merge([capsule(4.6, 16, '#161c2c', 0, -8, 0)]);
+      shinGeoL = merge([
+        capsule(4.2, 18, '#161c2c', 0, -9, 0),
+        box(7.5, 6.5, 15.5, '#0d1117', 0, -22, 2.2),
+        box(7.8, 2.4, 16.2, '#080a0f', 0, -25.2, 2.2),
+        sph(3.8, '#161b24', 0, -23.5, 9.2),
+      ]);
+
+      // Injured Right Leg: steel hinge orthopedic brace with dual struts & straps, support shoe
+      thighGeoR = merge([
+        capsule(4.6, 16, '#161c2c', 0, -8, 0),
+        cyl(5.3, 5.3, 4.5, '#718096', 0, -11, 0, 14), // steel thigh cuff
+        box(5.8, 3.8, 1.6, '#334155', 0, -11, 4.8), // strap buckle
+      ]);
+      shinGeoR = merge([
+        cyl(5.0, 5.0, 3.2, '#242b3d', 0, -2, 0, 14), // rolled trouser hem
+        capsule(3.8, 17, '#f1f5f9', 0, -9, 0), // medical support bandage
+        // Steel hinge knee mechanism
+        cyl(3.8, 3.8, 1.8, '#94a3b8', 4.8, 0, 0, 12, 0, 0, Math.PI / 2),
+        sph(1.2, '#f8fafc', 5.8, 0, 0), // chrome bolt
+        cyl(3.8, 3.8, 1.8, '#94a3b8', -4.8, 0, 0, 12, 0, 0, Math.PI / 2),
+        sph(1.2, '#f8fafc', -5.8, 0, 0),
+        // Steel struts down shin
+        box(1.4, 18, 2.0, '#718096', 4.8, -9, 0),
+        box(1.4, 18, 2.0, '#718096', -4.8, -9, 0),
+        // Brace straps
+        cyl(4.5, 4.5, 2.8, '#334155', 0, -8, 0, 14),
+        cyl(4.3, 4.3, 2.8, '#334155', 0, -15, 0, 14),
+        // Orthopedic support boot
+        box(8.0, 6.8, 16.0, '#1e293b', 0, -22, 2.2),
+        box(8.4, 3.2, 16.6, '#0f172a', 0, -25.2, 2.2),
+        box(8.2, 8.0, 2.2, '#94a3b8', 0, -21, -5.2),
+      ]);
+
+      // Arms: suit sleeves; Left hand holds the ebony walking cane
+      makeArm = (isLeft) => {
+        const shoulder = new THREE.Group();
+        shoulder.add(mk(merge([
+          sph(4.8, '#1a2233', 0, 0, 0),
+          cyl(4.8, 5.0, 13, '#1a2233', 0, -7, 0, 12),
+        ])));
+        const fore = new THREE.Group();
+        fore.position.y = -14;
+        fore.add(mk(merge([
+          cyl(4.2, 3.8, 13, '#1a2233', 0, -6.5, 0, 10),
+          cyl(4.5, 4.5, 2.2, '#f4f6fa', 0, -12.5, 0, 10), // white shirt cuff
+          box(4.8, 5.0, 3.5, skin, 0, -15, 0), // palm/fist
+        ])));
+        if (isLeft) {
+          // Ebony walking cane with ornate gold lion-head / crook handle
+          const cane = mk(merge([
+            cyl(1.3, 1.0, 48, '#1e140e', 0, -14, 0, 8),
+            ell(2.8, 2.0, 4.5, '#eab308', 0, 10.5, 1.8),
+            cyl(1.8, 1.8, 2.4, '#ca8a04', 0, 8.8, 0, 8),
+            cyl(1.3, 1.3, 2.0, '#18181b', 0, -37.5, 0, 8),
+          ]));
+          fore.add(cane);
+        }
+        shoulder.add(fore);
+        return { shoulder, fore };
+      };
+    } else if (mini) {
+      // ---------------- MINI-BOSSES (TML, DMM, PROF. K) ----------------
+      legBaseY = 48;
+      legOffsetX = 8.5;
+      torsoPosY = 48;
+      headPosY = 80;
+      armPosY = 74;
+      armPosX = 17;
+      thighLen = 22;
+
+      const miniType = p.mini;
+      const suitColor = miniType === 'TML' ? '#68432c' : miniType === 'DMM' ? '#49315e' : '#e2e8f0';
+      const torsoParts = [
+        box(21, 24, 13, suitColor, 0, 14, 0),
+        cyl(4.5, 5.2, 3.5, '#f4f6fa', 0, 24, 1, 12),
+      ];
+      if (miniType === 'TML') {
+        torsoParts.push(box(16, 20, 2, '#4a2f1e', 0, 13, 6.2)); // broad brown lapels
+      } else if (miniType === 'DMM') {
+        torsoParts.push(box(4.5, 3.2, 1.8, '#b91c1c', 0, 23.5, 6.5)); // bowtie
+      } else {
+        torsoParts.push(box(14, 20, 2, '#1e293b', 0, 13, 6.2)); // dark turtleneck under lab coat
+      }
+      torso = merge(torsoParts);
+
+      const headParts = [
+        cyl(4.0, 4.4, 8, skin, 0, -2, 0, 10),
+        sph(13.5, skin, 0, 7, 0, 1, 1.06, 0.96),
+        box(8.2, 5.8, 8.2, skin, 0, 1.6, 1.8, 0.28, 0, 0),
+        ell(1.8, 3.2, 1.8, skin, -13.5, 6.5, -0.8),
+        ell(1.8, 3.2, 1.8, skin, 13.5, 6.5, -0.8),
+        box(3.2, 2.4, 0.6, '#181d28', -4.8, 6.5, 13.2),
+        box(3.2, 2.4, 0.6, '#181d28', 4.8, 6.5, 13.2),
+        sph(0.8, '#ffffff', -4.2, 7.0, 13.6),
+        sph(0.8, '#ffffff', 5.4, 7.0, 13.6),
+        sph(14.8, hairHex, 0, 9, -2, 1.05, 1.04, 1.1),
+        box(14, 11, 5, hairHex, 0, 0.5, -11, 0.22, 0, 0),
+      ];
+      if (miniType === 'TML') {
+        headParts.push(ell(8.5, 4.0, 4.0, hairHex, -5.5, 14, 11.5, 0.18, 0.28, -0.28));
+      } else if (miniType === 'DMM') {
+        headParts.push(box(5.5, 1.2, 0.6, '#111111', 0, 2.2, 13.6)); // pencil mustache
+      } else {
+        headParts.push(sph(5.5, hairHex, 0, 16.5, -7.5)); // scholar bun
+        headParts.push(box(4.2, 3.2, 0.6, '#94a3b8', -4.8, 6.5, 13.8)); // spectacles
+        headParts.push(box(4.2, 3.2, 0.6, '#94a3b8', 4.8, 6.5, 13.8));
+      }
+      head = merge(headParts);
+
+      thighGeoL = thighGeoR = merge([capsule(4.4, 16, '#161c2c', 0, -8, 0)]);
+      shinGeoL = shinGeoR = merge([
+        capsule(4.0, 18, '#161c2c', 0, -9, 0),
+        box(7.2, 6.2, 15.0, '#0d1117', 0, -22, 2.2),
+        box(7.6, 2.4, 15.8, '#080a0f', 0, -25.2, 2.2),
+      ]);
+
+      makeArm = () => {
+        const shoulder = new THREE.Group();
+        shoulder.add(mk(merge([
+          sph(4.5, suitColor, 0, 0, 0),
+          cyl(4.5, 4.8, 13, suitColor, 0, -7, 0, 12),
+        ])));
+        const fore = new THREE.Group();
+        fore.position.y = -14;
+        fore.add(mk(merge([
+          cyl(4.0, 3.6, 13, suitColor, 0, -6.5, 0, 10),
+          box(4.5, 4.8, 3.2, skin, 0, -15, 0),
+        ])));
+        shoulder.add(fore);
+        return { shoulder, fore };
+      };
+    } else if (female) {
+      // ---------------- FEMALE PLAYERS (4 STYLES: PONYTAIL, TWIN TAILS, WUXIA BUN, BOB) ----------------
+      legBaseY = 50;
+      legOffsetX = 5.8;
+      torsoPosY = 50;
+      headPosY = 82;
+      armPosY = 74;
+      armPosX = 12.8;
+      thighLen = 22;
+
+      // Torso: tailored feminine silhouette, tapered waist, blouse collar / ribbon
+      const torsoParts = [
+        box(13.8, 10, 9.0, shirtHex, 0, 8, 0),
+        box(16.5, 14, 10.2, shirtHex, 0, 18, 0),
+        box(17.8, 4.5, 9.8, shirtHex, 0, 24, 0), // shoulder slope
+        cyl(4.2, 5.0, 3.5, shirtHex, 0, 26.5, 0, 12), // collar
+        box(1.8, 18, 0.6, shade(shirtHex, 0.85), 0, 16, 5.2), // placket
+      ];
+      if (style === 0) {
+        // High ponytail outfit: ribbon bow tie & high-waisted pleated skirt
+        torsoParts.push(box(3.8, 3.2, 1.8, '#e11d48', 0, 25.5, 5.4));
+        torsoParts.push(box(15.5, 7.5, 11.2, '#222a38', 0, 3, 0));
+      } else if (style === 1) {
+        // Twin tails outfit: Peter Pan collar & pencil skirt
+        torsoParts.push(cyl(4.5, 4.5, 1.2, '#ffffff', 0, 26, 3.5, 10));
+        torsoParts.push(box(15.0, 7.5, 10.8, '#1c212d', 0, 3, 0));
+      } else if (style === 2) {
+        // Wuxia bun outfit: mandarin collar with jade clasp & dress slacks
+        torsoParts.push(sph(1.2, '#34d399', 0, 26.5, 5.4));
+        torsoParts.push(box(14.8, 4.5, 10.5, '#282f3d', 0, 2, 0));
+      } else {
+        // Bob outfit: office vest over blouse
+        torsoParts.push(box(17.2, 15, 10.6, '#262d3a', 0, 17, 0));
+        torsoParts.push(box(15.2, 7.5, 11.0, '#262d3a', 0, 3, 0));
+      }
+      torso = merge(torsoParts);
+
+      // Head: slender anime face, delicate chin, expressive eyes & blush
+      const headParts = [
+        cyl(3.2, 3.6, 7.5, skin, 0, -2, 0, 10),
+        sph(12.5, skin, 0, 7, 0, 1, 1.06, 0.94),
+        box(7.0, 5.0, 7.0, skin, 0, 1.8, 1.8, 0.28, 0, 0),
+        ell(1.8, 1.2, 0.5, '#f472b6', -7.2, 5.2, 11.2), // blush
+        ell(1.8, 1.2, 0.5, '#f472b6', 7.2, 5.2, 11.2),
+        // Eyes
+        box(3.0, 2.6, 0.6, '#181d28', -4.5, 6.5, 12.4),
+        box(3.0, 2.6, 0.6, '#181d28', 4.5, 6.5, 12.4),
+        sph(0.85, '#ffffff', -3.9, 7.2, 12.8),
+        sph(0.85, '#ffffff', 5.1, 7.2, 12.8),
+        box(3.4, 0.7, 0.5, hairHex, -4.6, 8.8, 12.5, 0, 0, -0.1),
+        box(3.4, 0.7, 0.5, hairHex, 4.6, 8.8, 12.5, 0, 0, 0.1),
+        // Hair base
+        sph(13.8, hairHex, 0, 8.5, -1.8, 1.04, 1.02, 1.08),
+        box(12, 9, 4.5, hairHex, 0, 0.5, -10.5, 0.22, 0, 0),
+      ];
+
+      if (style === 0) {
+        // High ponytail: face bangs in head, swinging ponytail in separate group
+        headParts.push(ell(7.5, 3.5, 3.5, hairHex, -5.2, 12.5, 11, 0.18, 0.28, -0.28));
+        headParts.push(ell(5.5, 3.0, 3.0, hairHex, 4.8, 12.8, 10.5, 0.18, -0.35, 0.18));
+        ponytailGroup = new THREE.Group();
+        ponytailGroup.position.set(0, 13, -11);
+        ponytailGroup.add(mk(merge([
+          cyl(2.8, 2.8, 2.2, '#e11d48', 0, 0, 0, 10, 0.4, 0, 0), // scrunchie
+          pill(2.5, 18, hairHex, 0, -9, -3, 0.35, 0, 0),
+          pill(1.8, 15, hairHex, 0, -18, -6, 0.45, 0, 0),
+        ])));
+      } else if (style === 1) {
+        // Twin tails / pigtails
+        headParts.push(ell(8.0, 3.5, 3.5, hairHex, 0, 12.8, 11));
+        headParts.push(pill(2.2, 18, hairHex, -11, -3, -5, 0.15, 0, 0.22));
+        headParts.push(pill(2.2, 18, hairHex, 11, -3, -5, 0.15, 0, -0.22));
+        headParts.push(cyl(2.5, 2.5, 1.8, '#e11d48', -11, 5, -5, 8));
+        headParts.push(cyl(2.5, 2.5, 1.8, '#e11d48', 11, 5, -5, 8));
+      } else if (style === 2) {
+        // Wuxia chignon bun with hairpin needle (trâm cài tóc ngọc)
+        headParts.push(ell(8.0, 3.5, 3.5, hairHex, -4.5, 12.5, 11, 0.18, 0.25, -0.25));
+        headParts.push(sph(6.8, hairHex, 0, 14.5, -7.5)); // chignon
+        headParts.push(cyl(0.65, 0.65, 23, '#fde047', 0, 14.5, -7.5, 8, 0, 0, 1.1)); // hairpin
+        headParts.push(sph(1.6, '#34d399', 11.5, 19, -7.5)); // jade gemstone bead
+      } else {
+        // Chic layered bob
+        headParts.push(ell(7.5, 9.5, 4.2, hairHex, -12, 1, 0, 0.1, 0, 0.08));
+        headParts.push(ell(7.5, 9.5, 4.2, hairHex, 12, 1, 0, 0.1, 0, -0.08));
+        headParts.push(ell(9.0, 4.0, 3.8, hairHex, -2.5, 13.5, 11, 0.15, 0.2, -0.2));
+      }
+      head = merge(headParts);
+
+      // Legs: skin thighs for skirt, or slacks
+      const isSlacks = style === 2;
+      const legColor = isSlacks ? '#282f3d' : skin;
+      thighGeoL = thighGeoR = merge([capsule(3.2, 16, legColor, 0, -8, 0)]);
+
+      // Shins & Shoes: knee-high socks, ankle socks, slacks, or tights
+      if (style === 0) {
+        // Knee-high socks + buckle loafers
+        shinGeoL = shinGeoR = merge([
+          capsule(3.2, 18, '#1e232e', 0, -9, 0),
+          box(6.2, 5.5, 13.5, '#11141a', 0, -22, 1.5),
+          box(6.4, 2.0, 14.2, '#080a0f', 0, -24.8, 1.5),
+          box(3.2, 1.2, 1.2, '#e2e8f0', 0, -20.2, 4.5), // silver buckle
+        ]);
+      } else if (style === 1) {
+        // White ankle socks + pumps
+        shinGeoL = shinGeoR = merge([
+          capsule(3.0, 16, skin, 0, -8, 0),
+          cyl(3.4, 3.4, 3.5, '#ffffff', 0, -17, 0, 10), // sock
+          box(5.8, 5.2, 13.2, '#2a2f3a', 0, -22, 1.5),
+          box(6.0, 2.0, 13.8, '#1a1e28', 0, -24.6, 1.5),
+        ]);
+      } else if (style === 2) {
+        // Flared slacks + leather flats
+        shinGeoL = shinGeoR = merge([
+          capsule(3.4, 18, '#282f3d', 0, -9, 0),
+          box(6.2, 5.5, 13.8, '#1a1e28', 0, -22, 1.5),
+          box(6.4, 2.0, 14.2, '#0d1117', 0, -24.8, 1.5),
+        ]);
+      } else {
+        // Sheer dark tights + block heels
+        shinGeoL = shinGeoR = merge([
+          capsule(3.1, 18, '#252932', 0, -9, 0),
+          box(6.0, 5.4, 13.5, '#161922', 0, -22, 1.5),
+          box(6.2, 2.2, 14.0, '#0a0d13', 0, -24.8, 1.5),
+        ]);
+      }
+
+      // Slender arms, rolled sleeves
+      makeArm = () => {
+        const shoulder = new THREE.Group();
+        shoulder.add(mk(merge([
+          sph(3.4, shirtHex, 0, 0, 0),
+          cyl(3.4, 3.8, 11, shirtHex, 0, -6, 0, 10),
+          cyl(4.0, 4.0, 2.6, shade(shirtHex, 1.15), 0, -11.5, 0, 10),
+        ])));
+        const fore = new THREE.Group();
+        fore.position.y = -11.5;
+        fore.add(mk(merge([
+          cyl(2.8, 2.3, 13, skin, 0, -6.5, 0, 10),
+          box(3.8, 4.2, 2.8, skin, 0, -14, 0),
+          capsule(1.0, 2.5, skin, 2.0, -13.5, 1.0, 0.4, 0.28, 0),
+          sph(2.0, skin, 0, -15.5, 0),
+        ])));
+        shoulder.add(fore);
+        return { shoulder, fore };
+      };
+    } else {
+      // ---------------- MALE PLAYERS (4 STYLES: 7/3 PART, SPIKY, MAN BUN, COMMA BANGS) ----------------
+      legBaseY = 50;
+      legOffsetX = 6.2;
+      torsoPosY = 50;
+      headPosY = 82;
+      armPosY = 74;
+      armPosX = 13.5;
+      thighLen = 22;
+
+      // Torso: slim-fit office shirt, collar, tie/vest, belt & buckle, lanyard
+      const torsoParts = [
+        box(16, 3.2, 10, '#1a1e27', 0, 1.6, 0),
+        box(4.2, 3.6, 1.2, '#cdd6e2', 0, 1.6, 5.2),
+        box(15.5, 10, 9.6, shirtHex, 0, 8, 0),
+        box(19.2, 16, 11, shirtHex, 0, 19, 0),
+        box(20.5, 5, 10.6, shirtHex, 0, 25.5, 0),
+        box(2.2, 22, 0.7, shade(shirtHex, 0.85), 0, 15, 5.6),
+        sph(0.65, '#f4f6fa', 0, 22, 6.1),
+        sph(0.65, '#f4f6fa', 0, 16, 6.1),
+        sph(0.65, '#f4f6fa', 0, 10, 6.1),
+        cyl(4.8, 5.8, 3.8, shirtHex, 0, 28, 0, 12),
+        box(4.8, 4.6, 1.1, shade(shirtHex, 1.12), -4, 28.5, 5.2, 0.2, 0.28, -0.35),
+        box(4.8, 4.6, 1.1, shade(shirtHex, 1.12), 4, 28.5, 5.2, 0.2, -0.28, 0.35),
+      ];
+      if (style === 0) {
+        // Side part 7/3: classic necktie + ID lanyard
+        torsoParts.push(box(3.2, 3.2, 1.8, '#9e2a2b', 0, 26.8, 5.8));
+        torsoParts.push(box(2.6, 15, 0.8, '#9e2a2b', 0, 17, 5.9, -0.06));
+        torsoParts.push(box(0.8, 17, 0.4, '#3b82f6', -5.5, 20, 5.8, 0, 0, -0.22));
+        torsoParts.push(box(3.2, 4.8, 0.4, '#ffffff', -7.2, 10.5, 6.0));
+      } else if (style === 1) {
+        // Spiky hair: open collar + dark t-shirt underlayer
+        torsoParts.push(box(6.2, 10, 0.8, '#1e232e', 0, 22, 5.4));
+        torsoParts.push(box(0.8, 17, 0.4, '#e11d48', -5.5, 20, 5.8, 0, 0, -0.22));
+        torsoParts.push(box(3.2, 4.8, 0.4, '#ffffff', -7.2, 10.5, 6.0));
+      } else if (style === 2) {
+        // Man bun: office vest over shirt
+        torsoParts.push(box(19.6, 17, 11.4, '#242a38', 0, 18, 0));
+        torsoParts.push(box(0.8, 12, 0.5, '#eab308', -4.5, 14, 5.9)); // gold chain
+      } else {
+        // Comma bangs: button-down with slim knit tie + silver clip
+        torsoParts.push(box(2.8, 16, 0.8, '#374151', 0, 17, 5.8));
+        torsoParts.push(box(3.2, 1.0, 1.0, '#e2e8f0', 0, 19, 6.3));
+      }
+      torso = merge(torsoParts);
+
+      // Head & Hairstyles
+      const headParts = [
+        cyl(3.4, 3.8, 8, skin, 0, -2, 0, 10),
+        sph(13, skin, 0, 7, 0, 1, 1.08, 0.95),
+        box(7.5, 5.5, 7.5, skin, 0, 1.8, 1.8, 0.28, 0, 0),
+        ell(1.8, 3.2, 1.8, skin, -13, 6.5, -0.8),
+        ell(1.8, 3.2, 1.8, skin, 13, 6.5, -0.8),
+        box(3.2, 2.8, 0.6, '#181d28', -4.6, 6.5, 12.8),
+        box(3.2, 2.8, 0.6, '#181d28', 4.6, 6.5, 12.8),
+        sph(0.9, '#ffffff', -4.0, 7.2, 13.2),
+        sph(0.9, '#ffffff', 5.2, 7.2, 13.2),
+        box(3.6, 0.8, 0.5, hairHex, -4.8, 9, 12.9, 0, 0, -0.12),
+        box(3.6, 0.8, 0.5, hairHex, 4.8, 9, 12.9, 0, 0, 0.12),
+        sph(14.2, hairHex, 0, 9, -1.8, 1.04, 1.02, 1.08),
+        box(13, 10, 4.8, hairHex, 0, 0.5, -10.8, 0.22, 0, 0),
+      ];
+
+      if (style === 0) {
+        // Side part 7/3
+        headParts.push(ell(8.5, 3.8, 3.8, hairHex, -5.8, 13.2, 11.5, 0.18, 0.28, -0.28));
+        headParts.push(ell(5.8, 3.2, 3.2, hairHex, 5.2, 13.6, 11, 0.18, -0.35, 0.18));
+        headParts.push(box(11, 3.8, 2.8, hairHex, -1.5, 14.8, 10.5));
+      } else if (style === 1) {
+        // Textured spiky hair
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2;
+          headParts.push(cone(3.8, 10, hairHex, Math.sin(a) * 9.5, 18 + (i % 2) * 1.5, Math.cos(a) * 8.5 - 2, Math.cos(a) * 0.45, 0, -Math.sin(a) * 0.45));
+        }
+      } else if (style === 2) {
+        // Modern samurai man bun / topknot with undercut
+        headParts.push(sph(5.5, hairHex, 0, 16.5, -7.5));
+        headParts.push(ell(8.0, 3.2, 3.2, hairHex, -4.5, 13.2, 10.5, 0.15, 0.2, -0.2));
+      } else {
+        // Comma bangs / curtain bangs
+        headParts.push(ell(6.5, 3.5, 3.5, hairHex, -5.5, 13.0, 11.2, 0.2, 0.3, -0.3));
+        headParts.push(ell(6.5, 3.5, 3.5, hairHex, 5.5, 13.0, 11.2, 0.2, -0.3, 0.3));
+      }
+      head = merge(headParts);
+
+      // Slender pants & modern sneakers
+      thighGeoL = thighGeoR = merge([capsule(3.8, 16, pantsHex, 0, -8, 0)]);
+      shinGeoL = shinGeoR = merge([
+        capsule(3.4, 18, pantsHex, 0, -9, 0),
+        box(6.8, 6.2, 14.5, '#262d3d', 0, -22, 1.8),
+        box(7.2, 2.4, 15.5, '#f4f6fa', 0, -25.2, 1.8),
+        sph(3.5, '#f4f6fa', 0, -23.8, 8.5),
+        box(3.8, 1.1, 6.2, '#f4f6fa', 0, -19.2, 3.5),
+      ]);
+
+      makeArm = () => {
+        const shoulder = new THREE.Group();
+        shoulder.add(mk(merge([
+          sph(3.6, shirtHex, 0, 0, 0),
+          cyl(3.6, 4.0, 11, shirtHex, 0, -6, 0, 10),
+          cyl(4.3, 4.3, 2.8, shade(shirtHex, 1.15), 0, -12, 0, 10),
+        ])));
+        const fore = new THREE.Group();
+        fore.position.y = -12;
+        fore.add(mk(merge([
+          cyl(3.0, 2.5, 13, skin, 0, -6.5, 0, 10),
+          box(4.2, 4.6, 3.0, skin, 0, -14.5, 0),
+          capsule(1.1, 2.8, skin, 2.2, -14, 1.1, 0.4, 0.28, 0),
+          sph(2.2, skin, 0, -16.2, 0),
+        ])));
+        shoulder.add(fore);
+        return { shoulder, fore };
+      };
+    }
+
+    const root = new THREE.Group();
     g.add(root);
     const torsoM = mk(torso);
-    torsoM.position.y = 58;
+    torsoM.position.y = torsoPosY;
     root.add(torsoM);
     if (mini) torsoM.scale.set(1.16, 1.05, 1.08);
     const headM = mk(head);
-    headM.position.y = 90;
-    headM.scale.setScalar(mini ? 1.02 : 1.12); // a slightly bigger head reads as cuter from the camera
+    headM.position.y = headPosY;
+    headM.scale.setScalar(mini ? 1.02 : 1.12);
+    if (ponytailGroup) headM.add(ponytailGroup);
     root.add(headM);
     const acc = buildAccessory(p.role);
     if (acc) {
@@ -2089,35 +2500,33 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       headM.add(acc);
     }
 
+    // Articulated legs with hip & knee joints
     const legL = new THREE.Group();
-    legL.position.set(boss ? 0 : -8, 38, 0); // the boss has one leg only, right under him
-    legL.add(mk(legGeo()));
-    const legR = new THREE.Group();
-    legR.position.set(8, 38, 0);
-    legR.add(mk(legGeo()));
-    if (boss) g.add(legL);
-    else g.add(legL, legR); // VKL hops on a single leg
+    legL.position.set(-legOffsetX, legBaseY, 0);
+    legL.add(mk(thighGeoL));
+    const shinL = new THREE.Group();
+    shinL.position.set(0, -thighLen, 0);
+    shinL.add(mk(shinGeoL));
+    legL.add(shinL);
 
-    // The model faces +z, towards the camera, so its own right hand is on the -x side (the viewer's left).
-    // Arms have an elbow: an upper arm from the shoulder and a forearm with the hand, so the right arm can hold the
-    // hammer up beside the head without the handle cutting through a straight arm.
-    const makeArm = () => {
-      const shoulder = new THREE.Group();
-      shoulder.add(mk(merge([capsule(4.8, 7, jacket, 0, -9, 0), sph(5, jacket, 0, -17, 0)])));
-      const fore = new THREE.Group();
-      fore.position.y = -17;
-      fore.add(mk(merge([capsule(4.4, 7, jacket, 0, -8, 0), sph(4.7, skin, 0, -17.5, 0)])));
-      shoulder.add(fore);
-      return { shoulder, fore };
-    };
-    const armLg = makeArm();
-    const armRg = makeArm();
+    const legR = new THREE.Group();
+    legR.position.set(legOffsetX, legBaseY, 0);
+    legR.add(mk(thighGeoR));
+    const shinR = new THREE.Group();
+    shinR.position.set(0, -thighLen, 0);
+    shinR.add(mk(shinGeoR));
+    legR.add(shinR);
+
+    g.add(legL, legR);
+
+    const armLg = makeArm(true);
+    const armRg = makeArm(false);
     const armL = armLg.shoulder;
     const foreL = armLg.fore;
     const armR = armRg.shoulder;
     const foreR = armRg.fore;
-    armL.position.set(19, 72, 0);
-    armR.position.set(-19, 72, 0);
+    armL.position.set(armPosX, armPosY, 0);
+    armR.position.set(-armPosX, armPosY, 0);
     if (mini) {
       armL.position.x = 22; armR.position.x = -22;
       armL.scale.setScalar(1.12); armR.scale.setScalar(1.12);
@@ -2253,7 +2662,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     labelsEl.appendChild(label);
 
     scene.add(g);
-    return { g, root, torsoM, headM, legL, legR, armL, armR, foreL, foreR, hammer, cup, taser, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, ownedMaterials: [blob.material, ring.material], lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '' };
+    return { g, root, torsoM, headM, legL, legR, shinL, shinR, armL, armR, foreL, foreR, hammer, cup, taser, ring, label, bub, emo, nm, rl, hpb, hpf, hpt, bar, fill, ownedMaterials: [blob.material, ring.material], lie: 0, lastHp: -1, walk: 0, lastRole: '', lastCompany: null, lastName: p.name, lastEmote: '', lastChat: '', legBaseY, isBoss: boss, ponytail: ponytailGroup };
   }
 
   function updatePlayer(rig, p, dt, isMe, S) {
@@ -2271,30 +2680,92 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const mv = rig.mv;
     const idle = 1 - mv;
     const isBoss = p.gender === 'boss';
-    if (p.moving) rig.walk += dt * (isBoss ? 6.5 : 11); // the boss lurches along slowly
+    if (p.moving) rig.walk += dt * (isBoss ? 6.5 : 10.5); // the boss lurches along slowly
     const wp = rig.walk;
-    const sw = Math.sin(wp) * 1.0 * mv;
+    const sw = Math.sin(wp) * 0.95 * mv;
     const breathe = Math.sin(rig.t * 2.3) * idle;
-    rig.legL.rotation.x = sw;
-    rig.legR.rotation.x = -sw;
-    rig.legL.position.y = 38 + Math.max(0, -Math.sin(wp)) * 3 * mv; // the stepping foot lifts
-    rig.legR.position.y = 38 + Math.max(0, Math.sin(wp)) * 3 * mv;
-    const bob = Math.abs(Math.sin(wp)) * (isBoss ? 13 : 5) * mv; // one leg: every step is a hop
-    rig.root.position.y = bob;
+    const legBase = rig.legBaseY || 50;
+
     if (isBoss) {
-      // limping: he rolls from side to side on the one leg and the body drifts with each hop
-      rig.root.rotation.z = Math.sin(wp) * 0.15 * mv;
-      rig.root.position.x = Math.sin(wp + 1.2) * 5 * mv;
+      // ---------------- BOSS VKL REALISTIC LIMP WITH WALKING CANE ----------------
+      // Healthy Left Leg: takes a solid, confident stride forward
+      const swBossL = Math.sin(wp) * 0.75 * mv;
+      rig.legL.rotation.x = swBossL;
+      rig.legL.rotation.z = 0;
+      // Healthy left knee flexes naturally during swing phase
+      rig.shinL.rotation.x = -Math.max(0, Math.sin(wp)) * 0.75 * mv;
+      rig.legL.position.y = legBase + Math.max(0, -Math.sin(wp)) * 3 * mv;
+
+      // Injured Right Leg: steel hinge brace restricts knee flexion; circumduction arcing outward
+      const swBossR = -Math.sin(wp) * 0.75 * mv;
+      rig.legR.rotation.x = swBossR;
+      // Brace heavily restricts flexion
+      rig.shinR.rotation.x = -Math.max(0, -Math.sin(wp)) * 0.12 * mv;
+      // Circumduction: swing outward laterally to clear the floor
+      rig.legR.rotation.z = -Math.max(0, -Math.sin(wp)) * 0.16 * mv;
+      rig.legR.position.y = legBase + Math.max(0, Math.sin(wp)) * 2 * mv;
+
+      // Heavy body lean toward the supporting cane / healthy side
+      const limpLean = Math.sin(wp) * 0.14 * mv;
+      rig.root.rotation.z = limpLean + 0.04 * idle; // slight permanent lean onto cane when idle
+      rig.root.position.x = Math.sin(wp) * 4.2 * mv;
+
+      // Antalgic limp hop
+      const bob = Math.abs(Math.sin(wp)) * 7.5 * mv;
+      rig.root.position.y = bob;
+
+      // Left Arm: plants the walking cane down firmly in sync with left stride
+      rig.armL.rotation.x = -Math.sin(wp) * 0.45 * mv - 0.25 + breathe * 0.04;
+      rig.foreL.rotation.x = -0.45 - Math.max(0, Math.sin(wp)) * 0.25;
+      rig.armL.rotation.z = 0.22;
+    } else {
+      // ---------------- AUTHENTIC ARTICULATED BIPEDAL GAIT ----------------
+      rig.legL.rotation.x = sw;
+      rig.legR.rotation.x = -sw;
+      rig.legL.rotation.z = 0;
+      rig.legR.rotation.z = 0;
+
+      // Articulated Knee Flexion:
+      // Knee flexes back during forward swing phase for foot clearance, straightens right before heel strike
+      const kneeFlexL = Math.max(0, Math.sin(wp)) * 0.85 * mv;
+      const kneeFlexR = Math.max(0, -Math.sin(wp)) * 0.85 * mv;
+      rig.shinL.rotation.x = -kneeFlexL;
+      rig.shinR.rotation.x = -kneeFlexR;
+
+      // Stepping foot lifts off floor
+      rig.legL.position.y = legBase + Math.max(0, -Math.sin(wp)) * 3.5 * mv;
+      rig.legR.position.y = legBase + Math.max(0, Math.sin(wp)) * 3.5 * mv;
+
+      // Pelvic sway & translation (smooth hip roll)
+      rig.root.rotation.z = Math.sin(wp) * 0.045 * mv;
+      rig.root.position.x = Math.sin(wp) * 1.5 * mv;
+
+      // Bipedal vertical bobbing
+      const bob = Math.abs(Math.sin(wp)) * 3.2 * mv;
+      rig.root.position.y = bob;
+
+      // Torso counter-twist: shoulders twist opposite to hips for human movement
+      rig.torsoM.rotation.y = Math.sin(wp) * 0.16 * mv + Math.sin(rig.t * 0.9) * 0.03 * idle;
+
+      // Head counter-stabilization: eyes stay locked forward
+      rig.headM.rotation.y = -Math.sin(wp) * 0.10 * mv + Math.sin(rig.t * 0.8) * 0.05 * idle;
+      rig.headM.rotation.z = -Math.sin(wp) * 0.04 * mv + Math.sin(rig.t * 1.3) * 0.04 * idle;
+      rig.headM.rotation.x = -Math.sin(wp * 2) * 0.03 * mv + breathe * 0.02;
+
+      // Left arm natural swing
+      rig.armL.rotation.x = -sw * 0.85 + breathe * 0.04;
+      rig.foreL.rotation.x = -0.32 - Math.abs(sw) * 0.35;
+      rig.armL.rotation.z = 0.12 + Math.sin(rig.t * 1.7) * 0.03 * idle;
+
+      // Secondary hair dynamics (female high ponytail bounce)
+      if (rig.ponytail) {
+        rig.ponytail.rotation.x = -0.35 + Math.sin(wp * 2) * 0.22 * mv + Math.sin(rig.t * 3) * 0.06 * idle;
+        rig.ponytail.rotation.z = Math.sin(wp) * 0.18 * mv;
+      }
     }
-    const sy = 1 + breathe * 0.018 + (0.5 - Math.abs(Math.sin(wp))) * 0.07 * mv; // squash and stretch
+
+    const sy = 1 + breathe * 0.018 + (0.5 - Math.abs(Math.sin(wp))) * 0.06 * mv; // squash and stretch
     rig.root.scale.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy));
-    rig.torsoM.rotation.y = Math.sin(wp) * 0.2 * mv + Math.sin(rig.t * 0.9) * 0.03 * idle;
-    rig.headM.rotation.y = -Math.sin(wp) * 0.12 * mv + Math.sin(rig.t * 0.8) * 0.07 * idle;
-    rig.headM.rotation.z = Math.sin(wp) * 0.06 * mv + Math.sin(rig.t * 1.3) * 0.05 * idle;
-    rig.headM.rotation.x = -Math.sin(wp * 2) * 0.05 * mv + breathe * 0.02;
-    rig.armL.rotation.x = -sw * 0.95 + breathe * 0.05;
-    rig.foreL.rotation.x = -0.3 - Math.abs(sw) * 0.4; // a relaxed bend
-    rig.armL.rotation.z = 0.14 + Math.sin(rig.t * 1.7) * 0.03 * idle + Math.abs(sw) * 0.12;
 
     // right arm + hammer: carried raised over the shoulder, wound up, slammed down in front, then lifted again.
     // (The boss has no hammer: it keeps the old low guard and the punch.)
@@ -3105,7 +3576,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const jx = sh > 0 ? (coarse ? Math.sin(time * 44) * sh * 2.5 : (Math.random() - 0.5) * sh * 14) : 0;
     const jy = sh > 0 ? (coarse ? Math.sin(time * 51) * sh * 1.5 : (Math.random() - 0.5) * sh * 10) : 0;
     camera.position.set(cam.x + jx, Math.sin(cam.pitch) * d + 40 + jy, cam.z + Math.cos(cam.pitch) * d);
-    camera.lookAt(cam.x, 30, cam.z);
+    camera.lookAt(cam.x, 46, cam.z);
 
     // The sun's shadow box is fitted to the ground the camera actually sees (plus a margin for shadows cast into the
     // view from just outside it), in the light's own space. It used to be a square sized from the camera distance:
