@@ -23,6 +23,7 @@
   height: calc(100dvh - var(--play-top));
   min-height: calc(var(--layout-min-height, 0px) - var(--play-top));
   contain: layout;
+  container: game / size;
   overflow: hidden;
 }
 /* Only game gestures zoom the camera. Dialogs can still scroll normally. */
@@ -988,10 +989,15 @@ canvas {
   #joinForm.no-server-pick #joinBtn { grid-row: 4; align-self: center; }
   #joinForm.no-server-pick #joinErr { grid-column: 1 / -1; }
 }
-/* Wide screens, and short landscape phones where a second row of fields would push the join button off screen. */
-@media (min-width: 1000px), (max-height: 420px) and (min-width: 600px) {
+/* Use the actual app surface: iPhone can retain 378px CSS viewport/media-query
+   height after the visible app has recovered to 440px on cold landscape launch. */
+@container game (min-width: 1000px) {
   #joinForm.no-server-pick .joinFields, #joinForm.no-server-pick .character-details { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  #joinForm.no-server-pick .joinFields { align-items: end; } /* a label that wraps must not push its input out of line */
+  #joinForm.no-server-pick .joinFields { align-items: end; }
+}
+@container game (min-width: 600px) and (max-height: 420px) {
+  #joinForm.no-server-pick .joinFields, #joinForm.no-server-pick .character-details { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #joinForm.no-server-pick .joinFields { align-items: end; } /* keep wrapped labels aligned with their inputs */
 }
 @media (max-height: 559px) and (min-width: 600px) {
   #accountBox { padding: 8px 0; max-height: 88px; overflow-y: auto; }
