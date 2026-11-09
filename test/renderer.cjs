@@ -148,11 +148,11 @@ async function main() {
       app.resize(1210,802);app.zoom(-0.2);out.zoomedIn=app.zoomLimits().dist < app.zoomLimits().start;
       app.zoomStep(1);const chosen=Math.round(app.zoomLimits().dist);app.resize(844,390);out.keepsChoice=Math.round(app.zoomLimits().dist)===chosen;
       localStorage.removeItem('br-zoom');if(app.resetZoom)app.resetZoom();app.resize(956,440);return out;});
-    assert.deepStrictEqual([zoomCheck[390].start,zoomCheck[802].start,zoomCheck[950].start],[1126,1813,2060],'start zoom scales with game height');
+    assert.deepStrictEqual([zoomCheck[390].start,zoomCheck[802].start,zoomCheck[950].start],[380,558,636],'start zoom scales with game height');
     for(const h of [390,802,950]){const z=zoomCheck[h];
       assert.ok(z.min < z.start && z.dists[z.dists.length - 1] === z.max && z.atMax && z.backAtMin, `${h}: zoom steps reach max and min`);}
     assert.ok(zoomCheck.zoomedIn&&zoomCheck.keepsChoice,'can zoom closer than start; chosen zoom survives resizes');
-    console.log('ok - start zoom scales with screen height (phone 1126, iPad 1813, desktop 2060) and allows zooming in closer to inspect details');
+    console.log('ok - start zoom scales with screen height (phone 380, iPad 558, desktop 636) and allows zooming in closer to inspect details');
     assert.deepStrictEqual(errors, [], 'no browser page errors');
     for (const check of result.checks) console.log('ok - ' + check);
     console.log(JSON.stringify(result.metrics));

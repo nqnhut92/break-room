@@ -1,9 +1,9 @@
-import { createGameAudio, distanceVolume } from './audio.js?v=179426420574';
-import './actor-collision.js?v=179426420574';
-import { accountUI } from './account.js?v=179426420574';
-import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179426420574';
-import { createScene3D } from './scene3d.js?v=179426420574';
-import { ROLES, ROLE_BY_ID } from './roles.js?v=179426420574';
+import { createGameAudio, distanceVolume } from './audio.js?v=179426691686';
+import './actor-collision.js?v=179426691686';
+import { accountUI } from './account.js?v=179426691686';
+import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179426691686';
+import { createScene3D } from './scene3d.js?v=179426691686';
+import { ROLES, ROLE_BY_ID } from './roles.js?v=179426691686';
 
 (() => {
   'use strict';
@@ -2933,5 +2933,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179426420574';
     if (S.joined && (mm.on || mm.open)) mmDraw();
     requestAnimationFrame(frame);
   }
+  if (typeof window !== 'undefined') window.__gameTest = { S, get scene() { return scene; }, audio };
   requestAnimationFrame(frame);
 })();
