@@ -8,6 +8,69 @@
   const iphoneStandalone = /iPhone|iPod/.test(window.navigator?.userAgent || '') &&
     (window.navigator?.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches);
   root.classList?.toggle('iphone-standalone', !!iphoneStandalone);
+  // Local-only geometry reports for native Home Screen launch issues. No account,
+  // room, storage or URL-query data is included; nothing is sent automatically.
+  const reportButton = document.getElementById('viewportReport');
+  const viewportBuild = (() => {
+    try { return new URL(document.currentScript?.src || '', window.location?.href).searchParams.get('v') || 'dev'; }
+    catch (_) { return 'dev'; }
+  })();
+  const startedAt = Date.now();
+  let firstSample;
+  const samples = [];
+  function geometry() {
+    const rect = el => {
+      const r = el?.getBoundingClientRect();
+      return r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null;
+    };
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:0;padding:0;border:0;';
+    document.body.appendChild(probe);
+    const units = {};
+    for (const unit of ['dvh', 'svh', 'lvh']) {
+      probe.style.height = '100' + unit;
+      units[unit] = probe.getBoundingClientRect().height;
+    }
+    probe.style.cssText += 'height:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);';
+    const css = window.getComputedStyle(probe);
+    const safe = { top: css.paddingTop, right: css.paddingRight, bottom: css.paddingBottom, left: css.paddingLeft };
+    probe.remove();
+    const visual = window.visualViewport;
+    return {
+      atMs: Date.now() - startedAt, hidden: document.hidden,
+      layout: { width: window.innerWidth, height: window.innerHeight, rootWidth: root.clientWidth, rootHeight: root.clientHeight },
+      app: rect(app), root: rect(root), body: rect(document.body), canvas: rect(document.getElementById('c')),
+      units, safe, playTop: window.getComputedStyle(app).top,
+      scroll: { x: window.scrollX, y: window.scrollY },
+      visual: visual ? { width: visual.width, height: visual.height, offsetTop: visual.offsetTop, offsetLeft: visual.offsetLeft,
+        pageTop: visual.pageTop, pageLeft: visual.pageLeft, scale: visual.scale } : null,
+      screen: { width: window.screen?.width, height: window.screen?.height, availableWidth: window.screen?.availWidth,
+        availableHeight: window.screen?.availHeight, type: window.screen?.orientation?.type, angle: window.screen?.orientation?.angle,
+        legacyAngle: window.orientation, landscape: !!window.matchMedia?.('(orientation: landscape)').matches },
+    };
+  }
+  function record(reason) {
+    if (!iphoneStandalone) return;
+    const sample = { reason, ...geometry() };
+    if (!firstSample) firstSample = sample;
+    samples.push(sample);
+    if (samples.length > 12) samples.shift();
+  }
+  if (iphoneStandalone && reportButton) {
+    reportButton.hidden = false;
+    reportButton.addEventListener('click', async () => {
+      record('copy');
+      const report = JSON.stringify({ version: 1, build: viewportBuild, userAgent: window.navigator.userAgent,
+        standalone: true, first: firstSample, recent: samples.slice() }, null, 2);
+      try {
+        await window.navigator.clipboard.writeText(report);
+        reportButton.textContent = 'Đã chép thông tin';
+      } catch (_) {
+        // A selectable fallback also works when clipboard permission is denied.
+        window.prompt('Chép thông tin hiển thị bên dưới:', report);
+      }
+    });
+  }
   let width = 0, height = 0;
   function mobilePortrait() {
     return !!window.matchMedia?.('(pointer: coarse)').matches && height > width;
@@ -57,6 +120,10 @@
   window.addEventListener('orientationchange', resync);
   window.screen?.orientation?.addEventListener('change', resync);
   window.addEventListener('pageshow', resync);
+  for (const event of ['pageshow', 'resize', 'orientationchange']) {
+    window.addEventListener(event, () => record(event));
+  }
+  document.addEventListener('visibilitychange', () => record('visibilitychange'));
   document.addEventListener('fullscreenchange', resync);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) resync(); });
   if (app && window.ResizeObserver) new window.ResizeObserver(sync).observe(app);
@@ -75,8 +142,9 @@
   document.addEventListener('focusin', keyboardInset);
   document.addEventListener('focusout', () => setTimeout(keyboardInset, 0));
   sync();
+  record('initial');
   // A Home Screen launch can report a short layout height at first paint and fire no resize afterwards, so
   // only rotating the phone corrected it. Measure again once the page has loaded and while iOS settles.
-  window.addEventListener('load', resync);
-  for (const ms of [300, 1000, 2500]) setTimeout(sync, ms);
+  window.addEventListener('load', () => { resync(); record('load'); });
+  for (const ms of [300, 1000, 2500]) setTimeout(() => { sync(); record('startup:' + ms); }, ms);
 })();
