@@ -2432,7 +2432,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   // has none, so iPads outside Safari are sent to Safari. Automated browsers (navigator.webdriver: the test suites)
   // are not gated; test/install-card.cjs turns that off.
   const install = { prompt: null, installed: false };
-  const standaloneApp = () => navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  const standaloneApp = window.HomeScreenApp.active;
   // iPadOS reports a Mac (platform MacIntel, "Macintosh" user agent) but has a touch screen.
   const iPadDevice = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const iosDevice = iPadDevice || /iPhone|iPod/.test(navigator.userAgent);
@@ -2477,7 +2477,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     const link = location.origin + '/';
     try { await navigator.clipboard.writeText(link); $('installCopy').textContent = 'Đã copy'; } catch (e) { $('installCopy').textContent = link; }
   });
-  if (window.matchMedia) window.matchMedia('(display-mode: standalone)').addEventListener?.('change', syncInstallGate);
+  window.HomeScreenApp.onChange(syncInstallGate);
+  window.addEventListener('pageshow', syncInstallGate);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) syncInstallGate(); });
   syncInstallGate();
 
   // ----------------------------------------------------------------- join ----

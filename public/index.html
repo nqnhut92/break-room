@@ -51,12 +51,20 @@
     } catch (e) { /* storage unavailable: show the form */ }
   </script>
   <script>
-    // Phones and tablets in a browser tab only get the Home Screen steps (see the Home Screen gate in game.js, which has
-    // the final say): hide the form from the first paint so it never flashes before them.
+    // Share the launch check with game.js so first paint and the join gate agree.
+    window.HomeScreenApp = (() => {
+      const modes = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'];
+      const queries = modes.map(mode => matchMedia('(display-mode: ' + mode + ')'));
+      return {
+        active: () => navigator.standalone === true || queries.some(query => query.matches),
+        onChange: callback => { for (const query of queries) query.addEventListener?.('change', callback); },
+      };
+    })();
+    // Hide the form before the first paint in a mobile browser tab.
     try {
       var ipad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
       var touch = matchMedia('(pointer: coarse)').matches || ipad || /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (touch && navigator.standalone !== true && !matchMedia('(display-mode: standalone)').matches && !navigator.webdriver) document.documentElement.classList.add('install-gate');
+      if (touch && !window.HomeScreenApp.active() && !navigator.webdriver) document.documentElement.classList.add('install-gate');
     } catch (e) { /* show the form */ }
   </script>
   <script>

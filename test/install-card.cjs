@@ -20,13 +20,13 @@ const IPAD_EDGE = { ...IPAD_SAFARI, userAgent: MAC_UA + ' EdgiOS/131.0.2903.92' 
 const IPAD_EDGE_IOS_UA = { ...devices['iPad Pro 11 landscape'], userAgent: devices['iPad Pro 11 landscape'].userAgent.replace('Version/', 'EdgiOS/131.0 Version/') };
 
 // Opens the join screen (the card lives there); `join` also enters the office.
-async function open(browser, port, device, { standalone = false, prompt = false, join = false } = {}) {
+async function open(browser, port, device, { standalone = false, displayMode = 'browser', prompt = false, join = false } = {}) {
   const { ipadOs = false, ...contextOptions } = device;
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.route('**/scene3d.js', route => route.fulfill({ contentType: 'application/javascript', body: `export function createScene3D(){return {resize(){},setQuality(){},update(){},build(){},zoom(){},zoomStep(){},cameraTo(){},zoomLimits(){return {atMin:false,atMax:false}},fx:new Proxy({},{get:()=>()=>{}})}}` }));
-  await page.addInitScript(({ standalone, ipadOs }) => {
+  await page.addInitScript(({ standalone, displayMode, ipadOs }) => {
     if (ipadOs) {
       Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'MacIntel' });
       Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
@@ -34,11 +34,23 @@ async function open(browser, port, device, { standalone = false, prompt = false,
       const mm = window.matchMedia.bind(window);
       window.matchMedia = q => { const m = mm(q); return /pointer:\s*coarse/.test(q) ? new Proxy(m, { get: (o, k) => k === 'matches' ? false : typeof o[k] === 'function' ? o[k].bind(o) : o[k] }) : m; };
     }
+    // Android exposes MediaQueryList display modes, not navigator.standalone.
+    window.testDisplayMode = displayMode;
+    window.testDisplayQueries = [];
+    const nativeMatchMedia = window.matchMedia.bind(window);
+    window.matchMedia = query => {
+      const mode = /^\(display-mode:\s*([a-z-]+)\)$/.exec(query)?.[1];
+      if (!mode) return nativeMatchMedia(query);
+      const result = nativeMatchMedia(query);
+      Object.defineProperty(result, 'matches', { get: () => window.testDisplayMode === mode });
+      window.testDisplayQueries.push(result);
+      return result;
+    };
     Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false });
     Element.prototype.requestFullscreen = () => Promise.reject(new Error('unsupported'));
     if (screen.orientation) screen.orientation.lock = () => Promise.reject(new Error('unsupported'));
     if (standalone) Object.defineProperty(navigator, 'standalone', { value: true });
-  }, { standalone, ipadOs });
+  }, { standalone, displayMode, ipadOs });
   await page.goto(`http://localhost:${port}/?server=br-1`);
   await page.waitForLoadState('load');
   await page.waitForTimeout(400);
@@ -130,8 +142,31 @@ async function main() {
     assert.equal(await t.page.evaluate(() => window.prompted), 1, 'the browser dialog is asked for');
     assert.match(await stepsText(t.page), /Mở game từ icon/);
     assert.equal(await t.page.locator('#installBtn').isVisible(), false);
+    await gated(t.page); // accepting install does not turn the original browser tab into an app
     assert.deepEqual(t.errors, []); await t.context.close();
     ok('Android tab: manual steps, or the install button when the browser offers it; then "open the icon"');
+
+    for (const displayMode of ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay']) {
+      t = await open(browser, port, ANDROID, { displayMode });
+      assert.equal(await t.page.evaluate(() => navigator.standalone), undefined, 'Android has no iOS standalone flag');
+      assert.equal(await t.page.locator('html').evaluate(e => e.classList.contains('install-gate')), false);
+      await joins(t.page);
+      assert.deepEqual(t.errors, []); await t.context.close();
+      ok('Android ' + displayMode + ' launch enters without an install loop');
+    }
+    for (const event of ['change', 'pageshow', 'visibilitychange']) {
+      t = await open(browser, port, ANDROID);
+      await gated(t.page);
+      await t.page.evaluate(event => {
+        window.testDisplayMode = 'standalone';
+        if (event === 'change') for (const query of testDisplayQueries) query.dispatchEvent(new Event('change'));
+        else if (event === 'visibilitychange') document.dispatchEvent(new Event(event));
+        else window.dispatchEvent(new Event(event));
+      }, event);
+      await joins(t.page);
+      assert.deepEqual(t.errors, []); await t.context.close();
+      ok('Android late app mode is rechecked on ' + event);
+    }
 
     for (const viewport of [{ width: 740, height: 320 }, { width: 667, height: 375 }, { width: 390, height: 844 }]) {
       t = await open(browser, port, { ...IPHONE_SAFARI, viewport });
