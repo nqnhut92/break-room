@@ -98,13 +98,15 @@ async function main() {
       userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 Version/26.1 Mobile/15E148 Safari/604.1'});
     phone.on('pageerror',e=>errors.push(e.message));
     await phone.addInitScript(()=>Object.defineProperty(Navigator.prototype,'standalone',{configurable:true,get:()=>true}));
-    await phone.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:''}));
+    await phone.route('**/scene3d.js',r=>r.fulfill({contentType:'application/javascript',body:`export function createScene3D(){return {resize(w,h){window.safeRendererSize={w,h}},setQuality(){},update(){},build(){},zoom(){},cameraTo(){},zoomLimits(){return {}},fx:new Proxy({},{get:()=>()=>{}})}}`}));
     await phone.route('**/style.css',async route=>{
       const response=await route.fetch();
       await route.fulfill({response,body:(await response.text())+'\n:root { --safe-top: 100px; --safe-left: 59px; --safe-right: 59px; --safe-bottom: 21px; }'});
     });
     await phone.goto(`http://127.0.0.1:${port}/`);
     await phone.waitForTimeout(350);
+    assert.equal(await phone.locator('#app').evaluate(e=>getComputedStyle(e).position),'absolute',
+      'iPhone standalone app avoids the native fixed-position viewport path');
     assert.deepEqual(await phone.locator('#app').boundingBox(),{x:0,y:0,width:844,height:390},
       'cold landscape iPhone standalone must not reserve a stale portrait status band');
     assert.equal(await phone.locator('#rotateOverlay').isVisible(),false);
@@ -113,6 +115,18 @@ async function main() {
     assert.equal((await phone.locator('#app').boundingBox()).y,116,'portrait still reserves its reported top inset');
     await phone.setViewportSize({width:844,height:390});
     await phone.waitForFunction(()=>GameViewport.height===390);
+    await phone.fill('#nameInput','Standalone iPhone');await phone.click('#joinBtn');
+    await phone.waitForFunction(()=>document.getElementById('overlay').classList.contains('gone'));
+    assert.deepEqual(await phone.locator('#c').boundingBox(),{x:0,y:0,width:844,height:390});
+    const phoneHud=await phone.evaluate(()=>['topbar','minimap','chatDock','joystick','smashBtn'].map(id=>{
+      const r=document.getElementById(id).getBoundingClientRect();return {id,left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+    }));
+    for(const r of phoneHud) assert.ok(r.left>=59&&r.right<=785.5&&r.top>=0&&r.bottom<=369.5,
+      'absolute iPhone app contains its fixed HUD inside side/home safe areas: '+JSON.stringify(r));
+    await phone.click('#chatBtn');await phone.fill('#chatInput','Viewport check');
+    await phone.locator('#chatInput').blur();
+    assert.deepEqual(await phone.locator('#app').boundingBox(),{x:0,y:0,width:844,height:390},
+      'input focus does not scroll the absolute app away from the layout origin');
     await phone.close();
     console.log('ok - cold landscape iPhone standalone ignores a stale portrait top inset; native portrait/landscape still works');
     // An opaque system status bar can sit OUTSIDE the content viewport. Screen
@@ -150,6 +164,7 @@ async function main() {
     await ipad.fill('#nameInput','iPad bar');await ipad.click('#joinBtn');
     await ipad.waitForFunction(()=>document.getElementById('overlay').classList.contains('gone'));
     await ipad.waitForFunction(()=>GameViewport.height===802&&safeRendererSize.h===802);
+    assert.equal(await ipad.locator('#app').evaluate(e=>getComputedStyle(e).position),'fixed','iPad keeps its existing layout positioning');
     assert.deepEqual(await ipad.locator('#c').boundingBox(),{x:0,y:0,width:1210,height:802},'iPad Home Screen: canvas fills the web view with no extra top band');
     const band=await ipad.evaluate(()=>{const e=document.getElementById('statusBand'),r=e.getBoundingClientRect(),cs=getComputedStyle(e);
       return {top:r.top,width:r.width,height:r.height,clip:cs.backgroundClip||cs.webkitBackgroundClip,text:e.textContent,events:cs.pointerEvents};});
