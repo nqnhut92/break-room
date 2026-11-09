@@ -49,9 +49,11 @@ Mỗi lần build trên Vercel ghi ra `lib/build-info.json` (`scripts/stamp-asse
 
 - **Vào server mới bằng trang cũ**: thông điệp `welcome` mang `build` của server. Nếu khác phiên bản của trang thì người chơi thấy hộp thoại "có bản mới" với nút tải lại.
 - **Đang chơi mà có deploy mới**: instance đầu tiên của bản mới phát `{ v, t }` lên kênh chung `__build`. Các instance bản cũ (còn chạy một lúc, tối đa `maxDuration`) nghe thấy, gửi cho mọi người chơi của mình thông điệp `update` (cùng hộp thoại đó) rồi ngắt kết nối bằng mã **4003** sau 20 giây (`updateGraceMs`). Client không tự kết nối lại khi gặp 4003; nút sẽ tải lại trang.
-- **Trang đang mở tự nhận ra**: bản build còn ghi thêm file tĩnh `public/version.json` (cùng phiên bản). Mỗi trang đang mở lấy file đó mỗi 30 giây và khi tab quay lại phía trước; phiên bản khác nghĩa là vừa có deploy, người chơi thấy hộp thoại ngay, kèm đếm ngược 20 giây, rồi bị ngắt kết nối. Cách này chạy kể cả khi chưa có server nào báo, và không tốn lượt gọi function (chỉ là file tĩnh).
+- **Trang đang mở tự nhận ra**: bản build còn ghi thêm file tĩnh `public/version.json` (cùng phiên bản). Trang đang hiển thị lấy file đó mỗi 30 giây và kiểm tra ngay khi tab quay lại phía trước (gộp các lần kiểm tra cách nhau dưới một giây); tab ẩn bỏ qua polling; phiên bản khác nghĩa là vừa có deploy, người chơi thấy hộp thoại ngay, kèm đếm ngược 20 giây, rồi bị ngắt kết nối. Cách này chạy kể cả khi chưa có server nào báo, và không tốn lượt gọi function (chỉ là file tĩnh).
 - **Chỉ phản ứng với bản mới hơn**: instance bỏ qua thông báo của bản cũ hơn hoặc cùng giờ build, nên một instance bản cũ khởi động muộn không đá ai ra. Chạy local (`npm start`) thì phiên bản là `dev` và không có gì trong số này chạy.
-- Việc server báo cần function mới khởi động, tức là có người chơi đầu tiên vào được; còn cách kiểm tra `version.json` ở trên thì không, nên nó đảm bảo mọi người được báo trong khoảng 30 giây.
+- Việc server báo cần function mới khởi động, tức là có người chơi đầu tiên vào được; còn cách kiểm tra `version.json` ở trên thì không, nên nó đảm bảo trang đang hiển thị được báo trong khoảng 30 giây; tab ẩn kiểm tra khi quay lại phía trước.
+
+Danh sách phòng làm mới mỗi 15 giây chỉ khi tab đang hiển thị và màn chọn phòng đang mở. Khi quay lại tab hoặc mở lại màn chọn phòng, danh sách cũ từ 15 giây được làm mới ngay. Cả kiểm tra danh sách phòng lẫn phiên bản đều chặn request chồng nhau.
 
 ## Giới hạn của bản beta
 

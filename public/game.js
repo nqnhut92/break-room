@@ -1482,7 +1482,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   $('updateReload').addEventListener('click', () => location.reload());
   // The deploy writes /version.json next to the page (see scripts/stamp-assets.js). An open page asks for it every 30 s
-  // and when the tab comes back to the front: a different version means a deploy happened, so this page is out of date.
+  // while visible and when the tab comes back to the front: a different version means a deploy happened, so this page is out of date.
   // Whoever is playing gets the notice at once and is disconnected after a short countdown, whether or not any server
   // has told them. (Locally there is no such file and nothing happens.)
   function startUpdateCountdown() {
@@ -1502,8 +1502,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     updateTimer = setInterval(tick, 1000);
     tick();
   }
+  let versionBusy = false;
+  let versionCheckedAt = -Infinity;
   async function checkVersion() {
-    if (!MY_BUILD || !updateEl.hidden) return;
+    if (document.hidden || !MY_BUILD || !updateEl.hidden || versionBusy || Date.now() - versionCheckedAt < 1000) return;
+    versionBusy = true;
+    versionCheckedAt = Date.now();
     try {
       const r = await fetch('/version.json', { cache: 'no-store' });
       if (!r.ok) return;
@@ -1512,6 +1516,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         showUpdate(false);
       }
     } catch (e) { /* offline or no file: try again later */ }
+    finally { versionBusy = false; }
   }
   setInterval(checkVersion, 30000);
   document.addEventListener('visibilitychange', () => {
@@ -2619,7 +2624,12 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       picked = (best || rooms[0]).id;
     }
 
+    let roomsBusy = false;
+    let roomsCheckedAt = -Infinity;
     async function refresh(first) {
+      if (roomsBusy) return;
+      roomsBusy = true;
+      roomsCheckedAt = Date.now();
       try {
         let data;
         if (first && window.__rooms) {
@@ -2631,6 +2641,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
         }
         if (data && Array.isArray(data.rooms) && data.rooms.length) rooms = data.rooms;
       } catch (e) { /* keep what we have */ }
+      finally { roomsBusy = false; }
       loaded = true;
       const previousRoom = picked;
       preselect();
@@ -2653,9 +2664,13 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     };
     if (picked !== null) resume(); // the room is in the URL: no need to wait for the server list
     refresh(true).then(async () => { await account.ready; resume(); }); // signed in or guest: a reload in game goes straight back in (sign-in/out clears the flag)
-    setInterval(() => {
-      if (!$('overlay').classList.contains('gone')) refresh();
-    }, 15000);
+    // Forgotten background tabs must not keep hitting the room-list function.
+    const refreshVisibleRooms = () => {
+      if (!document.hidden && !$('overlay').classList.contains('gone') && Date.now() - roomsCheckedAt >= 15000) refresh();
+    };
+    setInterval(refreshVisibleRooms, 15000);
+    document.addEventListener('visibilitychange', refreshVisibleRooms);
+    new MutationObserver(refreshVisibleRooms).observe($('overlay'), { attributes: true, attributeFilter: ['class'] });
 
     $('joinForm').addEventListener('submit', async (e) => {
       e.preventDefault();

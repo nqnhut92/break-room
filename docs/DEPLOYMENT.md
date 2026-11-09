@@ -51,9 +51,11 @@ Every Vercel build writes `lib/build-info.json` (`scripts/stamp-assets.js`): the
 
 - **Joining a newer server with an old page**: the `welcome` message carries the server's `build`. If it differs from the page's version, the player gets an "update available" dialog with a reload button.
 - **Playing while a newer deploy goes live**: the first instance of the new build publishes `{ v, t }` on the shared `__build` channel. Instances of an older build (they keep running for a while, up to `maxDuration`) hear it, send every local player an `update` message (the same dialog) and disconnect them with code **4003** after 20 seconds (`updateGraceMs`). The client does not reconnect on 4003; the button reloads the page.
-- **Open pages notice by themselves**: the build also writes a static `public/version.json` (same version). Every open page fetches it every 30 seconds and when the tab comes back to the front; a different version means a deploy happened, so the player sees the dialog at once, with a 20 second countdown, and is then disconnected. This works even if no server has told them, and costs no function invocations (it is a static file).
+- **Open pages notice by themselves**: the build also writes a static `public/version.json` (same version). Visible pages fetch it every 30 seconds and check immediately when the tab comes back to the front (checks within one second are coalesced); hidden tabs skip polling; a different version means a deploy happened, so the player sees the dialog at once, with a 20 second countdown, and is then disconnected. This works even if no server has told them, and costs no function invocations (it is a static file).
 - **Only newer is acted on**: an instance ignores announcements with an older or equal build time, so a late cold start of an old deploy does not kick anyone. Locally (`npm start`) the version is `dev` and nothing of this runs.
-- The server push needs the new function to start, that is, a first player reaching it; the `version.json` check above does not, so it is the one that makes sure everybody is told within about 30 seconds.
+- The server push needs the new function to start, that is, a first player reaching it; the `version.json` check above does not, so it is the one that makes sure visible pages are told within about 30 seconds; hidden pages check when brought back to the front.
+
+The room list refreshes every 15 seconds only while the tab is visible and the join screen is open. Returning to the tab or reopening the join screen refreshes a list older than 15 seconds immediately. Both room-list and version checks prevent overlapping requests.
 
 ## Beta limitations
 
