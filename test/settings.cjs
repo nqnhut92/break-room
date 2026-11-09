@@ -30,6 +30,9 @@ async function main(){
       assert.ok(b.resetBtn.y>b.copyLink.y&&Math.abs(b.resetBtn.w-(b.copyLink.x+b.copyLink.w-b.helpBtn.x))<1);
       assert.ok(Object.values(b).every(v=>v.h>=44&&v.bottom<=height&&v.x>=0&&v.x+v.w<=width));
       ok(width+'x'+height+': five controls form two aligned pairs and a full-width reset row');
+      assert.equal(await page.locator('#gfxBtn').getAttribute('aria-pressed'),'true');
+      await page.click('#gfxBtn');assert.equal(await page.locator('#gfxBtn').getAttribute('aria-pressed'),'false');
+      assert.equal(await page.evaluate(()=>localStorage.getItem('br-gfx2')),'low');
       await page.click('#gfxBtn');assert.equal(await page.locator('#gfxBtn').getAttribute('aria-pressed'),'true');
       assert.equal(await page.evaluate(()=>localStorage.getItem('br-gfx2')),'high');
       await page.click('#mapBtn');assert.equal(await page.locator('#minimap').isVisible(),false);

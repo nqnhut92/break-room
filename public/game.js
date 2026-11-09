@@ -1,9 +1,9 @@
-import { createGameAudio, distanceVolume } from './audio.js';
-import './actor-collision.js';
-import { accountUI } from './account.js';
-import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js';
-import { createScene3D } from './scene3d.js';
-import { ROLES, ROLE_BY_ID } from './roles.js';
+import { createGameAudio, distanceVolume } from './audio.js?v=179426420574';
+import './actor-collision.js?v=179426420574';
+import { accountUI } from './account.js?v=179426420574';
+import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179426420574';
+import { createScene3D } from './scene3d.js?v=179426420574';
+import { ROLES, ROLE_BY_ID } from './roles.js?v=179426420574';
 
 (() => {
   'use strict';
@@ -1616,10 +1616,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     syncMapBtn();
   });
   syncMapBtn();
-  // graphics: high by default on computers, the safe (low) mode by default on touch screens; the choice is remembered
+  // graphics: high by default; the choice is remembered
   {
-    const coarseGfx = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    let q = coarseGfx ? 'low' : 'high';
+    let q = 'high';
     try {
       q = localStorage.getItem('br-gfx2') || q;
     } catch (e) { /* ignore */ }

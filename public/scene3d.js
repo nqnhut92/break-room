@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js';
+import { ROLE_BY_ID } from './roles.js?v=179426420574';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
