@@ -207,32 +207,61 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
         body.push(cyl(11, 13, 3, '#2b3240', 0, 1.5, 0));
         body.push(box(6, 20, 4, '#2b3240', 0, 13, -2));
       }
-      body.push(box(46, 32, 4, '#161a22', 0, 39, 0));
-      glow.push(box(41, 26, 0.8, '#4aa8ff', 0, 39, 2.3));
-      glow.push(box(36, 3, 0.9, '#bfe3ff', 0, 47, 2.5));
+      body.push(box(46, 32, 3.6, '#141720', 0, 39, 0));
+      body.push(box(46, 2.5, 4, '#202532', 0, 24.2, 0));
+      // IDE workstation screen (dark theme code editor)
+      glow.push(box(42, 26, 0.6, '#181a24', 0, 39, 2.0));
+      glow.push(box(42, 1.8, 0.7, '#007acc', 0, 27, 2.1)); // VS Code status bar
+      glow.push(box(42, 2.2, 0.7, '#242838', 0, 50.8, 2.1)); // tab bar
+      glow.push(box(14, 2.2, 0.8, '#181a24', -13, 50.8, 2.15)); // active tab
+      glow.push(box(2, 1.2, 0.9, '#e5c07b', -18, 50.8, 2.2));
+      glow.push(box(8, 21.6, 0.7, '#13151f', -17, 39, 2.1)); // file explorer
+      // syntax-highlighted code strips
+      glow.push(box(5, 1.2, 0.75, '#c678dd', -9, 47.5, 2.15));
+      glow.push(box(11, 1.2, 0.75, '#61afef', 1.5, 47.5, 2.15));
+      glow.push(box(6, 1.2, 0.75, '#e06c75', -8.5, 44.5, 2.15));
+      glow.push(box(13, 1.2, 0.75, '#56b6c2', 3, 44.5, 2.15));
+      glow.push(box(4, 1.2, 0.75, '#e5c07b', -6.5, 41.5, 2.15));
+      glow.push(box(14, 1.2, 0.75, '#98c379', 5, 41.5, 2.15));
+      glow.push(box(10, 1.2, 0.75, '#56b6c2', -3.5, 38.5, 2.15));
+      glow.push(box(7, 1.2, 0.75, '#e06c75', 7.5, 38.5, 2.15));
+      glow.push(box(15, 1.2, 0.75, '#98c379', 0, 35.5, 2.15));
+      glow.push(box(3, 1.2, 0.75, '#abb2bf', -10, 32.5, 2.15));
       break;
     case 'laptop':
-      body.push(box(46, 2.5, 30, '#9aa3b2', 0, 1.3, 0));
-      body.push(box(40, 0.6, 14, '#6f7886', 0, 2.8, 5));
-      body.push(box(46, 28, 2, '#8d96a6', 0, 16, -13, -0.22));
-      glow.push(box(41, 23, 0.6, '#5fb4ff', 0, 16, -11.9, -0.22));
+      body.push(box(46, 2.5, 30, '#8c95a3', 0, 1.3, 0));
+      body.push(box(15, 0.4, 9, '#767f8e', 0, 2.7, 8)); // trackpad
+      body.push(box(38, 0.4, 13, '#2b313d', 0, 2.7, -4)); // keyboard well
+      body.push(box(46, 28, 2, '#21252f', 0, 16, -13, -0.22)); // lid
+      // Terminal display
+      glow.push(box(42, 24, 0.5, '#161822', 0, 16, -12, -0.22));
+      glow.push(box(3, 1.2, 0.6, '#3ddc84', -16, 24.5, -11.9, -0.22)); // prompt
+      glow.push(box(14, 1.2, 0.6, '#61afef', -5, 24.5, -11.9, -0.22));
+      glow.push(box(24, 1.0, 0.6, '#abb2bf', -3, 21.5, -11.9, -0.22));
+      glow.push(box(18, 1.0, 0.6, '#98c379', -6, 18.5, -11.9, -0.22));
+      glow.push(box(28, 1.0, 0.6, '#ffd24a', 1, 15.5, -11.9, -0.22));
       break;
     case 'chair': {
-      // an office swivel chair made of soft shapes: puffy seat, curved back, round arms, a five-star base on wheels
+      // an office swivel chair: ergonomic seat, breathable mesh back, metallic cylinder, lumbar cushion, 5-star base with casters
       const SEAT = '#e48a8a';
       const SEAT_DARK = '#c96f6f';
-      const FRAME = '#3a4252';
+      const FRAME = '#2f3644';
+      const CHROME = '#b8c5d6';
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2;
         body.push(pill(2.3, 13, FRAME, Math.sin(a) * 9, 6.5, Math.cos(a) * 9, Math.PI / 2, a, 0));
         body.push(sph(3.2, '#1b212c', Math.sin(a) * 17, 3.2, Math.cos(a) * 17));
+        body.push(sph(1.6, CHROME, Math.sin(a) * 17, 3.2, Math.cos(a) * 17)); // wheel hub
       }
-      body.push(cyl(2.6, 3.2, 17, '#7d8aa3', 0, 15, 0, 14));
+      body.push(cyl(2.6, 3.2, 17, CHROME, 0, 15, 0, 14)); // shining gas lift
       body.push(cyl(14, 12, 4, FRAME, 0, 23.5, 0, 22));
+      body.push(pill(1.2, 8, CHROME, 8, 23, 2, 0, 0, Math.PI / 2)); // lift lever
+      body.push(box(3, 1.2, 4, '#1b212c', 13, 23, 2));
       body.push(ell(19.5, 6.8, 18.5, SEAT, 0, 28, 1.5));
       body.push(ell(17, 4, 16, SEAT_DARK, 0, 24.5, 1.5));
       body.push(pill(2.4, 10, FRAME, 0, 33, -14.5));
-      body.push(ell(18.5, 21, 5.4, '#b9565e', 0, 51, -17.5, -0.14)); // tall curved back, darker than the seat so it reads
+      body.push(ell(14, 4.5, 3.5, '#a14a52', 0, 41, -15.5)); // lumbar support cushion
+      body.push(ell(18.5, 21, 5.4, '#b9565e', 0, 51, -17.5, -0.14)); // tall curved back
       body.push(ell(13.5, 7, 4.2, '#a14a52', 0, 70, -19.5, -0.14)); // headrest
       for (const sx of [-1, 1]) {
         body.push(pill(1.9, 10, FRAME, sx * 19.5, 31.5, 4, Math.PI / 2));
@@ -247,9 +276,20 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
       body.push(box(5, 172, 38, FR, -42.5, 86, 0), box(5, 172, 38, FR, 42.5, 86, 0), box(90, 6, 40, FR, 0, 172, 0), box(86, 8, 36, IN, 0, 5, 0), box(84, 162, 3, IN, 0, 86, -17));
       const rnd = seeded(7);
       const BOOK = ['#d9534f', '#4a7fd0', '#e8b84a', '#4fae7b', '#8a64c8', '#e07fa0', '#f2f2ee'];
+      const BINDERS = ['#3b82f6', '#ef4444', '#10b981', '#6366f1'];
       for (const y of [34, 68, 102, 136]) {
         body.push(box(82, 3.5, 34, FR, 0, y, 0));
         let x = -37;
+        // Office binder files with spine labels
+        if (y === 68 || y === 102) {
+          for (let bi = 0; bi < 3; bi++) {
+            const bc = BINDERS[(bi + (y > 80 ? 2 : 0)) % BINDERS.length];
+            body.push(box(5.5, 23, 24, bc, x + 3, y + 13, -3));
+            body.push(box(3.5, 13, 0.4, '#ffffff', x + 3, y + 14, 9.2)); // spine label
+            x += 6.5;
+          }
+          x += 3;
+        }
         while (x < 32) {
           const bw = 4 + rnd() * 4;
           const bh = 17 + rnd() * 9;
@@ -257,7 +297,10 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
           x += bw + 0.6 + (rnd() < 0.18 ? 6 : 0);
         }
       }
-      pick = [100, 176, 50];
+      // Top shelf trophy decor
+      body.push(cyl(4, 2, 9, '#e5c07b', 26, 178, 0, 10));
+      body.push(cyl(5, 5, 3, '#2b3240', 26, 173, 0, 10));
+      pick = [100, 186, 50];
       break;
     }
     case 'lamp':
@@ -266,7 +309,8 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
       pick = [40, 205, 40];
       break;
     case 'trash':
-      body.push(cyl(13.5, 11, 52, '#8fa3a8', 0, 26, 0, 22), cyl(14.8, 14.8, 3.5, '#6c8187', 0, 53, 0, 22), cyl(11, 11, 1.5, '#2b3a3e', 0, 52, 0, 22));
+      body.push(cyl(13.5, 11, 52, '#4b5568', 0, 26, 0, 22), cyl(14.8, 14.8, 3.5, '#b4beca', 0, 53, 0, 22), cyl(11, 11, 1.5, '#1e2430', 0, 52, 0, 22));
+      body.push(sph(3.5, '#f4f6f8', 2, 48, -2, 1.2, 0.9, 1.1)); // crumpled paper
       pick = [40, 62, 40];
       break;
     case 'coatrack':
@@ -278,8 +322,11 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
       pick = [46, 150, 46];
       break;
     case 'fridge':
-      body.push(box(56, 76, 40, '#eef2f6', 0, 40, 0), box(55, 1.6, 1, '#b9c3cf', 0, 52, 20.2), pill(1.5, 14, '#8a8f99', 21, 66, 22.5), pill(1.5, 18, '#8a8f99', 21, 33, 22.5));
-      body.push(sph(2.5, '#8a8f99', -20, 1.5, 15), sph(2.5, '#8a8f99', 20, 1.5, 15));
+      body.push(box(56, 76, 40, '#e2e7ef', 0, 40, 0), box(55, 2, 1, '#9aa5b5', 0, 52, 20.2), pill(1.6, 16, '#b4beca', 21, 66, 22.5), pill(1.6, 20, '#b4beca', 21, 33, 22.5));
+      body.push(sph(2.5, '#6a7280', -20, 1.5, 15), sph(2.5, '#6a7280', 20, 1.5, 15));
+      body.push(box(9, 9, 0.5, '#ffd24a', -12, 64, 20.4, 0, 0, 0.1)); // post-it memo
+      body.push(sph(2, '#4aa8ff', -12, 67, 20.7)); // magnet
+      body.push(box(6, 9, 0.5, '#37e07a', -12, 38, 20.4)); // eco sticker
       pick = [64, 82, 48];
       break;
     case 'speaker':
@@ -287,51 +334,81 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
       pick = [34, 106, 34];
       break;
     case 'printer':
-      body.push(box(64, 28, 46, '#cfd6e0', 0, 14, 0));
-      body.push(box(60, 6, 40, '#b4bcc9', 0, 31, 0));
-      body.push(box(46, 14, 3, '#f4f6f9', 0, 42, -14, -0.5));
-      body.push(box(48, 2, 16, '#e4e8ee', 0, 15, 28));
-      body.push(box(16, 8, 4, '#2b3240', -18, 22, 23.2));
-      glow.push(box(3, 2, 2, '#37e07a', 22, 24, 23.4));
-      glow.push(box(10, 5, 1, '#4aa8ff', -18, 22, 25.3));
+      body.push(box(64, 28, 46, '#d5dce6', 0, 14, 0));
+      body.push(box(60, 6, 40, '#2b3240', 0, 31, 0));
+      body.push(box(56, 4, 38, '#9aa5b5', 0, 34, 0)); // scanner lid
+      body.push(box(46, 14, 3, '#f4f6f9', 0, 42, -14, -0.5)); // paper feed
+      body.push(box(48, 2, 16, '#e4e8ee', 0, 15, 28)); // tray
+      // Fresh printed sheet emerging with printed text lines
+      body.push(box(32, 0.8, 18, '#ffffff', 0, 17, 26, -0.05));
+      body.push(sbox(24, 0.2, 1.2, '#2f3646', 0, 17.5, 22));
+      body.push(sbox(20, 0.2, 1.2, '#2f3646', -2, 17.5, 25));
+      body.push(sbox(26, 0.2, 1.2, '#2f3646', 1, 17.5, 28));
+      // Angled LCD touch screen
+      body.push(box(20, 12, 3, '#242a36', -18, 26, 24, -0.4));
+      glow.push(box(16, 8, 0.8, '#4aa8ff', -18, 26, 25.4, -0.4));
+      glow.push(box(4, 4, 0.9, '#ffffff', -21, 26, 25.8, -0.4)); // icon
+      glow.push(box(4, 2, 1, '#37e07a', 20, 26, 23.5)); // ready LED
       break;
     case 'cooler':
-      body.push(box(36, 62, 36, '#e8edf3', 0, 31, 0));
-      body.push(box(30, 6, 30, '#cdd5df', 0, 63, 0));
-      body.push(cyl(14, 14, 36, '#5ab4ff', 0, 84, 0, 14));
-      body.push(cyl(6, 12, 8, '#4a9de0', 0, 105, 0, 12));
-      body.push(box(10, 4, 8, '#2b3240', 0, 44, 18));
-      body.push(box(10, 4, 8, '#e5483a', -9, 52, 18));
-      glow.push(box(4, 4, 2, '#7fd0ff', 9, 52, 18.3));
+      body.push(box(36, 62, 36, '#f0f3f7', 0, 31, 0));
+      body.push(box(24, 24, 6, '#262b36', 0, 42, 16)); // dispenser alcove
+      body.push(box(22, 2.5, 8, '#9aa5b5', 0, 31, 16.5)); // drip tray
+      body.push(box(3, 5, 5, '#e5483a', -5, 48, 17.5)); // hot tap
+      body.push(box(3, 5, 5, '#3b97e0', 5, 48, 17.5)); // cold tap
+      body.push(cyl(2.8, 2.2, 5.5, '#ffffff', 5, 34, 16.5, 12)); // cup
+      // Water bottle
+      body.push(cyl(13.5, 13.5, 34, '#42a2f8', 0, 84, 0, 16));
+      body.push(cyl(5.5, 11, 7, '#2b84dc', 0, 65, 0, 14));
+      body.push(cyl(6.5, 6.5, 2.5, '#1e68b8', 0, 63.5, 0, 14));
+      body.push(sph(2.2, '#d6efff', -4, 82, 5), sph(1.8, '#d6efff', 3, 91, -4)); // air bubbles
+      glow.push(box(2.5, 2.5, 1, '#37e07a', -12, 56, 18.2)); // green power LED
       break;
     case 'coffee':
-      body.push(box(52, 56, 40, '#2b2f38', 0, 28, 0));
-      body.push(box(52, 10, 42, '#3a2f2a', 0, 60, 0));
-      body.push(box(24, 6, 14, '#161a22', 0, 46, 20));
-      body.push(cyl(6, 6, 12, '#f3f3f3', 0, 14, 22, 10));
-      body.push(box(40, 3, 18, '#161a22', 0, 4, 22));
-      glow.push(box(8, 8, 1, '#ffb02e', -14, 32, 20.4));
-      glow.push(box(8, 8, 1, '#37e07a', 14, 32, 20.4));
+      body.push(box(52, 56, 40, '#222630', 0, 28, 0));
+      body.push(box(46, 20, 2, '#9aa5b5', 0, 44, 20.5)); // chrome front fascia
+      body.push(box(44, 6, 32, '#181b22', 0, 59, 0));
+      body.push(cyl(14, 12, 10, '#3e2516', 0, 66, 0, 14)); // bean hopper
+      body.push(cyl(3.8, 3.2, 7, '#f4f6f8', -13, 65, 4, 12)); // white cup
+      body.push(cyl(3.8, 3.2, 7, '#e4572e', 13, 65, 4, 12)); // terracotta cup
+      body.push(cyl(5, 5, 4, '#b4beca', 0, 34, 20, 12)); // portafilter
+      body.push(pill(1.8, 13, '#161920', 10, 34, 22, 0, 0.4, Math.PI / 2)); // handle
+      body.push(box(42, 2.5, 18, '#7b8796', 0, 3, 21)); // drip tray
+      body.push(cyl(3.5, 3.0, 6, '#f0f3f6', 0, 7.5, 21, 12)); // cup under spout
+      body.push(cyl(2.8, 2.8, 0.5, '#3b2214', 0, 10.2, 21, 10)); // crema
+      glow.push(box(12, 6, 0.6, '#4aa8ff', -12, 44, 21.6)); // LCD display
+      glow.push(box(4, 4, 0.8, '#37e07a', 14, 44, 21.6)); // green brew button
       break;
     case 'server':
-      body.push(box(60, 140, 50, '#12161e', 0, 70, 0));
-      body.push(box(64, 4, 54, '#2b3240', 0, 142, 0));
+      body.push(box(60, 140, 50, '#10141c', 0, 70, 0));
+      body.push(box(64, 4, 54, '#242b38', 0, 142, 0));
+      body.push(box(58, 136, 1.5, '#1e2532', 0, 70, 26)); // tinted glass door frame
+      body.push(box(3, 14, 3, '#9aa5b5', 26, 70, 27.5)); // rack door handle
       for (let i = 0; i < 8; i++) {
         const y = 14 + i * 16;
-        body.push(box(54, 12, 2, '#1d2330', 0, y, 25.5));
+        body.push(box(52, 12, 1, '#181e2a', 0, y, 25.5)); // 2U rack blade
+        body.push(box(1.8, 7, 2, '#6c7a8e', -23, y, 26.2));
+        body.push(box(1.8, 7, 2, '#6c7a8e', 23, y, 26.2));
         for (let k = 0; k < 3; k++) {
-          glow.push(box(4, 2.5, 1, k === 0 ? '#37e07a' : k === 1 ? '#4aa8ff' : '#ffb02e', -18 + k * 7, y, 26.8));
+          glow.push(box(3.5, 2.2, 1, k === 0 ? '#37e07a' : k === 1 ? '#4aa8ff' : '#ffb02e', -14 + k * 6, y, 26.8));
         }
+        // Colorful Ethernet patch cables
+        body.push(pill(1.2, 10, i % 2 === 0 ? '#4aa8ff' : '#ffb02e', 12, y, 26.8, Math.PI / 2));
+        body.push(pill(1.2, 10, i % 3 === 0 ? '#37e07a' : '#e5483a', 16, y, 26.8, Math.PI / 2));
       }
+      glow.push(box(16, 5, 0.8, '#4aa8ff', 0, 130, 26.6)); // top console LCD
       break;
     case 'plant':
-      body.push(cyl(14, 10, 26, '#8a5a3a', 0, 13, 0, 10));
-      body.push(cyl(13, 13, 3, '#3b2a1e', 0, 26, 0, 10));
-      body.push(cyl(2, 3, 16, '#5b3b24', 0, 36, 0, 6));
-      body.push(sph(16, '#3e9b55', 0, 52, 0, 1, 0.9, 1));
-      body.push(sph(11, '#2f7d45', -10, 62, 4));
-      body.push(sph(11, '#4db26a', 9, 60, -5));
-      body.push(sph(9, '#3e9b55', 2, 74, 2));
+      body.push(cyl(15, 12, 28, '#f4f6f9', 0, 16, 0, 16)); // ceramic pot
+      body.push(cyl(16, 16, 3, '#c9d3df', 0, 30, 0, 16)); // pot rim
+      body.push(cyl(12.5, 12.5, 4, '#b58351', 0, 2, 0, 14)); // wooden base
+      body.push(cyl(14, 14, 3, '#322319', 0, 28, 0, 14)); // soil
+      body.push(cyl(2.2, 2.8, 22, '#488e36', 0, 39, 0, 8)); // trunk
+      body.push(ell(14, 2.5, 18, '#3e9b55', -4, 48, 6, 0.3, -0.4, 0.2));
+      body.push(ell(13, 2.5, 16, '#2f7d45', 6, 52, -5, -0.2, 0.6, -0.3));
+      body.push(ell(15, 2.5, 17, '#4db26a', -8, 58, -6, -0.4, -0.3, 0.4));
+      body.push(ell(12, 2.5, 14, '#38a050', 5, 66, 4, 0.4, 0.2, -0.2));
+      body.push(ell(9, 2.2, 11, '#5ec77d', 0, 75, 0, 0, 0, 0));
       break;
     case 'tv':
       body.push(box(44, 3, 26, '#2b3240', 0, 1.5, 0));
@@ -340,9 +417,17 @@ function buildModel(type, types, largeScreen = false, arm = false, itDesk = fals
         const w = largeScreen || 1;
         const h = largeScreen ? largeScreen * 0.9 : 1;
         const cy = 46 + 28 * h; // keep the bottom edge at the top of the stand
-        body.push(box(92 * w, 56 * h, 5, '#12151c', 0, cy, 0));
-        glow.push(box(92 * w - 8, 56 * h - 8, 0.8, '#4aa8ff', 0, cy, 2.7));
-        glow.push(box(60 * w, 4, 0.9, '#bfe3ff', 0, cy + 16 * h, 2.9));
+        body.push(box(92 * w, 56 * h, 4, '#12151c', 0, cy, 0));
+        body.push(box(92 * w, 2.5 * h, 4.5, '#242936', 0, cy - 27 * h, 0)); // bezel chin
+        // Growth Bar Chart Dashboard
+        glow.push(box(92 * w - 6, 56 * h - 6, 0.8, '#151822', 0, cy, 2.6));
+        glow.push(box(92 * w - 6, 4 * h, 0.85, '#252b3d', 0, cy + 24 * h, 2.7));
+        glow.push(box(8 * w, 14 * h, 0.9, '#4aa8ff', -26 * w, cy - 10 * h, 2.8));
+        glow.push(box(8 * w, 22 * h, 0.9, '#37e07a', -13 * w, cy - 6 * h, 2.8));
+        glow.push(box(8 * w, 30 * h, 0.9, '#ffd24a', 0 * w, cy - 2 * h, 2.8));
+        glow.push(box(8 * w, 38 * h, 0.9, '#c678dd', 13 * w, cy + 2 * h, 2.8));
+        glow.push(box(8 * w, 44 * h, 0.9, '#ff6b5a', 26 * w, cy + 5 * h, 2.8));
+        glow.push(box(64 * w, 1.8 * h, 1.0, '#ffffff', 0, cy + 8 * h, 2.9, 0, 0, 0.22)); // trend line
         if (largeScreen) pick = [92 * w + 8, 46 + 56 * h + 8, 36];
       }
       break;
@@ -708,9 +793,14 @@ function deskGeometry(it = false) {
     box(6, DT - 6, it ? 108 : 70, BODY, 72, (DT - 6) / 2, 0),
     box(142, 30, 4, it ? '#e1e6ed' : '#a98156', 0, DT - 24, -32),
     box(38, 44, 64, BODY, 52, 28, 2),
-    pill(1.5, 14, '#8a8f99', 52, 38, 35, 0, 0, Math.PI / 2),
-    box(36, 2.6, 12, '#2f3646', -34, DT + 1.3, 16), // keyboard
-    ell(3.2, 1.8, 4.8, '#2f3646', -8, DT + 1, 16), // mouse
+    pill(1.5, 14, '#b4bcc9', 52, 38, 35, 0, 0, Math.PI / 2),
+    box(64, 0.8, 24, '#222630', -20, DT + 0.4, 16), // desk pad
+    box(34, 2.2, 12, '#333947', -32, DT + 1.5, 16), // keyboard frame
+    box(31, 0.8, 9.6, '#1d212b', -32, DT + 2.6, 16), // keycaps
+    box(3.5, 1.0, 2.8, '#e67e22', -44, DT + 2.7, 12.5), // accent ESC key
+    box(12, 1.0, 2.2, '#55627a', -32, DT + 2.7, 19.5), // spacebar
+    ell(3.2, 1.9, 4.8, '#333947', 4, DT + 1.4, 16), // mouse
+    box(1.0, 0.7, 2.2, '#61afef', 4, DT + 2.3, 14.5), // mouse wheel
     cyl(4.8, 4.4, 10, '#e4572e', 58, DT + 5, -34, 14), // mug
   ];
 }
@@ -728,7 +818,15 @@ function furnitureFallback(type, w, h) {
       box(w - 24, 2, h - 22, '#9a6a44', 0, DT + 0.5, 0),
       box(26, DT - 8, h - 30, '#5a3a22', -w / 3, (DT - 8) / 2, 0),
       box(26, DT - 8, h - 30, '#5a3a22', w / 3, (DT - 8) / 2, 0),
-      ell(14, 3, 9, '#eef0f4', 0, DT + 2.5, 0),
+      // Jabra Conference Speakerphone puck in the center
+      cyl(13, 14, 3.5, '#2b3240', 0, DT + 2.5, 0, 16),
+      cyl(10, 10, 0.6, '#1e2430', 0, DT + 4.3, 0, 16),
+      sph(1.2, '#37e07a', 0, DT + 4.8, 0), // green call/mute LED
+      // Meeting notebooks & pens
+      box(20, 1.5, 26, '#3a4454', -80, DT + 1.2, -10, 0, 0.1, 0),
+      pill(0.7, 12, '#e5c07b', -68, DT + 1.5, -10),
+      box(20, 1.5, 26, '#4f5b66', 80, DT + 1.2, 10, 0, -0.15, 0),
+      pill(0.7, 12, '#61afef', 68, DT + 1.5, 10),
       cyl(4.6, 4.2, 9, '#ffffff', -150, DT + 5, 20, 14),
       cyl(4.6, 4.2, 9, '#ffffff', 150, DT + 5, -20, 14),
       cyl(4.6, 4.2, 9, '#ffffff', 70, DT + 5, 24, 14),
@@ -872,23 +970,22 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = envTex;
-  scene.environmentIntensity = 0.22;
+  scene.environmentIntensity = 0.35;
 
   const camera = new THREE.PerspectiveCamera(42, 1, 20, 7000);
-  // The closest view is also the starting view, and it scales with the height of the game in CSS pixels: a taller screen
-  // has room to show more of the office. Players on an iPhone and an iPad each settled one 25% step further out than
-  // 380 + 1.335 * height (which gave 900 on a 390px phone and 1450 on an 802px iPad), so the start is 1.25x that:
-  // about 1125 on a phone, 1815 on an iPad, 2060 on a 950px-tall desktop window. The furthest view is at least 2300
-  // and 1.6x the start, capped at 3600 for fog/shadow range. The +/− buttons move between ZOOM_STEPS evenly spaced
-  // (geometric) levels across that range; pinch and the mouse wheel stay continuous within it.
-  const ZOOM_STEPS = 4;
+  // The starting view scales with the height of the game in CSS pixels: about 1125 on a phone,
+  // 1815 on an iPad, 2060 on a 950px-tall desktop window. Players can zoom out to see more of the room,
+  // or zoom in ~45% closer than the start to inspect workstation details.
+  const ZOOM_STEPS = 5;
   const zoomRange = h => {
-    const min = Math.round(Math.min(2600, Math.max(800, 1.25 * (380 + 1.335 * h))));
-    return { min, max: Math.min(3600, Math.max(2300, Math.round(min * 1.6))) };
+    const start = Math.round(Math.min(2600, Math.max(800, 1.25 * (380 + 1.335 * h))));
+    const min = Math.round(start * 0.55); // allows zooming in ~45% closer to inspect details
+    const max = Math.min(3600, Math.max(2300, Math.round(start * 1.6)));
+    return { min, max, start };
   };
-  let zoomMin, zoomMax;
-  ({ min: zoomMin, max: zoomMax } = zoomRange(window.innerHeight || 600));
-  const cam = { x: 0, z: 0, dist: zoomMin, pitch: 0.97, ready: false };
+  let zoomMin, zoomMax, zoomStart;
+  ({ min: zoomMin, max: zoomMax, start: zoomStart } = zoomRange(window.innerHeight || 600));
+  const cam = { x: 0, z: 0, dist: zoomStart, pitch: 0.97, ready: false };
   let zoomChosen = false; // until the player zooms, the start view follows window size changes
   try {
     const saved = Number(localStorage.getItem('br-zoom'));
@@ -910,7 +1007,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   sun.shadow.normalBias = 1.5;
   scene.add(sun, sun.target);
 
-  const bodyMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.8, metalness: 0.04 });
+  const bodyMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.62, metalness: 0.08 });
   const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false });
   const pickMat = new THREE.MeshBasicMaterial({ visible: false });
@@ -1625,7 +1722,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const wreck = new THREE.Mesh(mod.wrecks[wreckVariant(o.id)], bodyMat);
     wreck.rotation.y = idNoise(o.id, 7) * (types[o.type].w > 100 ? 0.2 : 0.8);
     wreck.receiveShadow = true;
-    wreck.castShadow = body.castShadow;
+    wreck.castShadow = false; // flat rubble on the floor does not need real-time shadow draws
     wreck.visible = false;
     group.add(wreck);
     // a scorch, puddle, soil or dust mark on the floor under the wreck
@@ -3059,7 +3156,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const dmg = 1 - o.hp / o.hpMax;
       const dark = 1 - dmg * 0.45;
       const f = o.flash;
-      if (dmg > 0.001 || f > 0 || electric > 0) {
+      if (!o.broken && (dmg > 0.001 || f > 0 || electric > 0)) {
         if (!rig.mat) rig.mat = bodyMat.clone();
         if (rig.body.material !== rig.mat) rig.body.material = rig.mat;
         rig.mat.color.setRGB(dark, dark, dark);
@@ -3222,13 +3319,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    ({ min: zoomMin, max: zoomMax } = zoomRange(h));
-    cam.dist = zoomChosen ? Math.min(zoomMax, Math.max(zoomMin, cam.dist)) : zoomMin;
+    ({ min: zoomMin, max: zoomMax, start: zoomStart } = zoomRange(h));
+    cam.dist = zoomChosen ? Math.min(zoomMax, Math.max(zoomMin, cam.dist)) : zoomStart;
   }
 
   // for the zoom buttons: are we at the closest or the furthest view?
   function zoomLimits() {
-    return { atMin: cam.dist <= zoomMin + 1, atMax: cam.dist >= zoomMax - 1, min: zoomMin, max: zoomMax, dist: cam.dist };
+    return { atMin: cam.dist <= zoomMin + 1, atMax: cam.dist >= zoomMax - 1, min: zoomMin, max: zoomMax, start: zoomStart, dist: cam.dist };
   }
 
   function zoom(delta) {
@@ -3236,6 +3333,14 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     zoomChosen = true;
     try {
       localStorage.setItem('br-zoom', String(Math.round(cam.dist)));
+    } catch (e) { /* ignore */ }
+  }
+
+  function resetZoom() {
+    cam.dist = zoomStart;
+    zoomChosen = false;
+    try {
+      localStorage.removeItem('br-zoom');
     } catch (e) { /* ignore */ }
   }
 
@@ -3254,7 +3359,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   }
 
   return {
-    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomStep, zoomLimits, cameraTo, ready,
+    renderer, build, update, pick, resize, setQuality, getQuality: () => quality, zoom, zoomStep, resetZoom, zoomLimits, cameraTo, ready,
     fx: { summon: fxSummon, duelCast: fxDuelCast, blow: fxBlow, rope: fxRope, process: fxProcess, electric: fxElectric, milkTea: fxMilkTea, debris: fxDebris, sparks: fxSparks, smoke: fxSmoke, dust: fxDust, floatText },
     objectHeight: (type) => (PICK[type] ? PICK[type][1] : 40) + lift(type),
     lift: (type) => lift(type),

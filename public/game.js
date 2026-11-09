@@ -1699,6 +1699,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     c.fillStyle = '#101622'; c.fillRect(0, 0, canvas.width, canvas.height);
     c.drawImage(mm.base, x(0), y(0), world.w*k, world.h*k);
     for (const o of S.objects) {
+      if (!full && (Math.abs(o.x - me.x) > range || Math.abs(o.y - me.y) > range)) continue;
       const t = S.types[o.type];
       const solid = t && t.w >= 44 && t.h >= 36 && o.type !== 'chair' && o.type !== 'plant';
       c.fillStyle = o.broken ? '#ff5d4a' : solid ? '#8b6f4e' : '#7a869a';
@@ -1763,14 +1764,18 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       c.stroke();
     }
     if (!full) {
-      const radius = canvas.width/2;
-      const fade = c.createRadialGradient(radius,radius,0,radius,radius,radius);
-      fade.addColorStop(0,'rgba(0,0,0,1)');
-      fade.addColorStop(.78,'rgba(0,0,0,1)');
-      fade.addColorStop(.92,'rgba(0,0,0,.7)');
-      fade.addColorStop(1,'rgba(0,0,0,.08)');
+      const radius = canvas.width / 2;
+      if (!mm.fadeGrad || mm.fadeW !== canvas.width) {
+        mm.fadeW = canvas.width;
+        mm.fadeGrad = c.createRadialGradient(radius, radius, 0, radius, radius, radius);
+        mm.fadeGrad.addColorStop(0, 'rgba(0,0,0,1)');
+        mm.fadeGrad.addColorStop(0.78, 'rgba(0,0,0,1)');
+        mm.fadeGrad.addColorStop(0.92, 'rgba(0,0,0,.7)');
+        mm.fadeGrad.addColorStop(1, 'rgba(0,0,0,.08)');
+      }
       c.globalCompositeOperation = 'destination-in';
-      c.fillStyle = fade; c.fillRect(0,0,canvas.width,canvas.height);
+      c.fillStyle = mm.fadeGrad;
+      c.fillRect(0, 0, canvas.width, canvas.height);
     }
     c.restore();
   }
@@ -1810,7 +1815,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   setInterval(() => {
     mmPlace();
     sidePlace();
-    mmDraw();
     // + fades out at the closest (starting) view, − at the furthest
     if (scene) {
       const z = scene.zoomLimits();
@@ -2145,6 +2149,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
       if (!$('ultBtn').hidden) send({ t: 'ult', skill: S.skill });
     } else if (k === 'm' && !e.repeat) {
       mmToggle();
+    } else if (/^(Digit|Numpad)0$/.test(e.code) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (scene && scene.resetZoom) scene.resetZoom();
     } else if (/^(Digit|Numpad)[1-9]$/.test(e.code) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
       // 1, 2, 3 choose a skill (hammer, milk tea, electric); Shift + 1 to 8 throw the emoji. Read from the physical key
       // (e.code), because Shift turns the character into a symbol.
@@ -2300,6 +2306,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
   }
   $('zoomIn').addEventListener('click', () => scene && scene.zoomStep(-1));
   $('zoomOut').addEventListener('click', () => scene && scene.zoomStep(1));
+  $('zoomIn').addEventListener('dblclick', (e) => { e.preventDefault(); if (scene && scene.resetZoom) scene.resetZoom(); });
+  $('zoomOut').addEventListener('dblclick', (e) => { e.preventDefault(); if (scene && scene.resetZoom) scene.resetZoom(); });
+  canvas.addEventListener('dblclick', () => { if (scene && scene.resetZoom) scene.resetZoom(); });
 
   canvas.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || !S.joined || typing()) return;
@@ -2922,6 +2931,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js';
     if (S.manaCfg) S.manaFrac = manaNow() / S.manaCfg.max;
     if (S.manaEmptyT > 0) S.manaEmptyT = Math.max(0, S.manaEmptyT - dt * 2.5);
     if (scene && S.joined) scene.update(dt, S);
+    if (S.joined && (mm.on || mm.open)) mmDraw();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

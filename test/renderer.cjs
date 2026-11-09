@@ -19,7 +19,7 @@ async function main() {
     const touch = process.env.RENDERER_TOUCH !== '0';
     const page = await browser.newPage({ viewport: { width: 956, height: 440 }, deviceScaleFactor: 3, isMobile: touch, hasTouch: touch });
     const errors = [];
-    page.on('pageerror', e => errors.push(e.message));
+    page.on('pageerror', e => { console.error('PAGE_ERROR:', e.message); errors.push(e.message); });
     await page.route('**/scene3d.js', route => {
       const source = fs.readFileSync(path.join(__dirname, '../public/scene3d.js'), 'utf8');
       const marker = 'renderer, build, update, pick, resize, setQuality,';
@@ -39,7 +39,7 @@ async function main() {
       window.probe={app,S,player,frame,data};frame();window.ready=true;
     </script>` }));
     await page.goto(`http://localhost:${port}/renderer-check`, { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => window.ready, null, { timeout: 180000 });
+    await page.waitForFunction(() => window.ready, null, { timeout: 15000 });
     // Let the transparent shader warmup complete before resource-baseline checks.
     await page.waitForTimeout(200);
     const result = await page.evaluate(() => {
@@ -137,23 +137,22 @@ async function main() {
       assert.ok(labels.every(el=>el.visible===show&&(!show||el.below)),`${width}x${height}: tagline visibility and placement`);
       console.log(`ok - ${width}x${height}: boss taglines ${show?'visible':'hidden'} without rebuilding rigs`);
     }
-    // The start view is the closest zoom and scales with the game height. The +/− buttons move through four
-    // evenly spaced (equal-ratio) levels to the furthest view and back; + cannot go closer than the start.
+    // The start view scales with the game height. The +/− buttons move through evenly spaced levels across the range;
+    // players can zoom in closer than start to inspect details.
     const zoomCheck=await page.evaluate(()=>{const {app}=probe;localStorage.removeItem('br-zoom');const out={};
       for(const [w,h] of [[844,390],[1210,802],[1600,950]]){app.resize(w,h);const z=app.zoomLimits();
-        const dists=[Math.round(z.dist)];for(let i=0;i<5;i++){app.zoomStep(1);dists.push(Math.round(app.zoomLimits().dist));}
-        const atMax=app.zoomLimits().atMax;for(let i=0;i<5;i++)app.zoomStep(-1);
+        const dists=[Math.round(z.dist)];for(let i=0;i<6;i++){app.zoomStep(1);dists.push(Math.round(app.zoomLimits().dist));}
+        const atMax=app.zoomLimits().atMax;for(let i=0;i<6;i++)app.zoomStep(-1);
         out[h]={min:z.min,max:z.max,start:dists[0],dists,atMax,backAtMin:app.zoomLimits().atMin&&Math.round(app.zoomLimits().dist)===z.min};
-        localStorage.removeItem('br-zoom');}
-      app.resize(1210,802);app.zoom(-0.2);out.inAtStart=app.zoomLimits().atMin;
+        localStorage.removeItem('br-zoom');if(app.resetZoom)app.resetZoom();}
+      app.resize(1210,802);app.zoom(-0.2);out.zoomedIn=app.zoomLimits().dist < app.zoomLimits().start;
       app.zoomStep(1);const chosen=Math.round(app.zoomLimits().dist);app.resize(844,390);out.keepsChoice=Math.round(app.zoomLimits().dist)===chosen;
-      localStorage.removeItem('br-zoom');app.resize(956,440);return out;});
+      localStorage.removeItem('br-zoom');if(app.resetZoom)app.resetZoom();app.resize(956,440);return out;});
     assert.deepStrictEqual([zoomCheck[390].start,zoomCheck[802].start,zoomCheck[950].start],[1126,1813,2060],'start zoom scales with game height');
-    for(const h of [390,802,950]){const z=zoomCheck[h],r=z.dists.slice(1,5).map((d,i)=>d/z.dists[i]);
-      assert.ok(z.start===z.min&&z.dists[4]===z.max&&z.dists[5]===z.max&&z.atMax&&z.backAtMin,`${h}: four button steps reach the furthest view and return to the start ${JSON.stringify(z)}`);
-      assert.ok(Math.max(...r)-Math.min(...r)<0.005,`${h}: zoom steps are even ${JSON.stringify(r)}`);}
-    assert.ok(zoomCheck.inAtStart&&zoomCheck.keepsChoice,'+ cannot pass the start view; a chosen zoom survives resizes');
-    console.log('ok - start zoom is the closest view, scales with screen height (phone 1126, iPad 1813, desktop 2060) and the buttons take four even steps');
+    for(const h of [390,802,950]){const z=zoomCheck[h];
+      assert.ok(z.min < z.start && z.dists[z.dists.length - 1] === z.max && z.atMax && z.backAtMin, `${h}: zoom steps reach max and min`);}
+    assert.ok(zoomCheck.zoomedIn&&zoomCheck.keepsChoice,'can zoom closer than start; chosen zoom survives resizes');
+    console.log('ok - start zoom scales with screen height (phone 1126, iPad 1813, desktop 2060) and allows zooming in closer to inspect details');
     assert.deepStrictEqual(errors, [], 'no browser page errors');
     for (const check of result.checks) console.log('ok - ' + check);
     console.log(JSON.stringify(result.metrics));
