@@ -105,6 +105,8 @@ async function main() {
     });
     await phone.goto(`http://127.0.0.1:${port}/`);
     await phone.waitForTimeout(350);
+    assert.equal(await phone.getAttribute('meta[name="apple-mobile-web-app-status-bar-style"]','content'),'black-translucent',
+      'iPhone advertises edge-to-edge status-bar configuration before installation');
     assert.equal(await phone.locator('#app').evaluate(e=>getComputedStyle(e).position),'absolute',
       'iPhone standalone app avoids the native fixed-position viewport path');
     assert.deepEqual(await phone.locator('#app').boundingBox(),{x:0,y:0,width:844,height:390},
@@ -165,6 +167,7 @@ async function main() {
     await ipad.waitForFunction(()=>document.getElementById('overlay').classList.contains('gone'));
     await ipad.waitForFunction(()=>GameViewport.height===802&&safeRendererSize.h===802);
     assert.equal(await ipad.locator('#app').evaluate(e=>getComputedStyle(e).position),'fixed','iPad keeps its existing layout positioning');
+    assert.equal(await ipad.locator('meta[name="apple-mobile-web-app-status-bar-style"]').count(),0,'iPad retains its measured system status bar');
     assert.deepEqual(await ipad.locator('#c').boundingBox(),{x:0,y:0,width:1210,height:802},'iPad Home Screen: canvas fills the web view with no extra top band');
     const band=await ipad.evaluate(()=>{const e=document.getElementById('statusBand'),r=e.getBoundingClientRect(),cs=getComputedStyle(e);
       return {top:r.top,width:r.width,height:r.height,clip:cs.backgroundClip||cs.webkitBackgroundClip,text:e.textContent,events:cs.pointerEvents};});

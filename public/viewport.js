@@ -61,7 +61,8 @@
     reportButton.addEventListener('click', async () => {
       record('copy');
       const report = JSON.stringify({ version: 1, build: viewportBuild, userAgent: window.navigator.userAgent,
-        standalone: true, first: firstSample, recent: samples.slice() }, null, 2);
+        standalone: true, statusBar: document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.content || 'default',
+        first: firstSample, recent: samples.slice() }, null, 2);
       try {
         await window.navigator.clipboard.writeText(report);
         reportButton.textContent = 'Đã chép thông tin';

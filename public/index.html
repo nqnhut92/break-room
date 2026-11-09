@@ -14,6 +14,16 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Break Room">
+  <script>
+    // iPhone-only install-time workaround for a stale portrait status-bar reservation
+    // on cold landscape launch. Keep iPad's measured system-status-bar configuration.
+    if (/iPhone|iPod/.test(navigator.userAgent)) {
+      var statusBar = document.createElement('meta');
+      statusBar.name = 'apple-mobile-web-app-status-bar-style';
+      statusBar.content = 'black-translucent';
+      document.head.appendChild(statusBar);
+    }
+  </script>
   <link rel="stylesheet" href="style.css">
   <!-- the import map must come before any module or modulepreload that imports "three" -->
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
