@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179428007982';
+import { ROLE_BY_ID } from './roles.js?v=179428106790';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -45,22 +45,22 @@ const box = (w, h, d, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
 };
 const sbox = (w, h, d, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) =>
   place(paint(new THREE.BoxGeometry(w, h, d), hex), x, y, z, rx, ry, rz);
-const cyl = (rt, rb, h, hex, x = 0, y = 0, z = 0, seg = 12, rx = 0, ry = 0, rz = 0) =>
+const cyl = (rt, rb, h, hex, x = 0, y = 0, z = 0, seg = 10, rx = 0, ry = 0, rz = 0) =>
   place(paint(new THREE.CylinderGeometry(rt, rb, h, seg), hex), x, y, z, rx, ry, rz);
 const sph = (r, hex, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
   const g = new THREE.SphereGeometry(r, 10, 8);
   g.scale(sx, sy, sz);
   return place(paint(g, hex), x, y, z);
 };
-// Soft shapes for the rounded furniture: an ellipsoid with its three radii, and a capsule. Both can be rotated.
+// Soft shapes for rounded features: lightweight ellipsoids & capsules optimized for smooth 60-120fps rendering
 const ell = (a, b, c, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
-  const g = new THREE.SphereGeometry(1, 20, 14);
+  const g = new THREE.SphereGeometry(1, 14, 10);
   g.scale(a, b, c);
   return place(paint(g, hex), x, y, z, rx, ry, rz);
 };
 const pill = (r, len, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) =>
-  place(paint(new THREE.CapsuleGeometry(r, len, 5, 12), hex), x, y, z, rx, ry, rz);
-const latheMesh = (pts, sx, sz, hex, x = 0, y = 0, z = 0, seg = 20) => {
+  place(paint(new THREE.CapsuleGeometry(r, len, 3, 10), hex), x, y, z, rx, ry, rz);
+const latheMesh = (pts, sx, sz, hex, x = 0, y = 0, z = 0, seg = 16) => {
   const v2 = pts.map(([px, py]) => new THREE.Vector2(px, py));
   const g = new THREE.LatheGeometry(v2, seg);
   g.scale(sx, 1, sz);
@@ -3685,14 +3685,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const fitPts = [];
   for (let i = 0; i < 8; i++) fitPts.push(new THREE.Vector3());
   let fitKey = '';
-  function fitShadowBox() {
+  function fitShadowBox(d = 600) {
     camera.updateMatrixWorld();
     let n = 0;
+    const maxShadowDist = Math.min(2400, Math.max(1200, d * 2.2));
     for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
       fitNdc.set(x, y);
       fitRay.setFromCamera(fitNdc, camera);
-      // a corner above the horizon (never with this camera, but be safe) is clamped to a far ground point
-      if (!fitRay.ray.intersectPlane(fitGround, fitHit) || fitHit.distanceTo(camera.position) > 6000) fitRay.ray.at(6000, fitHit);
+      // clamp ground ray to practical visible radius so distant horizon does not bloat shadow map
+      if (!fitRay.ray.intersectPlane(fitGround, fitHit) || fitHit.distanceTo(camera.position) > maxShadowDist) fitRay.ray.at(maxShadowDist, fitHit);
       fitPts[n++].set(fitHit.x, 0, fitHit.z);
       fitPts[n++].set(fitHit.x, 160, fitHit.z); // the tops of furniture standing at the edge of the view
     }
@@ -3718,7 +3719,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     sc2.left = l; sc2.right = r; sc2.bottom = b; sc2.top = t;
     sc2.near = near; sc2.far = far;
     sc2.updateProjectionMatrix();
-    shadowR = Math.max(r - l, t - b) / 2;
+    shadowR = Math.min(1300, Math.max(r - l, t - b) / 2);
   }
   function update(dt, S) {
     if (!loaded || !built) return; // models still loading
@@ -3767,7 +3768,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const sunDist = 1280 + shadowR * 0.9; // further away for a bigger box, so no ground point ends up behind the light
     sun.position.set(cam.x - (500 / 1280) * sunDist, (1100 / 1280) * sunDist, cam.z + (450 / 1280) * sunDist);
     sun.target.position.set(cam.x, 0, cam.z);
-    fitShadowBox();
+    fitShadowBox(d);
 
     // objects
     if (!contactBuilt && built && S.objects.length) buildContactShadows(S.objects, S.types);
