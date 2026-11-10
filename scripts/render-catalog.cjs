@@ -51,6 +51,7 @@ async function main() {
     const canvas = document.querySelector('canvas');
     const labels = document.querySelector('#labels');
     const app = createScene3D(canvas, labels);
+    window.app = app;
     app.setQuality('high');
     app.resize(window.innerWidth, window.innerHeight);
     await app.ready;
@@ -250,6 +251,19 @@ async function main() {
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(out, 'catalog-boss-vkl.png') });
     console.log('Captured catalog-boss-vkl.png');
+
+    // --- 3b. PANORAMIC ZOOM OUT (Max zoom-out birds-eye overview) ---
+    await page.evaluate(() => {
+      for (let i = 0; i < 6; i++) window.app.zoomStep(1);
+      window.renderFrame(0.016);
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(out, 'catalog-zoom-out.png') });
+    console.log('Captured catalog-zoom-out.png');
+    await page.evaluate(() => {
+      window.app.resetZoom();
+      window.renderFrame(0.016);
+    });
 
     // --- 4. PLAYER & BOSS VKL DEFEATED (Natural knockout flat on floor) ---
     await page.evaluate(({ cx, cy }) => {

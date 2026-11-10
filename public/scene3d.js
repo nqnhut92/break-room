@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179427707360';
+import { ROLE_BY_ID } from './roles.js?v=179427820109';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -150,7 +150,7 @@ const RUBBLE = {
 const NO_SHADOW_ON_TOUCH = new Set(['monitor', 'laptop', 'trash']);
 const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv', 'fridge', 'speaker']);
 
-const BOSS_SCALE = 1.30; // imposing executive boss (~1.3x player height, authoritative without being giant)
+const BOSS_SCALE = 1.42; // imposing executive boss (~1.42x player height, authoritative without being giant)
 
 // Floor textures (ambientCG, CC0): colour + normal map per floor kind, tinted to the office palette. If a file is
 // missing the old canvas-drawn floor is used. [file, world units per repeat, tint]
@@ -979,7 +979,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   const zoomRange = h => {
     const start = Math.round(Math.min(1000, Math.max(380, 0.48 * (280 + 1.1 * h))));
     const min = Math.round(start * 0.45);
-    const max = Math.min(2200, Math.max(1100, Math.round(start * 2.0)));
+    const max = Math.min(2600, Math.max(2100, Math.round(start * 3.5)));
     return { min, max, start };
   };
   let zoomMin, zoomMax, zoomStart;
@@ -1508,7 +1508,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   const miniRigs = new Map();
   // Prof. K (S.profk) uses the same rig, walk and punch as the minis; he has no HP, so his bar stays hidden.
-  const PROFK_SCALE = [1.14, 1.18, 1.14]; // between DMM and VKL
+  const PROFK_SCALE = [1.20, 1.24, 1.20]; // between DMM and VKL
   function updateMinis(dt, S) {
     for (const [id, b] of S.profk ? [...S.minis, ['PROFK', S.profk]] : S.minis) {
       let rig = miniRigs.get(id);
@@ -1516,7 +1516,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig = makePlayer(b.pl);
         // TML keeps a compact silhouette; DMM is broad despite its lower HP.
         if (id === 'PROFK') rig.g.scale.set(...PROFK_SCALE);
-        else rig.g.scale.set(id === 'TML' ? 1.08 : 1.20, id === 'TML' ? 1.10 : 1.14, id === 'TML' ? 1.08 : 1.20);
+        else rig.g.scale.set(id === 'TML' ? 1.16 : 1.28, id === 'TML' ? 1.18 : 1.25, id === 'TML' ? 1.16 : 1.28);
         rig.hpb.classList.add('boss');
         const wind = new THREE.Group();
         const mat = new THREE.MeshBasicMaterial({ color: id === 'TML' ? 0xffa13d : id === 'PROFK' ? 0x2fd08e : 0xc87dff, transparent: true, opacity: 0.65, depthWrite: false });
@@ -2618,12 +2618,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       cyl(2.9, 2.9, 40, '#6a3b2a', 0, 11, 0, 8),
       ...[0, 5, 10, 15, 20, 25].map((y) => cyl(3.25, 3.25, 1.1, WIRE, 0, y, 0, 8)),
       cyl(4.6, 4.6, 3.2, STEEL_DARK, 0, 30.4, 0, 10),
-      // pommel cap and the leather strap loop hanging from it
+      // pommel cap: solid round dark steel pommel with silver accent
       cyl(3.9, 3.1, 5.5, STEEL_DARK, 0, -8.2, 0, 8),
       cyl(4.1, 4.1, 1.2, STEEL, 0, -5.4, 0, 8),
-      box(1.2, 16, 1.2, LEATHER, -5.2, -17, 0),
-      box(1.2, 16, 1.2, LEATHER, 5.2, -17, 0),
-      box(11.6, 1.2, 1.2, LEATHER, 0, -25, 0),
+      sph(2.8, STEEL_DARK, 0, -10.5, 0),
       // head: a bright block with chamfered corners, seams on top, pewter knotwork panels at both ends
       box(34, 19, 17, STEEL, 0, 40, 0),
       box(34, 15, 18.6, STEEL, 0, 40, 0), // slightly proud middle band = the chamfer line
@@ -2800,12 +2798,17 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.legL.rotation.y = 0.14 * idle;
       rig.legR.rotation.y = -0.14 * idle;
 
-      // Articulated Knee Flexion (Standard Biomechanical Gait):
-      // Trailing leg flexes knee backwards during push-off and swing-through; leading leg extends forward for touchdown
-      const kneeFlexL = Math.max(0, Math.sin(wp + 0.2)) * 1.35 * mv;
-      const kneeFlexR = Math.max(0, -Math.sin(wp + 0.2)) * 1.35 * mv;
-      rig.shinL.rotation.x = kneeFlexL + 0.08 * idle;
-      rig.shinR.rotation.x = kneeFlexR + 0.08 * idle;
+      // Articulated Knee Flexion (Dynamic Biomechanical Gait):
+      // Both knees maintain continuous athletic flexion - neither leg locks straight like a wooden peg.
+      // Trailing leg: high kick-back flexion (~1.35 rad) lifting calf toward glute
+      // Leading leg: soft shock-absorbing bend (~0.55 rad) for springy landing
+      const trailKickL = Math.max(0, Math.sin(wp + 0.2)) * 1.15 * mv;
+      const leadBendL = Math.max(0, -Math.sin(wp + 0.2)) * 0.35 * mv;
+      rig.shinL.rotation.x = (0.20 * mv + trailKickL + leadBendL) + 0.08 * idle;
+
+      const trailKickR = Math.max(0, -Math.sin(wp + 0.2)) * 1.15 * mv;
+      const leadBendR = Math.max(0, Math.sin(wp + 0.2)) * 0.35 * mv;
+      rig.shinR.rotation.x = (0.20 * mv + trailKickR + leadBendR) + 0.08 * idle;
 
       // Stepping leg lifts slightly during swing phase
       rig.legL.position.y = legBase + Math.max(0, Math.sin(wp)) * 2.8 * mv;
@@ -3672,7 +3675,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // looked like dropped frames even when the renderer kept up (especially at 120 Hz).
     const jx = sh > 0 ? (coarse ? Math.sin(time * 44) * sh * 2.5 : (Math.random() - 0.5) * sh * 14) : 0;
     const jy = sh > 0 ? (coarse ? Math.sin(time * 51) * sh * 1.5 : (Math.random() - 0.5) * sh * 10) : 0;
-    camera.position.set(cam.x + jx, Math.sin(cam.pitch) * d + 40 + jy, cam.z + Math.cos(cam.pitch) * d);
+    const zoomProgress = Math.max(0, Math.min(1, (d - zoomStart) / Math.max(1, zoomMax - zoomStart)));
+    const currentPitch = cam.pitch + zoomProgress * 0.24; // dynamically elevates from 0.58 up to 0.82 rad when zooming out for whole-room panorama
+    camera.position.set(cam.x + jx, Math.sin(currentPitch) * d + 40 + jy, cam.z + Math.cos(currentPitch) * d);
     camera.lookAt(cam.x, 38, cam.z);
 
     // The sun's shadow box is fitted to the ground the camera actually sees (plus a margin for shadows cast into the
@@ -3900,7 +3905,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     cam.dist = Math.min(zoomMax, Math.max(zoomMin, cam.dist * (1 + delta)));
     zoomChosen = true;
     try {
-      localStorage.setItem('br-zoom-v3', String(Math.round(cam.dist)));
+      localStorage.setItem('br-zoom-v4', String(Math.round(cam.dist)));
     } catch (e) { /* ignore */ }
   }
 
@@ -3908,7 +3913,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     cam.dist = zoomStart;
     zoomChosen = false;
     try {
-      localStorage.removeItem('br-zoom-v3');
+      localStorage.removeItem('br-zoom-v4');
     } catch (e) { /* ignore */ }
   }
 
