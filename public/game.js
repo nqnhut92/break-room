@@ -1,9 +1,9 @@
-import { createGameAudio, distanceVolume } from './audio.js?v=179427101446';
-import './actor-collision.js?v=179427101446';
-import { accountUI } from './account.js?v=179427101446';
-import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179427101446';
-import { createScene3D } from './scene3d.js?v=179427101446';
-import { ROLES, ROLE_BY_ID } from './roles.js?v=179427101446';
+import { createGameAudio, distanceVolume } from './audio.js?v=179427707360';
+import './actor-collision.js?v=179427707360';
+import { accountUI } from './account.js?v=179427707360';
+import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179427707360';
+import { createScene3D } from './scene3d.js?v=179427707360';
+import { ROLES, ROLE_BY_ID } from './roles.js?v=179427707360';
 
 (() => {
   'use strict';

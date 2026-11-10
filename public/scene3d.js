@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179427101446';
+import { ROLE_BY_ID } from './roles.js?v=179427707360';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -984,10 +984,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
   };
   let zoomMin, zoomMax, zoomStart;
   ({ min: zoomMin, max: zoomMax, start: zoomStart } = zoomRange(window.innerHeight || 600));
-  const cam = { x: 0, z: 0, dist: zoomStart, pitch: 0.46, ready: false };
+  const cam = { x: 0, z: 0, dist: zoomStart, pitch: 0.58, ready: false };
   let zoomChosen = false; // until the player zooms, the start view follows window size changes
   try {
-    const saved = Number(localStorage.getItem('br-zoom-v3'));
+    const saved = Number(localStorage.getItem('br-zoom-v4'));
     if (saved > 0) { cam.dist = Math.min(zoomMax, Math.max(zoomMin, saved)); zoomChosen = true; } // the player's own choice
   } catch (e) { /* ignore */ }
   let shadowR = 900;
@@ -2155,12 +2155,12 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           box(2.8, 3.4, 2.0, skin, 0, -13.5, 0), // hand
         ])));
         if (isLeft) {
-          // Ebony cane with gold lion-head handle
+          // Ebony cane with gold lion-head handle, firmly grounded onto the floor
           const cane = mk(merge([
-            cyl(1.0, 0.8, 45, '#1e140e', 0, -12, 0, 8),
-            ell(2.2, 1.6, 3.5, '#eab308', 0, 9.5, 1.4),
-            cyl(1.4, 1.4, 2.0, '#ca8a04', 0, 8.0, 0, 8),
-            cyl(1.0, 1.0, 1.8, '#18181b', 0, -34, 0, 8),
+            cyl(1.1, 0.8, 38, '#1e140e', 0, -31.0, 0, 8), // tapered ebony shaft reaching down to floor
+            ell(2.4, 1.8, 3.6, '#eab308', 0, -9.5, 1.4), // carved gold lion head handle
+            cyl(1.5, 1.5, 2.0, '#ca8a04', 0, -11.0, 0, 8), // gold collar
+            cyl(1.1, 1.1, 2.2, '#18181b', 0, -50.0, 0, 8), // durable rubber base tip on floor
           ]));
           fore.add(cane);
         }
@@ -2305,15 +2305,21 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         // Eyebrows
         box(1.8, 0.3, 0.08, hairHex, -2.0, 6.8, 4.86, 0, 0, -0.1),
         box(1.8, 0.3, 0.08, hairHex, 2.0, 6.8, 4.86, 0, 0, 0.1),
-        // Hair base: shifted to back and top so the face and eyes remain clean and unobstructed
-        sph(5.3, hairHex, 0, 7.0, -1.8, 1.02, 1.05, 0.82),
-        box(5.8, 6.5, 2.6, hairHex, 0, 2.2, -4.5, 0.18, 0, 0),
+        // Natural hair foundation: cranium dome, nape, sideburns framing ears
+        sph(5.4, hairHex, 0, 6.8, -0.6, 1.04, 1.08, 0.98), // cranium dome
+        box(6.2, 7.0, 3.0, hairHex, 0, 2.4, -4.2, 0.16, 0, 0), // nape / gáy
+        box(1.0, 4.8, 2.6, hairHex, -4.9, 5.0, 0.8, 0, 0, -0.06), // sideburn L
+        box(1.0, 4.8, 2.6, hairHex, 4.9, 5.0, 0.8, 0, 0, 0.06), // sideburn R
+        ell(1.2, 2.4, 3.4, hairHex, -4.8, 6.8, -0.4), // temporal curve L
+        ell(1.2, 2.4, 3.4, hairHex, 4.8, 6.8, -0.4), // temporal curve R
       ];
 
       if (style === 0) {
-        // High ponytail: face fringe in head, ponytail in swinging group
-        headParts.push(ell(4.2, 2.2, 2.2, hairHex, -2.5, 9.2, 4.4, 0.15, 0.2, -0.2));
-        headParts.push(ell(3.6, 2.0, 2.0, hairHex, 2.4, 9.4, 4.2, 0.15, -0.25, 0.15));
+        // High ponytail: soft face-framing side bangs + swinging ponytail
+        headParts.push(ell(4.4, 2.4, 3.6, hairHex, -2.4, 8.8, 3.6, 0.14, 0.18, -0.15));
+        headParts.push(ell(4.0, 2.2, 3.2, hairHex, 2.4, 9.0, 3.4, 0.14, -0.2, 0.15));
+        headParts.push(pill(1.0, 4.8, hairHex, -3.8, 6.2, 2.4, 0.25, 0, 0.15)); // soft face tendril L
+        headParts.push(pill(1.0, 4.8, hairHex, 3.8, 6.2, 2.4, 0.25, 0, -0.15)); // soft face tendril R
         ponytailGroup = new THREE.Group();
         ponytailGroup.position.set(0, 9.8, -4.6);
         ponytailGroup.add(mk(merge([
@@ -2322,23 +2328,26 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
           pill(1.2, 12, hairHex, 0, -14, -5.0, 0.45, 0, 0),
         ])));
       } else if (style === 1) {
-        // Twin tails
-        headParts.push(ell(4.5, 2.2, 2.2, hairHex, 0, 9.4, 4.4));
+        // Twin tails: anime bangs + twin tails
+        headParts.push(ell(4.8, 2.6, 3.8, hairHex, 0, 9.0, 3.8, 0.12, 0, 0)); // soft full bangs
+        headParts.push(pill(1.1, 4.2, hairHex, -2.2, 7.8, 4.6, 0.2, 0.1, -0.1));
+        headParts.push(pill(1.1, 4.2, hairHex, 2.2, 7.8, 4.6, 0.2, -0.1, 0.1));
         headParts.push(pill(1.4, 14, hairHex, -5.8, 1.5, -2.5, 0.15, 0, 0.2));
         headParts.push(pill(1.4, 14, hairHex, 5.8, 1.5, -2.5, 0.15, 0, -0.2));
         headParts.push(cyl(1.8, 1.8, 1.2, '#e11d48', -5.8, 6.5, -2.5, 8));
         headParts.push(cyl(1.8, 1.8, 1.2, '#e11d48', 5.8, 6.5, -2.5, 8));
       } else if (style === 2) {
         // Wuxia chignon bun with hairpin needle & jade bead
-        headParts.push(ell(4.5, 2.2, 2.2, hairHex, -2.2, 9.2, 4.4, 0.15, 0.2, -0.2));
-        headParts.push(sph(3.6, hairHex, 0, 10.5, -4.2)); // chignon
-        headParts.push(cyl(0.35, 0.35, 14, '#fde047', 0, 10.5, -4.2, 8, 0, 0, 1.1)); // hairpin
+        headParts.push(ell(4.6, 2.4, 3.6, hairHex, -2.0, 8.8, 3.8, 0.14, 0.18, -0.15));
+        headParts.push(ell(4.2, 2.2, 3.2, hairHex, 2.2, 8.8, 3.6, 0.14, -0.18, 0.15));
+        headParts.push(sph(3.6, hairHex, 0, 10.5, -4.2)); // chignon bun
+        headParts.push(cyl(0.35, 0.35, 14, '#fde047', 0, 10.5, -4.2, 8, 0, 0, 1.1)); // golden hairpin
         headParts.push(sph(0.9, '#34d399', 6.5, 13.2, -4.2)); // jade bead
       } else {
-        // Chic layered bob
-        headParts.push(ell(4.2, 6.5, 2.6, hairHex, -5.5, 2.2, 0.2, 0.1, 0, 0.08));
-        headParts.push(ell(4.2, 6.5, 2.6, hairHex, 5.5, 2.2, 0.2, 0.1, 0, -0.08));
-        headParts.push(ell(4.8, 2.4, 2.2, hairHex, -1.2, 9.6, 4.4, 0.12, 0.15, -0.15));
+        // Chic layered bob: smooth flowing side bobs framing cheeks
+        headParts.push(ell(4.8, 2.6, 3.8, hairHex, -1.0, 9.2, 3.8, 0.12, 0.12, -0.12));
+        headParts.push(ell(4.4, 6.8, 3.0, hairHex, -5.2, 2.8, 0.6, 0.1, 0, 0.08));
+        headParts.push(ell(4.4, 6.8, 3.0, hairHex, 5.2, 2.8, 0.6, 0.1, 0, -0.08));
       }
       head = merge(headParts);
 
@@ -2412,45 +2421,48 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       };
     } else {
       // ---------------- MALE PLAYERS (1:7 PROPORTIONS, SEAMLESS BALL SOCKETS, FLAT EYES) ----------------
-      legBaseY = 40;
-      legOffsetX = 4.6;
+      legBaseY = 37.5;
+      legOffsetX = 4.4;
       torsoPosY = 40;
       headPosY = 68;
       armPosY = 61;
       armPosX = 9.8;
-      thighLen = 19;
+      thighLen = 17.5;
 
-      // Torso: slim-fit shirt, tie, belt, lanyard; shoulders extend to X = ±9.3 (armPosX = 9.8 -> 0 gap!)
+      // Torso: slim-fit shirt, tie/chain, comfortable dropped crotch & leather belt
       const torsoParts = [
-        box(14.5, 6.0, 8.5, pantsHex, 0, 0, 0), // pelvis socket
-        box(13.5, 7.0, 8.0, shirtHex, 0, 6.0, 0), // waist
-        box(16.5, 12.0, 9.5, shirtHex, 0, 14.0, 0), // chest
-        box(18.6, 5.0, 9.2, shirtHex, 0, 21.0, 0), // shoulders (ends at X = ±9.3)
-        cyl(3.0, 3.6, 3.2, shirtHex, 0, 24.2, 0, 12), // collar
-        box(1.5, 15, 0.4, shade(shirtHex, 0.85), 0, 14, 4.8), // placket
+        box(15.2, 8.5, 9.0, pantsHex, 0, -1.2, 0), // pelvis socket with comfortable natural rise
+        box(5.8, 5.0, 7.5, pantsHex, 0, -3.8, 0), // dropped crotch saddle seam (đáy quần hạ thấp thoải mái)
+        box(14.8, 1.8, 8.8, '#181d28', 0, 3.2, 0), // leather dress belt
+        box(3.2, 2.2, 9.2, '#94a3b8', 0, 3.2, 0), // silver/steel belt buckle
+        box(13.5, 7.0, 8.0, shirtHex, 0, 7.5, 0), // waist
+        box(16.5, 12.0, 9.5, shirtHex, 0, 15.5, 0), // chest
+        box(18.6, 5.0, 9.2, shirtHex, 0, 22.5, 0), // shoulders
+        cyl(3.0, 3.6, 3.2, shirtHex, 0, 25.7, 0, 12), // collar
+        box(1.5, 15, 0.4, shade(shirtHex, 0.85), 0, 15.5, 4.8), // placket
       ];
       if (style === 0) {
         // 7/3 side part: classic red necktie + ID card lanyard
-        torsoParts.push(box(2.2, 14, 0.8, '#9e2a2b', 0, 16, 5.2));
-        torsoParts.push(box(0.6, 14, 0.3, '#3b82f6', -4.2, 17, 5.0, 0, 0, -0.2));
-        torsoParts.push(box(2.4, 3.8, 0.3, '#ffffff', -5.5, 9.5, 5.2));
+        torsoParts.push(box(2.2, 14, 0.8, '#9e2a2b', 0, 17.5, 5.2));
+        torsoParts.push(box(0.6, 14, 0.3, '#3b82f6', -4.2, 18.5, 5.0, 0, 0, -0.2));
+        torsoParts.push(box(2.4, 3.8, 0.3, '#ffffff', -5.5, 11.0, 5.2));
       } else if (style === 1) {
-        // Spiky: open collar + dark undershirt
-        torsoParts.push(box(4.5, 8, 0.6, '#1e232e', 0, 19, 4.6));
-        torsoParts.push(box(0.6, 14, 0.3, '#e11d48', -4.2, 17, 5.0, 0, 0, -0.2));
-        torsoParts.push(box(2.4, 3.8, 0.3, '#ffffff', -5.5, 9.5, 5.2));
+        // Modern quiff: open collar + dark undershirt
+        torsoParts.push(box(4.5, 8, 0.6, '#1e232e', 0, 20.5, 4.6));
+        torsoParts.push(box(0.6, 14, 0.3, '#e11d48', -4.2, 18.5, 5.0, 0, 0, -0.2));
+        torsoParts.push(box(2.4, 3.8, 0.3, '#ffffff', -5.5, 11.0, 5.2));
       } else if (style === 2) {
         // Man bun: office vest over shirt
-        torsoParts.push(box(17.0, 13, 9.8, '#242a38', 0, 14, 0));
-        torsoParts.push(box(0.6, 10, 0.4, '#eab308', -3.5, 11, 5.1)); // gold chain
+        torsoParts.push(box(17.0, 13, 9.8, '#242a38', 0, 15.5, 0));
+        torsoParts.push(box(0.6, 10, 0.4, '#eab308', -3.5, 12.5, 5.1)); // gold chain
       } else {
         // Comma bangs: button-down with slim knit tie & clip
-        torsoParts.push(box(2.0, 14, 0.7, '#374151', 0, 16, 5.1));
-        torsoParts.push(box(2.4, 0.7, 0.8, '#e2e8f0', 0, 17.5, 5.3));
+        torsoParts.push(box(2.0, 14, 0.7, '#374151', 0, 17.5, 5.1));
+        torsoParts.push(box(2.4, 0.7, 0.8, '#e2e8f0', 0, 19.0, 5.3));
       }
       torso = merge(torsoParts);
 
-      // Head: 1:7 human proportion (~14 units tall), FLAT FLUSH EYES (0 bulging!), layered hair
+      // Head: 1:7 human proportion (~14 units tall), FLAT FLUSH EYES, NATURAL LAYERED HAIRSTYLES
       const headParts = [
         cyl(2.2, 2.6, 5.5, skin, 0, 0.5, 0, 10), // neck
         sph(5.6, skin, 0, 6.2, 0, 0.95, 1.15, 0.95), // core
@@ -2465,47 +2477,64 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         // Eyebrows
         box(2.0, 0.4, 0.08, hairHex, -2.2, 7.2, 5.36, 0, 0, -0.1),
         box(2.0, 0.4, 0.08, hairHex, 2.2, 7.2, 5.36, 0, 0, 0.1),
-        // Hair base: shifted to back and top so the face and eyes remain clean and unobstructed
-        sph(5.7, hairHex, 0, 7.5, -1.8, 1.02, 1.05, 0.82),
-        box(6.2, 7.0, 2.8, hairHex, 0, 2.4, -4.8, 0.18, 0, 0),
+        // Natural hair foundation: cranium dome, nape, sideburns framing ears
+        sph(5.7, hairHex, 0, 7.2, -0.6, 1.04, 1.08, 0.98), // cranium dome
+        box(6.6, 7.5, 3.2, hairHex, 0, 2.6, -4.4, 0.16, 0, 0), // nape / gáy
+        box(1.2, 5.0, 3.0, hairHex, -5.3, 5.2, 0.8, 0, 0, -0.06), // sideburn L
+        box(1.2, 5.0, 3.0, hairHex, 5.3, 5.2, 0.8, 0, 0, 0.06), // sideburn R
+        ell(1.4, 2.6, 3.6, hairHex, -5.1, 7.2, -0.4), // temporal curve L
+        ell(1.4, 2.6, 3.6, hairHex, 5.1, 7.2, -0.4), // temporal curve R
       ];
 
       if (style === 0) {
-        // Side part 7/3
-        headParts.push(ell(4.5, 2.2, 2.2, hairHex, -2.8, 9.8, 4.8, 0.15, 0.2, -0.2));
-        headParts.push(ell(3.8, 2.0, 2.0, hairHex, 2.6, 10.0, 4.5, 0.15, -0.25, 0.15));
+        // Side part 7/3: classic executive wave with natural layered flow
+        headParts.push(ell(4.8, 2.8, 3.8, hairHex, -2.4, 9.6, 3.2, 0.14, 0.22, -0.16));
+        headParts.push(ell(4.0, 2.4, 3.0, hairHex, -3.2, 8.8, 4.0, 0.15, 0.18, -0.2));
+        headParts.push(pill(1.2, 5.2, shade(hairHex, 0.9), -1.6, 8.6, 4.8, 0.22, 0.1, -0.32));
+        headParts.push(ell(3.8, 2.4, 3.2, hairHex, 2.8, 9.2, 2.8, 0.1, -0.22, 0.14));
+        headParts.push(pill(1.0, 4.2, shade(hairHex, 0.9), 2.2, 8.0, 4.4, 0.18, -0.1, 0.28));
       } else if (style === 1) {
-        // Textured spiky
-        for (let i = 0; i < 7; i++) {
-          const a = (i / 7) * Math.PI * 2;
-          headParts.push(cone(2.2, 6.5, hairHex, Math.sin(a) * 4.6, 11 + (i % 2) * 1.0, Math.cos(a) * 4.2 - 0.8, Math.cos(a) * 0.4, 0, -Math.sin(a) * 0.4));
-        }
+        // Modern textured crop / layered quiff: natural textured volume, soft fringe (0 alien spikes!)
+        headParts.push(ell(5.2, 3.2, 4.2, hairHex, 0, 10.0, 1.8, 0.16, 0, 0));
+        headParts.push(pill(1.6, 5.8, hairHex, 0, 10.5, 3.8, 0.32, 0, 0));
+        headParts.push(pill(1.4, 5.2, hairHex, -1.8, 10.2, 3.6, 0.30, 0.14, -0.12));
+        headParts.push(pill(1.4, 5.2, hairHex, 1.8, 10.2, 3.6, 0.30, -0.14, 0.12));
+        headParts.push(pill(1.2, 4.4, shade(hairHex, 1.08), 0, 9.4, 4.8, 0.42, 0, 0));
+        headParts.push(pill(1.1, 4.0, shade(hairHex, 0.92), -2.6, 9.0, 4.0, 0.25, 0.2, -0.2));
+        headParts.push(pill(1.1, 4.0, shade(hairHex, 0.92), 2.6, 9.0, 4.0, 0.25, -0.2, 0.2));
       } else if (style === 2) {
-        // Man bun / topknot
-        headParts.push(sph(3.2, hairHex, 0, 11.5, -4.5));
-        headParts.push(ell(4.6, 2.0, 2.0, hairHex, -2.4, 9.8, 4.5, 0.12, 0.15, -0.15));
+        // Slicked back undercut flowing into a neat textured man-bun
+        headParts.push(ell(5.2, 2.8, 4.6, hairHex, 0, 9.6, 1.2, -0.14, 0, 0));
+        headParts.push(ell(4.6, 2.2, 3.8, hairHex, 0, 9.2, 3.4, -0.08, 0, 0));
+        headParts.push(sph(3.0, hairHex, 0, 11.2, -3.8, 1.1, 0.95, 1.1));
+        headParts.push(cyl(1.8, 1.8, 1.2, '#181d28', 0, 10.4, -3.6, 10, -0.3, 0, 0));
+        headParts.push(pill(0.7, 3.8, hairHex, -4.2, 6.2, 2.2, 0.18, 0, 0.1));
+        headParts.push(pill(0.7, 3.8, hairHex, 4.2, 6.2, 2.2, 0.18, 0, -0.1));
       } else {
-        // Comma bangs / curtain bangs
-        headParts.push(ell(3.8, 2.2, 2.2, hairHex, -2.6, 9.6, 4.6, 0.18, 0.25, -0.25));
-        headParts.push(ell(3.8, 2.2, 2.2, hairHex, 2.6, 9.6, 4.6, 0.18, -0.25, 0.25));
+        // Comma bangs: classic Korean two-block with soft swooping curved bangs
+        headParts.push(ell(5.2, 3.0, 4.0, hairHex, 0, 9.8, 2.2, 0.14, 0, 0));
+        headParts.push(pill(1.4, 5.0, hairHex, -2.2, 8.8, 4.6, 0.24, 0.32, -0.32));
+        headParts.push(pill(1.1, 3.4, shade(hairHex, 0.9), -1.0, 7.6, 5.0, 0.32, -0.18, -0.38));
+        headParts.push(pill(1.3, 4.8, hairHex, 2.2, 8.8, 4.6, 0.24, -0.28, 0.28));
+        headParts.push(pill(1.0, 3.2, shade(hairHex, 0.9), 3.0, 7.8, 4.6, 0.22, -0.12, 0.22));
       }
       head = merge(headParts);
 
       // Legs: tailored trousers with masculine volume, calf shape, and cuff break
       thighGeoL = thighGeoR = merge([
-        sph(4.2, pantsHex, 0, 0, 0), // hip ball (sockets inside pelvis block)
-        cyl(4.2, 3.6, 18, pantsHex, 0, -9, 0, 12),
-        sph(3.4, pantsHex, 0, -18.5, 0), // knee ball
+        sph(4.2, pantsHex, 0, 0, 0), // hip ball (sockets inside dropped pelvis block)
+        cyl(4.2, 3.6, 17, pantsHex, 0, -8.5, 0, 12),
+        sph(3.4, pantsHex, 0, -17.5, 0), // knee ball
       ]);
       shinGeoL = shinGeoR = merge([
         sph(3.42, pantsHex, 0, 0, 0), // knee socket (shared center with thigh knee ball)
-        cyl(3.5, 3.8, 9, pantsHex, 0, -4.5, 0, 12), // calf muscle curve
-        cyl(3.8, 3.2, 9.5, pantsHex, 0, -13.5, 0, 12), // tapered tailored trouser pipe
-        cyl(3.4, 3.4, 2.0, shade(pantsHex, 0.85), 0, -17.5, 0, 12), // crisp trouser cuff
-        box(5.6, 4.2, 12.0, '#262d3d', 0, -19.5, 1.8), // modern office shoe
-        box(5.8, 1.8, 12.4, '#f4f6fa', 0, -21.4, 1.8), // crisp sole
-        sph(2.8, '#f4f6fa', 0, -20.5, 7.2), // toe cap
-        box(3.0, 0.8, 4.8, '#f4f6fa', 0, -18.0, 2.8), // laces
+        cyl(3.5, 3.8, 8.5, pantsHex, 0, -4.2, 0, 12), // calf muscle curve
+        cyl(3.8, 3.2, 9.0, pantsHex, 0, -12.5, 0, 12), // tapered tailored trouser pipe
+        cyl(3.4, 3.4, 2.0, shade(pantsHex, 0.85), 0, -16.5, 0, 12), // crisp trouser cuff
+        box(5.6, 4.2, 12.0, '#262d3d', 0, -18.5, 1.8), // modern office shoe
+        box(5.8, 1.8, 12.4, '#f4f6fa', 0, -20.4, 1.8), // crisp sole
+        sph(2.8, '#f4f6fa', 0, -19.5, 7.2), // toe cap
+        box(3.0, 0.8, 4.8, '#f4f6fa', 0, -17.0, 2.8), // laces
       ]);
 
       // Arms: shoulder sphere penetrates deep into torso shoulder (armPosX = 9.8, shoulder width = 18.6 -> 0 gap!)
@@ -2757,10 +2786,10 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const bob = Math.abs(Math.sin(wp)) * 7.5 * mv;
       rig.root.position.y = bob;
 
-      // Left Arm: plants the walking cane down firmly in sync with left stride
-      rig.armL.rotation.x = -Math.sin(wp) * 0.45 * mv - 0.25 + breathe * 0.04;
-      rig.foreL.rotation.x = -0.45 - Math.max(0, Math.sin(wp)) * 0.25;
-      rig.armL.rotation.z = 0.22;
+      // Left Arm: holds walking cane planted firmly on floor beside left shoe
+      rig.armL.rotation.x = Math.sin(wp) * 0.18 * mv + 0.04 * idle;
+      rig.foreL.rotation.x = Math.sin(wp) * 0.10 * mv + 0.02 * idle;
+      rig.armL.rotation.z = 0.16;
     } else {
       // ---------------- AUTHENTIC ARTICULATED BIPEDAL GAIT ----------------
       rig.legL.rotation.x = sw;
@@ -2771,16 +2800,16 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       rig.legL.rotation.y = 0.14 * idle;
       rig.legR.rotation.y = -0.14 * idle;
 
-      // Articulated Knee Flexion:
-      // Relaxed micro-bend when standing (-0.08), swing phase flexion when moving
-      const kneeFlexL = Math.max(0, Math.sin(wp)) * 0.85 * mv;
-      const kneeFlexR = Math.max(0, -Math.sin(wp)) * 0.85 * mv;
-      rig.shinL.rotation.x = -kneeFlexL - 0.08 * idle;
-      rig.shinR.rotation.x = -kneeFlexR - 0.08 * idle;
+      // Articulated Knee Flexion (Standard Biomechanical Gait):
+      // Trailing leg flexes knee backwards during push-off and swing-through; leading leg extends forward for touchdown
+      const kneeFlexL = Math.max(0, Math.sin(wp + 0.2)) * 1.35 * mv;
+      const kneeFlexR = Math.max(0, -Math.sin(wp + 0.2)) * 1.35 * mv;
+      rig.shinL.rotation.x = kneeFlexL + 0.08 * idle;
+      rig.shinR.rotation.x = kneeFlexR + 0.08 * idle;
 
-      // Stepping foot lifts off floor
-      rig.legL.position.y = legBase + Math.max(0, -Math.sin(wp)) * 3.5 * mv;
-      rig.legR.position.y = legBase + Math.max(0, Math.sin(wp)) * 3.5 * mv;
+      // Stepping leg lifts slightly during swing phase
+      rig.legL.position.y = legBase + Math.max(0, Math.sin(wp)) * 2.8 * mv;
+      rig.legR.position.y = legBase + Math.max(0, -Math.sin(wp)) * 2.8 * mv;
 
       // Pelvic sway & translation (smooth hip roll and subtle breathing weight shift)
       rig.root.rotation.z = Math.sin(wp) * 0.045 * mv + Math.sin(rig.t * 1.8) * 0.015 * idle;

@@ -21,6 +21,8 @@ async function main() {
       viewport: { width: 1024, height: 500 },
       deviceScaleFactor: 2
     });
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', err => console.log('PAGE ERR:', err.message));
 
     await page.route('**/catalog-view', route => route.fulfill({
       contentType: 'text/html',
@@ -121,6 +123,31 @@ async function main() {
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(out, 'catalog-male-styles.png') });
     console.log('Captured catalog-male-styles.png');
+
+    // --- 1b. RUNNING STRIDE (Profile running view: side view heading = -PI/2, moving = true) ---
+    await page.evaluate(({ cx, cy }) => {
+      const runner = {
+        id: 1,
+        name: 'Runner',
+        gender: 'm',
+        role: 'dev',
+        company: '',
+        hue: 35,
+        x: cx,
+        y: cy,
+        heading: -Math.PI / 2, // run left in profile
+        moving: true,
+        swing: 0,
+        hpFrac: 1,
+        dead: false
+      };
+      window.setupScene([runner], null);
+      // Advance to mid-stride where back foot is pushing off and flexing
+      for (let f = 0; f < 28; f++) window.renderFrame(0.016);
+    }, { cx: centerX, cy: centerY });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(out, 'catalog-running-legs.png') });
+    console.log('Captured catalog-running-legs.png');
 
     // --- 2. FEMALE STYLES (0: High ponytail, 1: Twin tails, 2: Wuxia bun, 3: Bob) ---
     await page.evaluate(({ cx, cy }) => {
