@@ -65,6 +65,7 @@ async function main() {
       objects: [],
       boss: null
     };
+    window.S = S;
 
     window.setupScene = (playersList, bossObj) => {
       S.players.clear();
@@ -157,7 +158,7 @@ async function main() {
     await page.screenshot({ path: path.join(out, 'catalog-female-styles.png') });
     console.log('Captured catalog-female-styles.png');
 
-    // --- 3. BOSS VKL (Standing: cane in hand, limp leg with brace) ---
+    // --- 3. BOSS VKL & MINI-BOSSES (Standing: cane in hand, limp leg with brace, proportional heights) ---
     await page.evaluate(({ cx, cy }) => {
       const me = {
         id: 1,
@@ -166,7 +167,7 @@ async function main() {
         role: 'dev',
         company: '',
         hue: 35,
-        x: cx - 55,
+        x: cx - 110,
         y: cy,
         heading: 0,
         moving: false,
@@ -177,7 +178,7 @@ async function main() {
       const boss = {
         dead: false,
         hp: 6000,
-        x: cx + 30,
+        x: cx + 110,
         y: cy,
         pl: {
           id: -1,
@@ -186,7 +187,7 @@ async function main() {
           role: 'boss',
           company: '',
           hue: 0,
-          x: cx + 30,
+          x: cx + 110,
           y: cy,
           heading: 0, // facing camera
           moving: false,
@@ -196,6 +197,26 @@ async function main() {
           dead: false
         }
       };
+      // Minis
+      window.S.minis.clear();
+      window.S.minis.set('TML', {
+        hp: 1200,
+        x: cx - 50,
+        y: cy,
+        pl: { id: 101, name: 'TML', mini: 'TML', role: 'lead', hue: 35, x: cx - 50, y: cy, heading: 0, moving: false, hpFrac: 1 }
+      });
+      window.S.minis.set('DMM', {
+        hp: 1500,
+        x: cx + 0,
+        y: cy,
+        pl: { id: 102, name: 'DMM', mini: 'DMM', role: 'pm', hue: 280, x: cx + 0, y: cy, heading: 0, moving: false, hpFrac: 1 }
+      });
+      window.S.minis.set('PROFK', {
+        hp: 2000,
+        x: cx + 55,
+        y: cy,
+        pl: { id: 103, name: 'Prof. K', mini: 'PROFK', role: 'dev', hue: 140, x: cx + 55, y: cy, heading: 0, moving: false, hpFrac: 1 }
+      });
       window.setupScene([me], boss);
       for (let f = 0; f < 10; f++) window.renderFrame(0.016);
     }, { cx: centerX, cy: centerY });
@@ -242,6 +263,21 @@ async function main() {
           dead: true
         }
       };
+      // Mini beaten and lingering
+      S.minis.set('TML', {
+        hp: 0,
+        x: cx - 95,
+        y: cy,
+        pl: { id: 101, name: 'TML (Beaten)', mini: 'TML', role: 'lead', hue: 35, x: cx - 95, y: cy, heading: 0, moving: false, hpFrac: 0, dead: true }
+      });
+      // Lingering beaten mini-boss
+      window.S.minis.clear();
+      window.S.minis.set('TML', {
+        hp: 0,
+        x: cx - 110,
+        y: cy,
+        pl: { id: 101, name: 'TML (Defeated)', mini: 'TML', role: 'lead', hue: 35, x: cx - 110, y: cy, heading: 0, moving: false, hpFrac: 0, dead: true }
+      });
       window.setupScene([me], boss);
       // Run enough frames for rig.lie to interpolate smoothly to 1.0
       for (let f = 0; f < 30; f++) window.renderFrame(0.05);

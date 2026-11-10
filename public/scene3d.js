@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179426691686';
+import { ROLE_BY_ID } from './roles.js?v=179427101446';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -150,7 +150,7 @@ const RUBBLE = {
 const NO_SHADOW_ON_TOUCH = new Set(['monitor', 'laptop', 'trash']);
 const ELECTRONIC = new Set(['laptop', 'monitor', 'printer', 'server', 'coffee', 'tv', 'fridge', 'speaker']);
 
-const BOSS_SCALE = 2.1; // the boss is a big man
+const BOSS_SCALE = 1.30; // imposing executive boss (~1.3x player height, authoritative without being giant)
 
 // Floor textures (ambientCG, CC0): colour + normal map per floor kind, tinted to the office palette. If a file is
 // missing the old canvas-drawn floor is used. [file, world units per repeat, tint]
@@ -1508,7 +1508,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   const miniRigs = new Map();
   // Prof. K (S.profk) uses the same rig, walk and punch as the minis; he has no HP, so his bar stays hidden.
-  const PROFK_SCALE = [1.75, 1.65, 1.65]; // between DMM (1.65, 1.3, 1.5) and VKL (2.1)
+  const PROFK_SCALE = [1.14, 1.18, 1.14]; // between DMM and VKL
   function updateMinis(dt, S) {
     for (const [id, b] of S.profk ? [...S.minis, ['PROFK', S.profk]] : S.minis) {
       let rig = miniRigs.get(id);
@@ -1516,7 +1516,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig = makePlayer(b.pl);
         // TML keeps a compact silhouette; DMM is broad despite its lower HP.
         if (id === 'PROFK') rig.g.scale.set(...PROFK_SCALE);
-        else rig.g.scale.set(id === 'TML' ? 1.15 : 1.65, 1.3, id === 'TML' ? 1.15 : 1.5);
+        else rig.g.scale.set(id === 'TML' ? 1.08 : 1.20, id === 'TML' ? 1.10 : 1.14, id === 'TML' ? 1.08 : 1.20);
         rig.hpb.classList.add('boss');
         const wind = new THREE.Group();
         const mat = new THREE.MeshBasicMaterial({ color: id === 'TML' ? 0xffa13d : id === 'PROFK' ? 0x2fd08e : 0xc87dff, transparent: true, opacity: 0.65, depthWrite: false });
@@ -1527,13 +1527,22 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig.miniWind = wind; rig.miniFill = fill;
         miniRigs.set(id, rig);
       }
-      rig.g.visible = b.hp > 0;
+      if (b.hp <= 0) {
+        if (!rig.deadAt) rig.deadAt = performance.now();
+      } else {
+        rig.deadAt = 0;
+      }
+      const corpseLinger = b.hp <= 0 && (performance.now() - rig.deadAt < 15000);
+      rig.g.visible = b.hp > 0 || corpseLinger;
+      rig.label.classList.toggle('gone', b.hp <= 0);
       if (b.hp > 0) {
         updatePlayer(rig, b.pl, dt, false, S);
         updateElectricTarget(rig, rig.torsoM, rig.torsoM.geometry, b.pl.electricUntil);
         // Walking, standing and the punch come from the same rig code as players and VKL (updatePlayer above). The
         // mini-boss pose only takes over for the wind-up and the slam, which that code has no telegraph for.
         if (b.wind || (b.pl.swing || 0) > 0 || (rig.miniWindPose || 0) > 0.01) animateMini(rig, b, dt);
+      } else if (corpseLinger) {
+        updatePlayer(rig, { ...b.pl, dead: true, hpFrac: 0, moving: false }, dt, false, S);
       }
       if (b.wind && performance.now() - b.wind.t0 > b.wind.ms + 400) b.wind = null; // cancelled wind-up: no strike follows
       rig.miniWind.visible = !!b.wind && b.hp > 0;
@@ -2034,13 +2043,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
     if (boss) {
       // ---------------- BOSS VKL (WUXIA EXECUTIVE RIG - 1:7 PROPORTION, SEAMLESS JOINTS) ----------------
-      legBaseY = 46;
+      legBaseY = 40;
       legOffsetX = 5.4;
-      torsoPosY = 46;
-      headPosY = 75;
-      armPosY = 68;
+      torsoPosY = 40;
+      headPosY = 69;
+      armPosY = 62;
       armPosX = 11.0;
-      thighLen = 22;
+      thighLen = 19;
 
       // Torso: navy trench coat, waistcoat vest, crisp white collar, crimson tie, gold tie bar
       const torsoParts = [
@@ -2089,41 +2098,44 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
       // Healthy Left Leg: socket ball at top + knee sphere at bottom, zero gap
       thighGeoL = merge([
-        sph(2.9, '#161c2c', 0, 0, 0), // hip ball (sockets in pelvis)
-        cyl(2.9, 2.5, 21, '#161c2c', 0, -10.5, 0, 10),
-        sph(2.5, '#161c2c', 0, -21.5, 0), // knee ball
+        sph(4.2, '#161c2c', 0, 0, 0), // hip ball (sockets in pelvis)
+        cyl(4.2, 3.6, 18, '#161c2c', 0, -9, 0, 12),
+        sph(3.4, '#161c2c', 0, -18.5, 0), // knee ball
       ]);
       shinGeoL = merge([
-        sph(2.52, '#161c2c', 0, 0, 0), // knee socket (matches thigh knee ball)
-        cyl(2.4, 2.0, 20, '#161c2c', 0, -10, 0, 10),
-        box(5.0, 4.2, 11.5, '#0d1117', 0, -21, 1.6), // black oxford leather shoe
-        box(5.2, 1.8, 12.0, '#080a0f', 0, -23, 1.6),
-        sph(2.5, '#161b24', 0, -22, 6.8),
+        sph(3.42, '#161c2c', 0, 0, 0), // knee socket (matches thigh knee ball)
+        cyl(3.5, 3.8, 9, '#161c2c', 0, -4.5, 0, 12), // calf curve
+        cyl(3.8, 3.2, 9.5, '#161c2c', 0, -13.5, 0, 12), // trouser pipe
+        cyl(3.4, 3.4, 2.0, '#11141a', 0, -17.5, 0, 12), // cuff
+        box(5.8, 4.4, 12.0, '#0d1117', 0, -19.5, 1.8), // black oxford leather shoe
+        box(6.0, 1.8, 12.4, '#080a0f', 0, -21.4, 1.8),
+        sph(3.0, '#161b24', 0, -20.5, 7.2),
       ]);
 
       // Injured Right Leg: steel orthopedic brace mechanism with articulated hinge & struts
       thighGeoR = merge([
-        sph(2.9, '#161c2c', 0, 0, 0),
-        cyl(2.9, 2.5, 21, '#161c2c', 0, -10.5, 0, 10),
-        sph(2.5, '#161c2c', 0, -21.5, 0),
-        cyl(3.3, 3.3, 4.0, '#718096', 0, -13, 0, 12), // steel thigh cuff
-        box(3.8, 2.5, 1.2, '#334155', 0, -13, 3.2), // buckle
+        sph(4.2, '#161c2c', 0, 0, 0),
+        cyl(4.2, 3.6, 18, '#161c2c', 0, -9, 0, 12),
+        sph(3.4, '#161c2c', 0, -18.5, 0),
+        cyl(4.4, 4.4, 4.2, '#718096', 0, -11, 0, 12), // steel thigh cuff
+        box(4.6, 2.6, 1.4, '#334155', 0, -11, 3.8), // buckle
       ]);
       shinGeoR = merge([
-        sph(2.52, '#161c2c', 0, 0, 0),
-        cyl(2.4, 2.0, 20, '#161c2c', 0, -10, 0, 10),
+        sph(3.42, '#161c2c', 0, 0, 0),
+        cyl(3.5, 3.8, 9, '#161c2c', 0, -4.5, 0, 12),
+        cyl(3.8, 3.2, 9.5, '#161c2c', 0, -13.5, 0, 12),
         // Steel orthopedic hinge mechanism
-        cyl(2.8, 2.8, 1.4, '#94a3b8', 3.0, 0, 0, 12, 0, 0, Math.PI / 2),
-        sph(0.8, '#f8fafc', 3.7, 0, 0),
-        cyl(2.8, 2.8, 1.4, '#94a3b8', -3.0, 0, 0, 12, 0, 0, Math.PI / 2),
-        sph(0.8, '#f8fafc', -3.7, 0, 0),
+        cyl(3.6, 3.6, 1.6, '#94a3b8', 3.8, 0, 0, 12, 0, 0, Math.PI / 2),
+        sph(1.1, '#f8fafc', 4.6, 0, 0),
+        cyl(3.6, 3.6, 1.6, '#94a3b8', -3.8, 0, 0, 12, 0, 0, Math.PI / 2),
+        sph(1.1, '#f8fafc', -4.6, 0, 0),
         // Vertical steel struts down calf
-        box(1.0, 18, 1.4, '#718096', 3.0, -9, 0),
-        box(1.0, 18, 1.4, '#718096', -3.0, -9, 0),
+        box(1.2, 16, 1.6, '#718096', 3.8, -8, 0),
+        box(1.2, 16, 1.6, '#718096', -3.8, -8, 0),
         // Support shoe
-        box(5.2, 4.4, 11.8, '#1e293b', 0, -21, 1.6),
-        box(5.4, 2.2, 12.2, '#0f172a', 0, -23, 1.6),
-        box(5.3, 5.5, 1.6, '#94a3b8', 0, -20, -3.8), // heel bracket
+        box(6.0, 4.6, 12.2, '#1e293b', 0, -19.5, 1.8),
+        box(6.2, 2.2, 12.6, '#0f172a', 0, -21.4, 1.8),
+        box(6.1, 5.5, 1.8, '#94a3b8', 0, -17.5, -4.0), // heel bracket
       ]);
 
       // Arms: shoulder sphere penetrates deep into torso shoulder (armPosX = 11.0); cane in left hand
@@ -2157,13 +2169,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       };
     } else if (mini) {
       // ---------------- MINI-BOSSES (TML, DMM, PROF. K - 1:7 PROPORTIONS, SEAMLESS) ----------------
-      legBaseY = 46;
+      legBaseY = 40;
       legOffsetX = 5.0;
-      torsoPosY = 46;
-      headPosY = 74;
-      armPosY = 67;
+      torsoPosY = 40;
+      headPosY = 68;
+      armPosY = 61;
       armPosX = 10.4;
-      thighLen = 22;
+      thighLen = 19;
 
       const miniType = p.mini;
       const suitColor = miniType === 'TML' ? '#68432c' : miniType === 'DMM' ? '#49315e' : '#e2e8f0';
@@ -2207,15 +2219,18 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       head = merge(headParts);
 
       thighGeoL = thighGeoR = merge([
-        sph(2.8, '#161c2c', 0, 0, 0),
-        cyl(2.8, 2.4, 21, '#161c2c', 0, -10.5, 0, 10),
-        sph(2.4, '#161c2c', 0, -21.5, 0),
+        sph(4.0, '#161c2c', 0, 0, 0),
+        cyl(4.0, 3.4, 18, '#161c2c', 0, -9, 0, 12),
+        sph(3.2, '#161c2c', 0, -18.5, 0),
       ]);
       shinGeoL = shinGeoR = merge([
-        sph(2.42, '#161c2c', 0, 0, 0),
-        cyl(2.3, 1.9, 20, '#161c2c', 0, -10, 0, 10),
-        box(4.8, 4.0, 11.2, '#0d1117', 0, -21, 1.6),
-        box(5.0, 1.8, 11.6, '#080a0f', 0, -23, 1.6),
+        sph(3.22, '#161c2c', 0, 0, 0),
+        cyl(3.3, 3.6, 9, '#161c2c', 0, -4.5, 0, 12),
+        cyl(3.6, 3.0, 9.5, '#161c2c', 0, -13.5, 0, 12),
+        cyl(3.2, 3.2, 2.0, '#11141a', 0, -17.5, 0, 12),
+        box(5.6, 4.2, 11.8, '#0d1117', 0, -19.5, 1.8),
+        box(5.8, 1.8, 12.2, '#080a0f', 0, -21.4, 1.8),
+        sph(2.8, '#161b24', 0, -20.5, 7.2),
       ]);
 
       makeArm = () => {
@@ -2237,13 +2252,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       };
     } else if (female) {
       // ---------------- FEMALE PLAYERS (1:7 PROPORTIONS, SEAMLESS BALL SOCKETS, FLAT EYES) ----------------
-      legBaseY = 46;
+      legBaseY = 38;
       legOffsetX = 4.2;
-      torsoPosY = 46;
-      headPosY = 73;
-      armPosY = 66;
+      torsoPosY = 38;
+      headPosY = 65;
+      armPosY = 58;
       armPosX = 8.6;
-      thighLen = 22;
+      thighLen = 17.5;
 
       // Torso: slender feminine waist, blouse, collar/ribbon; shoulders extend to X = ±8.6
       const torsoParts = [
@@ -2331,44 +2346,48 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const isSlacks = style === 2;
       const legColor = isSlacks ? '#282f3d' : skin;
       thighGeoL = thighGeoR = merge([
-        sph(2.6, legColor, 0, 0, 0), // hip ball (inside pelvis socket)
-        cyl(2.6, 2.2, 21, legColor, 0, -10.5, 0, 10),
-        sph(2.2, legColor, 0, -21.5, 0), // knee ball
+        sph(3.6, legColor, 0, 0, 0), // hip ball (inside pelvis socket)
+        cyl(3.6, 3.0, 17, legColor, 0, -8.5, 0, 12),
+        sph(2.8, legColor, 0, -17.5, 0), // knee ball
       ]);
 
       if (style === 0) {
         // Dark knee-high socks + buckle loafers
         shinGeoL = shinGeoR = merge([
-          sph(2.22, '#1e232e', 0, 0, 0), // knee socket
-          cyl(2.1, 1.7, 20, '#1e232e', 0, -10, 0, 10),
-          box(4.2, 3.8, 10.5, '#11141a', 0, -21, 1.5),
-          box(4.4, 1.6, 11.0, '#080a0f', 0, -22.8, 1.5),
-          box(2.2, 0.8, 0.8, '#e2e8f0', 0, -19.5, 3.5),
+          sph(2.82, '#1e232e', 0, 0, 0), // knee socket
+          cyl(2.9, 3.2, 8.5, '#1e232e', 0, -4.2, 0, 12),
+          cyl(3.2, 2.5, 9.5, '#1e232e', 0, -13.2, 0, 12),
+          box(4.8, 4.0, 11.0, '#11141a', 0, -18.5, 1.6),
+          box(5.0, 1.6, 11.4, '#080a0f', 0, -20.3, 1.6),
+          box(2.4, 0.8, 0.8, '#e2e8f0', 0, -17.0, 3.6),
         ]);
       } else if (style === 1) {
         // White ankle socks + pumps
         shinGeoL = shinGeoR = merge([
-          sph(2.22, skin, 0, 0, 0),
-          cyl(2.1, 1.7, 20, skin, 0, -10, 0, 10),
-          cyl(2.3, 2.3, 2.8, '#ffffff', 0, -16.5, 0, 10), // sock
-          box(4.0, 3.6, 10.2, '#2a2f3a', 0, -21, 1.5),
-          box(4.2, 1.6, 10.6, '#1a1e28', 0, -22.8, 1.5),
+          sph(2.82, skin, 0, 0, 0),
+          cyl(2.9, 3.2, 8.5, skin, 0, -4.2, 0, 12),
+          cyl(3.2, 2.5, 9.5, skin, 0, -13.2, 0, 12),
+          cyl(2.8, 2.8, 2.6, '#ffffff', 0, -15.5, 0, 12), // sock
+          box(4.6, 3.8, 10.6, '#2a2f3a', 0, -18.5, 1.6),
+          box(4.8, 1.6, 11.0, '#1a1e28', 0, -20.3, 1.6),
         ]);
       } else if (style === 2) {
         // Flared slacks + flats
         shinGeoL = shinGeoR = merge([
-          sph(2.22, '#282f3d', 0, 0, 0),
-          cyl(2.3, 1.9, 20, '#282f3d', 0, -10, 0, 10),
-          box(4.2, 3.8, 10.5, '#1a1e28', 0, -21, 1.5),
-          box(4.4, 1.6, 11.0, '#0d1117', 0, -22.8, 1.5),
+          sph(2.82, '#282f3d', 0, 0, 0),
+          cyl(2.9, 3.3, 8.5, '#282f3d', 0, -4.2, 0, 12),
+          cyl(3.3, 3.6, 9.5, '#282f3d', 0, -13.2, 0, 12),
+          box(4.8, 3.8, 10.8, '#1a1e28', 0, -18.5, 1.6),
+          box(5.0, 1.6, 11.2, '#0d1117', 0, -20.3, 1.6),
         ]);
       } else {
         // Tights + heels
         shinGeoL = shinGeoR = merge([
-          sph(2.22, '#252932', 0, 0, 0),
-          cyl(2.1, 1.7, 20, '#252932', 0, -10, 0, 10),
-          box(4.0, 3.6, 10.2, '#161922', 0, -21, 1.5),
-          box(4.2, 1.6, 10.6, '#0a0d13', 0, -22.8, 1.5),
+          sph(2.82, '#252932', 0, 0, 0),
+          cyl(2.9, 3.2, 8.5, '#252932', 0, -4.2, 0, 12),
+          cyl(3.2, 2.5, 9.5, '#252932', 0, -13.2, 0, 12),
+          box(4.6, 3.8, 10.6, '#161922', 0, -18.5, 1.6),
+          box(4.8, 1.6, 11.0, '#0a0d13', 0, -20.3, 1.6),
         ]);
       }
 
@@ -2393,13 +2412,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       };
     } else {
       // ---------------- MALE PLAYERS (1:7 PROPORTIONS, SEAMLESS BALL SOCKETS, FLAT EYES) ----------------
-      legBaseY = 46;
+      legBaseY = 40;
       legOffsetX = 4.6;
-      torsoPosY = 46;
-      headPosY = 74;
-      armPosY = 67;
+      torsoPosY = 40;
+      headPosY = 68;
+      armPosY = 61;
       armPosX = 9.8;
-      thighLen = 23;
+      thighLen = 19;
 
       // Torso: slim-fit shirt, tie, belt, lanyard; shoulders extend to X = ±9.3 (armPosX = 9.8 -> 0 gap!)
       const torsoParts = [
@@ -2472,19 +2491,21 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       }
       head = merge(headParts);
 
-      // Legs: seamless ball socket at hip and knee
+      // Legs: tailored trousers with masculine volume, calf shape, and cuff break
       thighGeoL = thighGeoR = merge([
-        sph(2.8, pantsHex, 0, 0, 0), // hip ball (sockets inside pelvis block)
-        cyl(2.8, 2.4, 22, pantsHex, 0, -11, 0, 10),
-        sph(2.4, pantsHex, 0, -22, 0), // knee ball
+        sph(4.2, pantsHex, 0, 0, 0), // hip ball (sockets inside pelvis block)
+        cyl(4.2, 3.6, 18, pantsHex, 0, -9, 0, 12),
+        sph(3.4, pantsHex, 0, -18.5, 0), // knee ball
       ]);
       shinGeoL = shinGeoR = merge([
-        sph(2.42, pantsHex, 0, 0, 0), // knee socket (shared center with thigh knee ball)
-        cyl(2.3, 1.9, 21, pantsHex, 0, -10.5, 0, 10),
-        box(4.8, 4.2, 11.5, '#262d3d', 0, -22.5, 1.8),
-        box(5.0, 1.8, 12.0, '#f4f6fa', 0, -24.4, 1.8),
-        sph(2.5, '#f4f6fa', 0, -23.5, 7.2),
-        box(2.8, 0.8, 4.5, '#f4f6fa', 0, -20.8, 2.8),
+        sph(3.42, pantsHex, 0, 0, 0), // knee socket (shared center with thigh knee ball)
+        cyl(3.5, 3.8, 9, pantsHex, 0, -4.5, 0, 12), // calf muscle curve
+        cyl(3.8, 3.2, 9.5, pantsHex, 0, -13.5, 0, 12), // tapered tailored trouser pipe
+        cyl(3.4, 3.4, 2.0, shade(pantsHex, 0.85), 0, -17.5, 0, 12), // crisp trouser cuff
+        box(5.6, 4.2, 12.0, '#262d3d', 0, -19.5, 1.8), // modern office shoe
+        box(5.8, 1.8, 12.4, '#f4f6fa', 0, -21.4, 1.8), // crisp sole
+        sph(2.8, '#f4f6fa', 0, -20.5, 7.2), // toe cap
+        box(3.0, 0.8, 4.8, '#f4f6fa', 0, -18.0, 2.8), // laces
       ]);
 
       // Arms: shoulder sphere penetrates deep into torso shoulder (armPosX = 9.8, shoulder width = 18.6 -> 0 gap!)
@@ -2598,7 +2619,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // arm lifts the hammer and swinging it down brings the head onto whatever is in front.
     hammer.position.set(0, -12, 1); // in the fist, at the end of the forearm
     hammer.quaternion.copy(_hammerHeld);
-    hammer.scale.setScalar(0.72);
+    hammer.scale.setScalar(0.40);
     foreR.add(hammer);
     // A bubble tea cup (for the milk tea throw) and a stun gun (for the electric skill) in the same fist, shown instead
     // of the hammer when that skill is chosen. Origin = where the fist holds them, "up" = the cup's / the gun's barrel.
@@ -2744,23 +2765,26 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       // ---------------- AUTHENTIC ARTICULATED BIPEDAL GAIT ----------------
       rig.legL.rotation.x = sw;
       rig.legR.rotation.x = -sw;
-      rig.legL.rotation.z = 0;
-      rig.legR.rotation.z = 0;
+      // Natural standing stance: subtle A-frame angle + relaxed toe-out
+      rig.legL.rotation.z = -0.08 * idle;
+      rig.legR.rotation.z = 0.08 * idle;
+      rig.legL.rotation.y = 0.14 * idle;
+      rig.legR.rotation.y = -0.14 * idle;
 
       // Articulated Knee Flexion:
-      // Knee flexes back during forward swing phase for foot clearance, straightens right before heel strike
+      // Relaxed micro-bend when standing (-0.08), swing phase flexion when moving
       const kneeFlexL = Math.max(0, Math.sin(wp)) * 0.85 * mv;
       const kneeFlexR = Math.max(0, -Math.sin(wp)) * 0.85 * mv;
-      rig.shinL.rotation.x = -kneeFlexL;
-      rig.shinR.rotation.x = -kneeFlexR;
+      rig.shinL.rotation.x = -kneeFlexL - 0.08 * idle;
+      rig.shinR.rotation.x = -kneeFlexR - 0.08 * idle;
 
       // Stepping foot lifts off floor
       rig.legL.position.y = legBase + Math.max(0, -Math.sin(wp)) * 3.5 * mv;
       rig.legR.position.y = legBase + Math.max(0, Math.sin(wp)) * 3.5 * mv;
 
-      // Pelvic sway & translation (smooth hip roll)
-      rig.root.rotation.z = Math.sin(wp) * 0.045 * mv;
-      rig.root.position.x = Math.sin(wp) * 1.5 * mv;
+      // Pelvic sway & translation (smooth hip roll and subtle breathing weight shift)
+      rig.root.rotation.z = Math.sin(wp) * 0.045 * mv + Math.sin(rig.t * 1.8) * 0.015 * idle;
+      rig.root.position.x = Math.sin(wp) * 1.5 * mv + Math.sin(rig.t * 1.8) * 0.4 * idle;
 
       // Bipedal vertical bobbing
       const bob = Math.abs(Math.sin(wp)) * 3.2 * mv;
@@ -2800,7 +2824,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     // the ultimate: whatever is in the hand swells for a moment
     const giantTarget = (p.ultUntil || 0) > performance.now() ? 3.2 : 1;
     rig.giant = (rig.giant || 1) + (giantTarget - (rig.giant || 1)) * Math.min(1, dt * (giantTarget > 1 ? 14 : 6));
-    rig.hammer.scale.setScalar(0.82 * rig.giant);
+    rig.hammer.scale.setScalar(0.40 * rig.giant);
     rig.cup.scale.setScalar(rig.giant);
     rig.taser.scale.setScalar(rig.giant);
     const CARRY = -0.12; // at rest: the arm hangs naturally at the side
@@ -3730,13 +3754,13 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     updateHealthBars(S);
     if (bossRig) {
       const bp = S.boss && S.boss.pl;
-      const pr = bp ? project(bp.x, 132 * BOSS_SCALE + 14, bp.y) : null;
+      const pr = bp ? project(bp.x, 92 * BOSS_SCALE + 26, bp.y) : null;
       const on = !!pr && !S.boss.dead && pr.ok && pr.sx > -120 && pr.sx < W + 120 && pr.sy > -60 && pr.sy < H + 60;
       bossRig.label.style.display = on ? '' : 'none';
       if (on) bossRig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
     }
     for (const [id, rig] of miniRigs) {
-      const b = id === 'PROFK' ? S.profk : S.minis.get(id), pr = b ? project(b.x, id === 'PROFK' ? 240 : 190, b.y) : null; // Prof. K is taller
+      const b = id === 'PROFK' ? S.profk : S.minis.get(id), pr = b ? project(b.x, id === 'PROFK' ? 148 : 138, b.y) : null;
       const on = !!pr && b.hp > 0 && pr.ok && pr.sx > -120 && pr.sx < W + 120 && pr.sy > -60 && pr.sy < H + 60;
       rig.label.style.display = on ? '' : 'none';
       if (on) rig.label.style.transform = 'translate(' + pr.sx.toFixed(1) + 'px,' + pr.sy.toFixed(1) + 'px) translate(-50%,-100%)';
