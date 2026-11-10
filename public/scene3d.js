@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179427931641';
+import { ROLE_BY_ID } from './roles.js?v=179428007982';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -2162,11 +2162,16 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         ])));
         const fore = new THREE.Group();
         fore.position.y = -12;
+        const thumbX = isLeft ? -1.4 : 1.4;
+        const thumbRotZ = isLeft ? -0.35 : 0.35;
         fore.add(mk(merge([
           sph(2.42, '#1a2233', 0, 0, 0), // elbow socket
-          cyl(2.5, 2.2, 12, '#1a2233', 0, -6, 0, 10),
-          cyl(2.7, 2.7, 1.8, '#f4f6fa', 0, -11.5, 0, 10), // white cuff
-          box(2.8, 3.4, 2.0, skin, 0, -13.5, 0), // hand
+          cyl(2.5, 2.2, 10.5, '#1a2233', 0, -5.2, 0, 10),
+          cyl(2.5, 2.5, 1.8, '#f4f6fa', 0, -10.2, 0, 10), // white cuff
+          sph(1.75, skin, 0, -11.2, 0), // wrist
+          ell(1.85, 2.3, 1.4, skin, 0, -13.0, 0.1), // palm
+          ell(1.75, 1.1, 1.35, skin, 0, -14.8, 0.35), // curled fingers
+          pill(0.68, 1.6, skin, thumbX, -12.6, 0.85, 0.3, 0, thumbRotZ), // thumb
         ])));
         if (isLeft) {
           // Ebony cane with gold lion-head handle, firmly grounded onto the floor
@@ -2259,7 +2264,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         sph(2.8, '#161b24', 0, -20.5, 7.2),
       ]);
 
-      makeArm = () => {
+      makeArm = (isLeft) => {
         const shoulder = new THREE.Group();
         shoulder.add(mk(merge([
           sph(2.8, suitColor, 0, 0, 0),
@@ -2268,10 +2273,16 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         ])));
         const fore = new THREE.Group();
         fore.position.y = -12;
+        const thumbX = isLeft ? -1.3 : 1.3;
+        const thumbRotZ = isLeft ? -0.35 : 0.35;
         fore.add(mk(merge([
           sph(2.32, suitColor, 0, 0, 0),
-          cyl(2.4, 2.0, 12, suitColor, 0, -6, 0, 10),
-          box(2.6, 3.2, 1.8, skin, 0, -13, 0),
+          cyl(2.4, 2.05, 10.5, suitColor, 0, -5.2, 0, 10),
+          cyl(2.15, 2.15, 1.8, '#f4f6fa', 0, -10.2, 0, 10), // shirt cuff peeking from suit sleeve
+          sph(1.68, skin, 0, -11.0, 0), // wrist
+          ell(1.75, 2.2, 1.35, skin, 0, -12.8, 0.1), // palm
+          ell(1.65, 1.0, 1.30, skin, 0, -14.6, 0.35), // curled fingers
+          pill(0.65, 1.6, skin, thumbX, -12.4, 0.8, 0.3, 0, thumbRotZ), // thumb
         ])));
         shoulder.add(fore);
         return { shoulder, fore };
@@ -2440,7 +2451,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       }
 
       // Arms: shoulder sphere penetrates deep into torso shoulder (armPosX = 8.6, shoulder width = 16.2 -> 0 gap!)
-      makeArm = () => {
+      makeArm = (isLeft) => {
         const shoulder = new THREE.Group();
         shoulder.add(mk(merge([
           sph(2.5, shirtHex, 0, 0, 0),
@@ -2450,10 +2461,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         ])));
         const fore = new THREE.Group();
         fore.position.y = -10;
+        const thumbX = isLeft ? -1.15 : 1.15;
+        const thumbRotZ = isLeft ? -0.35 : 0.35;
         fore.add(mk(merge([
           sph(2.02, skin, 0, 0, 0), // elbow socket
-          cyl(1.9, 1.6, 11, skin, 0, -5.5, 0, 10),
-          box(2.4, 3.0, 1.8, skin, 0, -12, 0),
+          cyl(1.85, 1.45, 9.5, skin, 0, -4.8, 0, 12), // slender feminine forearm
+          sph(1.48, skin, 0, -9.5, 0), // slender wrist
+          ell(1.5, 2.0, 1.2, skin, 0, -11.4, 0.1), // graceful feminine palm
+          ell(1.4, 0.9, 1.15, skin, 0, -13.0, 0.3), // curled fingers
+          pill(0.55, 1.4, skin, thumbX, -11.0, 0.7, 0.3, 0, thumbRotZ), // delicate thumb
         ])));
         shoulder.add(fore);
         return { shoulder, fore };
@@ -2598,21 +2614,25 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       ]);
 
       // Arms: shoulder sphere penetrates deep into torso shoulder (armPosX = 9.8, shoulder width = 18.6 -> 0 gap!)
-      makeArm = () => {
+      makeArm = (isLeft) => {
         const shoulder = new THREE.Group();
         shoulder.add(mk(merge([
           sph(2.8, shirtHex, 0, 0, 0),
-          cyl(2.6, 2.3, 11, shirtHex, 0, -5.5, 0, 10),
-          cyl(2.8, 2.8, 2.2, shade(shirtHex, 1.15), 0, -10.5, 0, 10),
+          cyl(2.6, 2.3, 11, shirtHex, 0, -5.5, 0, 12),
+          cyl(2.8, 2.8, 2.2, shade(shirtHex, 1.15), 0, -10.5, 0, 12), // rolled sleeve cuff
           sph(2.2, skin, 0, -11, 0), // elbow ball
         ])));
         const fore = new THREE.Group();
         fore.position.y = -11;
+        const thumbX = isLeft ? -1.3 : 1.3;
+        const thumbRotZ = isLeft ? -0.35 : 0.35;
         fore.add(mk(merge([
           sph(2.22, skin, 0, 0, 0), // elbow socket
-          cyl(2.1, 1.8, 12, skin, 0, -6, 0, 10),
-          box(2.8, 3.4, 2.0, skin, 0, -12.5, 0),
-          capsule(0.7, 1.8, skin, 1.4, -12, 0.7, 0.35, 0.25, 0),
+          cyl(2.1, 1.65, 10.5, skin, 0, -5.2, 0, 12), // tapered athletic forearm
+          sph(1.68, skin, 0, -10.5, 0), // soft rounded wrist
+          ell(1.75, 2.2, 1.35, skin, 0, -12.4, 0.1), // sculpted natural palm
+          ell(1.65, 1.0, 1.30, skin, 0, -14.2, 0.35), // relaxed curled fingers
+          pill(0.65, 1.6, skin, thumbX, -12.0, 0.8, 0.3, 0, thumbRotZ), // distinct articulated thumb
         ])));
         shoulder.add(fore);
         return { shoulder, fore };

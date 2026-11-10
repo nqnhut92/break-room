@@ -125,6 +125,21 @@ async function main() {
     await page.screenshot({ path: path.join(out, 'catalog-male-styles.png') });
     console.log('Captured catalog-male-styles.png');
 
+    // --- 1a. CLOSE-UP HAND & UPPER BODY ---
+    await page.evaluate(() => {
+      window.app.cameraTo(1920 - 48 * 0.5, 1950);
+      for (let i = 0; i < 4; i++) window.app.zoomStep(-1);
+      window.renderFrame(0.016);
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(out, 'catalog-hand-detail.png') });
+    console.log('Captured catalog-hand-detail.png');
+    await page.evaluate(() => {
+      window.app.resetZoom();
+      window.app.cameraTo(1920, 1950);
+      window.renderFrame(0.016);
+    });
+
     // --- 1b. RUNNING STRIDE (Profile running view: side view heading = -PI/2, moving = true) ---
     await page.evaluate(({ cx, cy }) => {
       const runner = {
