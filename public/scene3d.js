@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179428106790';
+import { ROLE_BY_ID } from './roles.js?v=179428285306';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -1490,9 +1490,9 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     }
     if (!windMesh) {
       windMesh = new THREE.Group();
-      const outline = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 56), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.9, depthWrite: false }));
-      const base = new THREE.Mesh(new THREE.CircleGeometry(1, 56), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.16, depthWrite: false }));
-      const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 56), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.4, depthWrite: false }));
+      const outline = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 32), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.9, depthWrite: false }));
+      const base = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.16, depthWrite: false }));
+      const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: 0xff3b2a, transparent: true, opacity: 0.4, depthWrite: false }));
       for (const m of [base, fill, outline]) {
         m.rotation.x = -Math.PI / 2;
         windMesh.add(m);
@@ -1526,8 +1526,8 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
         rig.hpb.classList.add('boss');
         const wind = new THREE.Group();
         const mat = new THREE.MeshBasicMaterial({ color: id === 'TML' ? 0xffa13d : id === 'PROFK' ? 0x2fd08e : 0xc87dff, transparent: true, opacity: 0.65, depthWrite: false });
-        const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 48), mat);
-        const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 48), mat.clone());
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 32), mat);
+        const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 32), mat.clone());
         ring.rotation.x = fill.rotation.x = -Math.PI / 2;
         fill.material.opacity = 0.22; wind.add(ring, fill); wind.position.y = 2; scene.add(wind);
         rig.miniWind = wind; rig.miniFill = fill;
@@ -3569,15 +3569,16 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- floating texts (DOM, pinned to a 3D point) --------------------------
   const texts = [];
+  const maxTexts = coarse ? 16 : 40;
   function floatText(x, y, z, text, color, size) {
     const el = document.createElement('div');
     el.className = 'ftext';
     el.textContent = text;
     el.style.color = color;
-    el.style.fontSize = size + 'px';
+    el.style.fontSize = (coarse ? Math.max(13, size * 0.9) : size) + 'px';
     labelsEl.appendChild(el);
-    texts.push({ el, x, y, z, life: 1.2, max: 1.2 });
-    while (texts.length > 40) texts.shift().el.remove();
+    texts.push({ el, x, y, z, life: 1.1, max: 1.1 });
+    while (texts.length > maxTexts) texts.shift().el.remove();
   }
 
   // Hidden effects otherwise compile their programs on the first hammer impact.
@@ -3606,11 +3607,15 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
 
   // ---- projection ---------------------------------------------------------
   const v3 = new THREE.Vector3();
+  const _proj = { sx: 0, sy: 0, ok: false };
   let W = 1;
   let H = 1;
   function project(x, y, z) {
     v3.set(x, y, z).project(camera);
-    return { sx: (v3.x * 0.5 + 0.5) * W, sy: (-v3.y * 0.5 + 0.5) * H, ok: v3.z < 1 && v3.z > -1 };
+    _proj.sx = (v3.x * 0.5 + 0.5) * W;
+    _proj.sy = (-v3.y * 0.5 + 0.5) * H;
+    _proj.ok = v3.z < 1 && v3.z > -1;
+    return _proj;
   }
 
   // ---- health bars over damaged objects -------------------------------------
@@ -3768,7 +3773,7 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
     const sunDist = 1280 + shadowR * 0.9; // further away for a bigger box, so no ground point ends up behind the light
     sun.position.set(cam.x - (500 / 1280) * sunDist, (1100 / 1280) * sunDist, cam.z + (450 / 1280) * sunDist);
     sun.target.position.set(cam.x, 0, cam.z);
-    fitShadowBox(d);
+    if (sun.castShadow) fitShadowBox(d);
 
     // objects
     if (!contactBuilt && built && S.objects.length) buildContactShadows(S.objects, S.types);

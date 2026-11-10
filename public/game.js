@@ -1,9 +1,9 @@
-import { createGameAudio, distanceVolume } from './audio.js?v=179428106790';
-import './actor-collision.js?v=179428106790';
-import { accountUI } from './account.js?v=179428106790';
-import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179428106790';
-import { createScene3D } from './scene3d.js?v=179428106790';
-import { ROLES, ROLE_BY_ID } from './roles.js?v=179428106790';
+import { createGameAudio, distanceVolume } from './audio.js?v=179428285306';
+import './actor-collision.js?v=179428285306';
+import { accountUI } from './account.js?v=179428285306';
+import { renderIcons, setButtonIcon } from './vendor/lucide-icons.js?v=179428285306';
+import { createScene3D } from './scene3d.js?v=179428285306';
+import { ROLES, ROLE_BY_ID } from './roles.js?v=179428285306';
 
 (() => {
   'use strict';
@@ -940,6 +940,23 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428106790';
   const narrowMQ = window.matchMedia('(max-width: 640px)');
   const BOSS_TARGET = -2; // value of S.attackId while tapping on the boss walks over and swings at it
   const hurtEl = $('hurt');
+  let lastHurtVibrate = 0;
+  function triggerHurtFeedback() {
+    if (hurtEl.getAnimations && hurtEl.getAnimations().length) {
+      for (const a of hurtEl.getAnimations()) {
+        a.currentTime = 0;
+        a.play();
+      }
+    } else {
+      hurtEl.classList.remove('on');
+      requestAnimationFrame(() => hurtEl.classList.add('on'));
+    }
+    const now = performance.now();
+    if (navigator.vibrate && now - lastHurtVibrate > 280) {
+      lastHurtVibrate = now;
+      navigator.vibrate(40);
+    }
+  }
 
   function receiveMinis(state) {
     if (!state || state.version <= S.miniVersion) return;
@@ -1153,7 +1170,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428106790';
     const v = volumeAt(m.x, m.y);
     sfxPunch(v);
     S.shake = Math.min(1.4, S.shake + 0.55 * v);
-    if (scene) for (let i = 0; i < 6; i++) scene.fx.smoke(m.x + rand(-m.r, m.r) * 0.7, 6, m.y + rand(-m.r, m.r) * 0.7);
+    if (scene) for (let i = 0; i < (narrowMQ.matches ? 3 : 6); i++) scene.fx.smoke(m.x + rand(-m.r, m.r) * 0.7, 6, m.y + rand(-m.r, m.r) * 0.7);
   }
   function bossHit(m) {
     const b = S.boss;
@@ -1228,12 +1245,9 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428106790';
     p.hpT = performance.now();
     if (scene) scene.fx.floatText(p.x, 150, p.y, '-' + m.dmg, '#ff6b5a', 20);
     if (m.id === S.me) {
-      hurtEl.classList.remove('on');
-      void hurtEl.offsetWidth; // restart the animation
-      hurtEl.classList.add('on');
+      triggerHurtFeedback();
       S.shake = Math.min(1.4, S.shake + 0.6);
       sfxHurt();
-      if (navigator.vibrate) navigator.vibrate(60);
     }
   }
   // Who knocked a player out, from the server's `by` on 'down' (an older server sends none: it was always VKL then).
@@ -1263,9 +1277,7 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428106790';
       S.smashHeld = false;
       S.target = null;
       S.attackId = null;
-      hurtEl.classList.remove('on');
-      void hurtEl.offsetWidth;
-      hurtEl.classList.add('on');
+      triggerHurtFeedback();
       sfxHurt();
       $('downOverlay').hidden = false;
       $('downBy').textContent = downCause(m.by);
