@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
-import { ROLE_BY_ID } from './roles.js?v=179427882379';
+import { ROLE_BY_ID } from './roles.js?v=179427931641';
 
 // ------------------------------------------------------------- geometry ----
 const _m = new THREE.Matrix4();
@@ -60,6 +60,12 @@ const ell = (a, b, c, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
 };
 const pill = (r, len, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) =>
   place(paint(new THREE.CapsuleGeometry(r, len, 5, 12), hex), x, y, z, rx, ry, rz);
+const latheMesh = (pts, sx, sz, hex, x = 0, y = 0, z = 0, seg = 20) => {
+  const v2 = pts.map(([px, py]) => new THREE.Vector2(px, py));
+  const g = new THREE.LatheGeometry(v2, seg);
+  g.scale(sx, 1, sz);
+  return place(paint(g, hex), x, y, z);
+};
 // Models have indexed geometry with UVs; bring every part to the same shape so they can share one merged mesh.
 const merge = (list) => {
   if (!list.length) return null;
@@ -2051,13 +2057,24 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       armPosX = 11.0;
       thighLen = 19;
 
-      // Torso: navy trench coat, waistcoat vest, crisp white collar, crimson tie, gold tie bar
+      // Torso: ONE SINGLE SEAMLESS EXECUTIVE OVERCOAT & SUIT
       const torsoParts = [
-        ell(8.2, 4.6, 4.8, '#161c2c', 0, 0, 0), // pelvis
-        box(15.5, 6.0, 9.0, '#161c2c', 0, -0.6, 0), // pelvis socket
-        ell(8.2, 5.2, 4.8, '#242b3d', 0, 7.0, 0), // tailored vest & waist
-        ell(10.2, 7.0, 5.8, '#1a2233', 0, 15.0, 0), // broad tailored chest
-        ell(11.2, 3.6, 5.6, '#1a2233', 0, 22.0, 0), // draped overcoat shoulder crest (reaches X = ±11.0)
+        latheMesh([
+          [3.8, -3.5],
+          [7.2, -1.8],
+          [8.2, 1.5],
+        ], 1.0, 0.58, '#161c2c'),
+        box(15.5, 5.5, 8.8, '#161c2c', 0, -0.6, 0),
+
+        latheMesh([
+          [7.8, 1.5],
+          [8.4, 7.0],
+          [9.8, 14.5],
+          [10.8, 20.5],
+          [10.2, 23.0],
+          [3.4, 24.8],
+        ], 1.0, 0.56, '#1a2233'),
+
         // White collar & placket
         cyl(3.2, 3.8, 3.2, '#f4f6fa', 0, 24.5, 1.2, 12),
         box(4.5, 12, 0.8, '#f4f6fa', 0, 18, 5.2),
@@ -2177,11 +2194,22 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       const miniType = p.mini;
       const suitColor = miniType === 'TML' ? '#68432c' : miniType === 'DMM' ? '#49315e' : '#e2e8f0';
       const torsoParts = [
-        ell(7.8, 4.4, 4.6, suitColor, 0, 0, 0), // pelvis
-        box(15.0, 6.0, 8.5, suitColor, 0, -0.6, 0), // pelvis socket
-        ell(7.6, 4.8, 4.4, suitColor, 0, 6.8, 0), // waist
-        ell(miniType === 'DMM' ? 10.2 : 9.0, 6.2, 5.2, suitColor, 0, 15, 0), // chest (broad for DMM)
-        ell(miniType === 'DMM' ? 11.0 : 10.4, 3.4, 5.0, suitColor, 0, 21.5, 0), // broad rounded shoulders
+        latheMesh([
+          [3.6, -3.5],
+          [6.8, -1.8],
+          [miniType === 'DMM' ? 8.2 : 7.6, 1.5],
+        ], 1.0, 0.58, suitColor),
+        box(15.0, 5.5, 8.5, suitColor, 0, -0.6, 0),
+
+        latheMesh([
+          [miniType === 'DMM' ? 8.2 : 7.5, 1.5],
+          [miniType === 'DMM' ? 8.8 : 7.8, 7.0],
+          [miniType === 'DMM' ? 10.4 : 8.8, 14.5],
+          [miniType === 'DMM' ? 11.2 : 10.0, 20.5],
+          [miniType === 'DMM' ? 10.4 : 9.2, 23.0],
+          [3.2, 24.5],
+        ], 1.0, 0.56, suitColor),
+
         cyl(3.0, 3.6, 3.2, '#f4f6fa', 0, 24.2, 0.8, 12),
       ];
       if (miniType === 'TML') {
@@ -2258,17 +2286,27 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       armPosX = 8.6;
       thighLen = 17.5;
 
-      // Torso: slender feminine waist, blouse, soft curves; shoulders extend seamlessly to X = ±8.6
+      // Torso: ONE SINGLE SEAMLESS FEMININE BLOUSE (smooth hourglass silhouette, 0 horizontal cuts)
       const torsoParts = [
-        ell(6.8, 4.2, 4.2, '#222a38', 0, 0, 0), // pelvis socket
-        box(12.4, 5.5, 7.5, '#222a38', 0, -0.6, 0),
-        ell(5.8, 4.2, 3.8, shirtHex, 0, 6.8, 0), // slender natural hourglass waist
-        ell(7.0, 5.4, 4.2, shirtHex, 0, 14.5, 0.2), // feminine chest
-        ell(2.8, 2.4, 2.6, shirtHex, -2.4, 14.0, 3.0), // soft bust curve L
-        ell(2.8, 2.4, 2.6, shirtHex, 2.4, 14.0, 3.0), // soft bust curve R
-        ell(8.6, 2.6, 4.0, shirtHex, 0, 20.2, 0), // soft rounded feminine shoulders
-        cyl(2.4, 3.0, 2.8, shirtHex, 0, 23.4, 0, 12), // collar
-        box(1.0, 13, 0.3, shade(shirtHex, 0.85), 0, 14, 4.1), // placket
+        latheMesh([
+          [3.0, -3.2],
+          [6.0, -1.5],
+          [6.8, 2.0],
+        ], 1.0, 0.58, '#222a38'), // pelvis slacks / skirt base
+        box(12.4, 5.0, 7.5, '#222a38', 0, -0.6, 0),
+
+        // ONE SINGLE CONTINUOUS BLOUSE: slender waist -> feminine chest -> soft shoulders
+        latheMesh([
+          [5.6, 2.0],   // slender natural hourglass waist
+          [6.2, 7.0],   // ribcage transition
+          [7.2, 13.5],  // bust
+          [7.6, 17.0],  // upper chest
+          [8.0, 19.8],  // soft rounded feminine shoulders
+          [2.8, 22.8],  // collar base
+        ], 1.0, 0.54, shirtHex),
+
+        cyl(2.4, 3.0, 2.6, shirtHex, 0, 23.4, 0, 12), // collar
+        box(1.0, 13, 0.25, shade(shirtHex, 0.85), 0, 14, 4.0), // placket
       ];
       if (style === 0) {
         // High ponytail: ribbon bow tie & high pleated skirt
@@ -2430,24 +2468,38 @@ export function createScene3D(canvas, labelsEl, hooks = {}) {
       armPosX = 9.8;
       thighLen = 17.5;
 
-      // Torso: sculpted athletic torso with smooth chest, contoured shoulders, natural waist taper & dropped crotch
+      // Torso: ONE SINGLE SEAMLESS ATHLETIC SHIRT (0 cuts, 0 Michelin rolls, 0 "đòn bánh tét"!)
       const torsoParts = [
-        // Pelvis & hips: smooth rounded slacks with natural rise and dropped crotch
-        ell(7.7, 4.5, 4.6, pantsHex, 0, -1.0, 0),
-        box(14.8, 7.5, 8.6, pantsHex, 0, -1.6, 0), // pelvis socket enclosing top of thighs
-        ell(3.2, 3.6, 4.0, pantsHex, 0, -4.0, 0), // dropped crotch saddle seam (đáy quần hạ thấp thoải mái)
-        // Leather belt & buckle: curved leather band wrapping naturally around waist
-        ell(7.6, 1.4, 4.6, '#181d28', 0, 3.2, 0),
-        box(2.8, 1.8, 0.6, '#94a3b8', 0, 3.2, 4.5), // silver belt buckle
-        // Athletic waist: tapered V-shape connecting chest to hips
-        ell(7.2, 4.6, 4.3, shirtHex, 0, 8.5, 0),
-        // Athletic chest: contoured pectorals and rounded ribcage catching studio light
-        ell(8.6, 6.0, 5.0, shirtHex, 0, 16.5, 0.4),
-        ell(8.4, 5.5, 4.6, shirtHex, 0, 16.0, -0.4),
-        // Shoulders: smoothly rounded shoulder arch meeting arm sockets seamlessly at X = ±9.8
-        ell(9.8, 3.2, 4.8, shirtHex, 0, 22.2, 0),
-        cyl(2.8, 3.4, 3.2, shirtHex, 0, 25.4, 0, 14), // collar
-        box(1.2, 14, 0.3, shade(shirtHex, 0.85), 0, 15.5, 4.9), // placket
+        // Seamless slacks pelvis from dropped crotch to belt
+        latheMesh([
+          [3.4, -4.0], // dropped crotch saddle seam
+          [6.6, -2.5], // thigh socket curve
+          [7.6, -0.2], // natural hip rise
+          [7.3, 3.2],  // belt line
+        ], 1.0, 0.58, pantsHex),
+        box(14.8, 6.0, 8.4, pantsHex, 0, -1.2, 0), // socket core enclosing tops of thighs
+
+        // Curved leather dress belt wrapping around waist
+        latheMesh([
+          [7.3, 2.2],
+          [7.6, 3.2],
+          [7.3, 4.0],
+        ], 1.01, 0.59, '#181d28'),
+        box(2.8, 1.8, 0.6, '#94a3b8', 0, 3.2, 4.6), // silver belt buckle
+
+        // ONE SINGLE CONTINUOUS SCULPTED SHIRT: waist -> athletic chest -> natural shoulder arch -> collar
+        latheMesh([
+          [6.9, 3.2],   // waist
+          [7.4, 7.5],   // mid-waist
+          [8.5, 12.5],  // lower chest
+          [9.3, 17.0],  // broad athletic chest
+          [9.6, 20.5],  // upper chest / clavicle
+          [8.4, 23.2],  // natural shoulder slope (meets arm sockets at X = ±9.8)
+          [3.2, 24.8],  // collar base
+        ], 1.0, 0.54, shirtHex),
+
+        cyl(2.8, 3.4, 2.6, shirtHex, 0, 25.4, 0, 14), // collar
+        box(1.2, 14, 0.25, shade(shirtHex, 0.85), 0, 15.5, 4.8), // crisp placket
       ];
       if (style === 0) {
         // 7/3 side part: classic red necktie + ID card lanyard
