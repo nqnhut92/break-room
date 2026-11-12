@@ -673,8 +673,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428406916';
       case 'moleDead': {
         const mole = S.players.get(m.id);
         const killer = S.players.get(m.by);
-        toast('🐍 ' + (killer ? killer.name : 'Ai đó') + ' vạch mặt rắn độc ' + (mole ? mole.name : '') + '! +' + m.cost);
-        if (mole && scene) scene.fx.floatText(mole.x, 150, mole.y, '+' + m.cost, '#7df3ba', 24);
+        toast('🐍 ' + (killer ? killer.name : 'Ai đó') + ' vạch mặt rắn độc ' + (mole ? mole.name : '') + '! +' + fmtShort(m.cost));
+        if (mole && scene) scene.fx.floatText(mole.x, 150, mole.y, '+' + fmtShort(m.cost), '#7df3ba', 24);
         if (mole) S.shake = Math.min(1, S.shake + 0.4 * volumeAt(mole.x, mole.y));
         break;
       }
