@@ -97,7 +97,6 @@ async function main() {
     await gated(t.page);
     assert.match(await stepsText(t.page), /^Bấm Chia sẻ\nChọn Thêm vào Màn hình chính\nMở game từ icon mới$/);
     assert.equal(await t.page.locator('#installBtn').isVisible(), false, 'no install button on iOS');
-    assert.equal(await t.page.locator('#installCopy').isVisible(), false);
     // Not even a scripted submit or the reload auto-join gets in from the tab.
     await t.page.evaluate(() => { document.getElementById('nameInput').value = 'Sneaky'; document.getElementById('joinForm').requestSubmit(); });
     await t.page.evaluate(() => { sessionStorage.setItem('br-auto', '1'); localStorage.setItem('br-name', 'Sneaky'); });
@@ -120,11 +119,10 @@ async function main() {
     for (const device of [IPAD_EDGE, IPAD_EDGE_IOS_UA]) {
       t = await open(browser, port, device);
       await gated(t.page);
-      assert.match(await stepsText(t.page), /mở trang bằng Safari/, 'Edge on iPad has no Add to Home Screen');
-      assert.ok(await t.page.locator('#installCopy').isVisible(), 'a link to paste into Safari');
+      assert.match(await stepsText(t.page), /^Bấm ⋯\nChọn Chia sẻ\nChọn Thêm vào Màn hình chính/);
       await t.context.close();
     }
-    ok('iPad (Mac user agent, fine pointer): Safari gets the steps, Edge is sent to Safari with a copy-link button');
+    ok('iPad (Mac user agent, fine pointer): Safari gets the steps, Edge the same through its menu');
 
     t = await open(browser, port, IPHONE_SAFARI, { standalone: true });
     await joins(t.page);

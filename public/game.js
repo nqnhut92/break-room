@@ -2448,8 +2448,8 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428406916';
   // can join from the tab (also not the reload auto-join). Web pages cannot tell whether the icon already exists, only whether this launch
   // came from it (navigator.standalone / display-mode). Android/Chromium fires beforeinstallprompt, so the prompt gets a
   // button for the browser's own install dialog; iOS has no install API in any browser (all run on WebKit).
-  // User-observed (Nov 2026): Edge on iPhone has "Add to Home Screen" and its icon works like Safari's; Edge on iPad
-  // has none, so iPads outside Safari are sent to Safari. Automated browsers (navigator.webdriver: the test suites)
+  // User-observed (Nov 2026): Edge on iPhone and on iPad has "Add to Home Screen" and its icon works like Safari's.
+  // Automated browsers (navigator.webdriver: the test suites)
   // are not gated; test/install-card.cjs turns that off.
   const install = { prompt: null, installed: false };
   const standaloneApp = window.HomeScreenApp.active;
@@ -2465,7 +2465,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428406916';
     if (install.installed) return [['Đã cài xong. ', 'Mở game từ icon trên màn hình chính']];
     if (install.prompt) return [['Bấm ', 'Cài app'], ...open];
     if (!iosDevice) return [['Bấm ', '⋮'], ['Chọn ', 'Thêm vào màn hình chính (hoặc Cài đặt ứng dụng)'], ...open];
-    if (otherIosBrowser() && iPadDevice) return [['Trình duyệt này trên iPad không thêm được: ', 'mở trang bằng Safari'], ['Bấm ', 'Chia sẻ'], ['Chọn ', 'Thêm vào Màn hình chính'], ...open];
     if (otherIosBrowser()) return [['Bấm ', '⋯'], ['Chọn ', 'Chia sẻ'], ['Chọn ', 'Thêm vào Màn hình chính'], ...open];
     return [['Bấm ', 'Chia sẻ'], ['Chọn ', 'Thêm vào Màn hình chính'], ...open];
   }
@@ -2481,7 +2480,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428406916';
       return li;
     }));
     $('installBtn').hidden = !install.prompt;
-    $('installCopy').hidden = !(iPadDevice && otherIosBrowser());
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); install.prompt = e; syncInstallGate(); });
   window.addEventListener('appinstalled', () => { install.prompt = null; install.installed = true; syncInstallGate(); });
@@ -2492,10 +2490,6 @@ import { ROLES, ROLE_BY_ID } from './roles.js?v=179428406916';
     const choice = await ask.userChoice.catch(() => null);
     if (choice && choice.outcome === 'accepted') { install.prompt = null; install.installed = true; }
     syncInstallGate();
-  });
-  $('installCopy').addEventListener('click', async () => {
-    const link = location.origin + '/';
-    try { await navigator.clipboard.writeText(link); $('installCopy').textContent = 'Đã copy'; } catch (e) { $('installCopy').textContent = link; }
   });
   window.HomeScreenApp.onChange(syncInstallGate);
   window.addEventListener('pageshow', syncInstallGate);
